@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { customerComplaints, ncSequences, ncCustomers } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+
+async function nextComplaintNumber(orgId: string): Promise<string> {
+  const year = new Date().getFullYear();
+  const result = await db
+    .insert(ncSequences)
+    .values({ orgId, entityType: "customer_complaint", year, lastSeq: 1 })
+    .onConflictDoUpdate({
+      target: [ncSequences.orgId, ncSequences.entityType, ncSequences.year],
+      set: { lastSeq: sql`${ncSequences.lastSeq} + 1` },
+    })
+    .returning({ lastSeq: ncSequences.lastSeq });
+
+  const seq = result[0].lastSeq;
+  return `CC-${year}-${String(seq).padStart(4, "0")}`;
+}
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const items = await db
+    .select()
+    .from(customerComplaints)
+    .where(eq(customerComplaints.orgId, session.user.organizationId))
+    .orderBy(customerComplaints.createdAt);
+
+  return NextResponse.json(items);
+}
+
+export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id || !session.user.organizationId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const {
+    customerId, customerSiteName, customerReference,
+    receivedAt, receivedChannel, isFormal,
+    discoveryStage, partId, lotNumber, quantityClaimed,
+    categoryL2Id, categoryL3Id,
+    title, customerDescription, severity,
+    safetyRelated, recallRisk,
+  } = body;
+
+  if (!title || !customerId || !receivedAt || !receivedChannel || !discoveryStage || !severity) {
+    return NextResponse.json({ error: "필수 항목을 입력하세요." }, { status: 400 });
+  }
+
+  // SLA 계산
+  const [customer] = await db
+    .select()
+    .from(ncCustomers)
+    .where(eq(ncCustomers.id, customerId))
+    .limit(1);
+
+  const received = new Date(receivedAt);
+  const initialSla = customer?.initialResponseSlaHours ?? 24;
+  const containmentSla = customer?.containmentSlaHours ?? 48;
+  const finalSlaDays = customer?.finalReportSlaDays ?? 15;
+
+  const initialResponseDueAt = new Date(received.getTime() + initialSla * 60 * 60 * 1000);
+  const containmentDueAt = new Date(received.getTime() + containmentSla * 60 * 60 * 1000);
+  const finalReportDueAt = new Date(received.getTime() + finalSlaDays * 24 * 60 * 60 * 1000);
+
+  const complaintNumber = await nextComplaintNumber(session.user.organizationId);
+
+  const [created] = await db
+    .insert(customerComplaints)
+    .values({
+      orgId: session.user.organizationId,
+      complaintNumber,
+      customerId,
+      customerSiteName: customerSiteName || null,
+      customerReference: customerReference || null,
+      receivedAt: received,
+      receivedChannel,
+      isFormal: isFormal ?? true,
+      receivedByUserId: session.user.id,
+      discoveryStage,
+      partId: partId || null,
+      lotNumber: lotNumber || null,
+      quantityClaimed: quantityClaimed || null,
+      categoryL2Id: categoryL2Id || null,
+      categoryL3Id: categoryL3Id || null,
+      title,
+      customerDescription: customerDescription || null,
+      severity,
+      safetyRelated: safetyRelated ?? false,
+      recallRisk: recallRisk ?? false,
+      initialResponseDueAt,
+      containmentDueAt,
+      finalReportDueAt,
+    })
+    .returning();
+
+  return NextResponse.json(created, { status: 201 });
+}

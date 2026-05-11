@@ -1,0 +1,8 @@
+.env
+.env.local
+.claude/
+.env.production.local
+.next/
+node_modules/
+.vercel/
+drizzle/meta/

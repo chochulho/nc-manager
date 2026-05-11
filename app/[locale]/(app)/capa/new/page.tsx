@@ -1,0 +1,64 @@
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { internalNCs, customerComplaints } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
+import { NewCAPAForm } from "./new-capa-form";
+
+export default async function NewCAPAPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ sourceType?: string; sourceId?: string }>;
+}) {
+  const session = await auth();
+  if (!session?.user?.organizationId) redirect("/dashboard");
+
+  const orgId = session.user.organizationId;
+  const sp = await searchParams;
+  const { sourceType, sourceId } = sp;
+
+  let sourceLabel = "";
+  let sourceNumber = "";
+
+  if (sourceType === "internal_nc" && sourceId) {
+    const [nc] = await db
+      .select({ ncNumber: internalNCs.ncNumber, title: internalNCs.title })
+      .from(internalNCs)
+      .where(and(eq(internalNCs.id, sourceId), eq(internalNCs.orgId, orgId)));
+    if (nc) {
+      sourceNumber = nc.ncNumber;
+      sourceLabel = `[${nc.ncNumber}] ${nc.title}`;
+    }
+  } else if (sourceType === "customer_complaint" && sourceId) {
+    const [cc] = await db
+      .select({ complaintNumber: customerComplaints.complaintNumber, title: customerComplaints.title })
+      .from(customerComplaints)
+      .where(and(eq(customerComplaints.id, sourceId), eq(customerComplaints.orgId, orgId)));
+    if (cc) {
+      sourceNumber = cc.complaintNumber;
+      sourceLabel = `[${cc.complaintNumber}] ${cc.title}`;
+    }
+  }
+
+  const [ncList, complaintList] = await Promise.all([
+    db.select({ id: internalNCs.id, ncNumber: internalNCs.ncNumber, title: internalNCs.title })
+      .from(internalNCs)
+      .where(eq(internalNCs.orgId, orgId))
+      .orderBy(internalNCs.createdAt),
+    db.select({ id: customerComplaints.id, complaintNumber: customerComplaints.complaintNumber, title: customerComplaints.title })
+      .from(customerComplaints)
+      .where(eq(customerComplaints.orgId, orgId))
+      .orderBy(customerComplaints.createdAt),
+  ]);
+
+  return (
+    <NewCAPAForm
+      sourceType={sourceType ?? ""}
+      sourceId={sourceId ?? ""}
+      sourceLabel={sourceLabel}
+      sourceNumber={sourceNumber}
+      ncList={ncList}
+      complaintList={complaintList}
+    />
+  );
+}

@@ -1,0 +1,187 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ArrowLeft, Save } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const SOURCE_TYPE_OPTIONS = [
+  { value: "internal_nc", label: "내부 NC" },
+  { value: "customer_complaint", label: "고객 클레임" },
+  { value: "audit", label: "감사" },
+  { value: "change", label: "변경" },
+  { value: "gauge", label: "게이지" },
+  { value: "other", label: "기타" },
+];
+
+const METHODOLOGY_OPTIONS = [
+  { value: "8d", label: "8D (8-Discipline)" },
+  { value: "simple_capa", label: "Simple CAPA" },
+  { value: "a3", label: "A3" },
+];
+
+interface NcItem { id: string; ncNumber: string; title: string }
+interface ComplaintItem { id: string; complaintNumber: string; title: string }
+
+interface Props {
+  sourceType: string;
+  sourceId: string;
+  sourceLabel: string;
+  sourceNumber: string;
+  ncList: NcItem[];
+  complaintList: ComplaintItem[];
+}
+
+export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, ncList, complaintList }: Props) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    title: "",
+    methodology: "8d",
+    problemStatement: "",
+    sourceType: initSourceType || "other",
+    sourceId: initSourceId || "",
+  });
+
+  function set(key: string, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.title || !form.sourceType || !form.sourceId) {
+      toast.error("제목, 출처 유형, 출처 ID는 필수입니다.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/nc/capa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? "등록에 실패했습니다."); return; }
+      toast.success(`${data.capaNumber} 등록 완료`);
+      router.push(`/capa/${data.id}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="flex items-center gap-3">
+          <Link href="/capa"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
+          <h1 className="page-title">CAPA 신규 등록</h1>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-5">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+              <h2 className="section-title">기본 정보</h2>
+              <div>
+                <Label>CAPA 제목 *</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => set("title", e.target.value)}
+                  required
+                  placeholder="시정조치 제목을 입력하세요"
+                  className="mt-1"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>방법론</Label>
+                  <Select value={form.methodology} onValueChange={(v) => set("methodology", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {METHODOLOGY_OPTIONS.map((m) => (
+                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>문제 설명</Label>
+                <Textarea
+                  value={form.problemStatement}
+                  onChange={(e) => set("problemStatement", e.target.value)}
+                  placeholder="발생한 문제를 구체적으로 설명하세요"
+                  rows={4}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-5">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+              <h2 className="section-title">출처 정보</h2>
+              <div>
+                <Label>출처 유형 *</Label>
+                <Select value={form.sourceType} onValueChange={(v) => setForm((prev) => ({ ...prev, sourceType: v, sourceId: "" }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SOURCE_TYPE_OPTIONS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>출처 *</Label>
+                {sourceLabel ? (
+                  <div className="mt-1 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800 font-medium">
+                    {sourceLabel}
+                    <input type="hidden" value={form.sourceId} />
+                  </div>
+                ) : form.sourceType === "internal_nc" ? (
+                  <Select value={form.sourceId} onValueChange={(v) => set("sourceId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="NC 선택" /></SelectTrigger>
+                    <SelectContent>
+                      {ncList.map((nc) => (
+                        <SelectItem key={nc.id} value={nc.id}>[{nc.ncNumber}] {nc.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : form.sourceType === "customer_complaint" ? (
+                  <Select value={form.sourceId} onValueChange={(v) => set("sourceId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="클레임 선택" /></SelectTrigger>
+                    <SelectContent>
+                      {complaintList.map((cc) => (
+                        <SelectItem key={cc.id} value={cc.id}>[{cc.complaintNumber}] {cc.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    value={form.sourceId}
+                    onChange={(e) => set("sourceId", e.target.value)}
+                    placeholder="출처 ID 입력"
+                    className="mt-1"
+                  />
+                )}
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full" disabled={loading}>
+              <Save className="h-4 w-4 mr-2" />
+              {loading ? "저장 중..." : "CAPA 등록하기"}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
