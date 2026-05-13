@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { customerComplaints, ncSequences, ncCustomers } from "@/lib/db/schema";
+import { customerComplaints, ncSequences, ncCustomers, ncFieldClaimDetails } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
     categoryL2Id, categoryL3Id,
     title, customerDescription, severity,
     safetyRelated, recallRisk,
+    fieldClaim,
   } = body;
 
   if (!title || !customerId || !receivedAt || !receivedChannel || !discoveryStage || !severity) {
@@ -99,6 +100,23 @@ export async function POST(req: NextRequest) {
       finalReportDueAt,
     })
     .returning();
+
+  // field/warranty + fieldClaim 데이터가 있으면 함께 저장
+  if ((discoveryStage === "field" || discoveryStage === "warranty") && fieldClaim) {
+    await db.insert(ncFieldClaimDetails).values({
+      orgId: session.user.organizationId,
+      complaintId: created.id,
+      vehicleModel: fieldClaim.vehicleModel || null,
+      vehicleVin: fieldClaim.vehicleVin || null,
+      manufacturedAt: fieldClaim.manufacturedAt ? new Date(fieldClaim.manufacturedAt) : null,
+      region: fieldClaim.region || null,
+      dealerName: fieldClaim.dealerName || null,
+      mileageKm: fieldClaim.mileageKm || null,
+      usageMonths: fieldClaim.usageMonths ?? null,
+      dtcCodes: fieldClaim.dtcCodes?.length ? fieldClaim.dtcCodes : null,
+      symptomDescription: fieldClaim.symptomDescription || null,
+    });
+  }
 
   return NextResponse.json(created, { status: 201 });
 }

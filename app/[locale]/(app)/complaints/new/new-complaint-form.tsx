@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Paperclip, X } from "lucide-react";
+import { ArrowLeft, Save, Paperclip, X, Plus, MapPin } from "lucide-react";
 import Link from "next/link";
 
 interface Option { id: string; name: string; code?: string }
@@ -45,6 +45,12 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [dtcInput, setDtcInput] = useState("");
+  const [fieldClaim, setFieldClaim] = useState({
+    vehicleModel: "", vehicleVin: "", manufacturedAt: "",
+    region: "", dealerName: "", mileageKm: "",
+    usageMonths: "", symptomDescription: "", dtcCodes: [] as string[],
+  });
   const [form, setForm] = useState({
     title: "",
     customerDescription: "",
@@ -68,14 +74,36 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function setFc(key: string, value: string) {
+    setFieldClaim((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function addDtc() {
+    const val = dtcInput.trim().toUpperCase();
+    if (!val) return;
+    if (fieldClaim.dtcCodes.includes(val)) return;
+    setFieldClaim((prev) => ({ ...prev, dtcCodes: [...prev.dtcCodes, val] }));
+    setDtcInput("");
+  }
+
+  function removeDtc(code: string) {
+    setFieldClaim((prev) => ({ ...prev, dtcCodes: prev.dtcCodes.filter((c) => c !== code) }));
+  }
+
+  const isFieldClaim = form.discoveryStage === "field" || form.discoveryStage === "warranty";
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload = isFieldClaim
+        ? { ...form, fieldClaim: { ...fieldClaim, usageMonths: fieldClaim.usageMonths !== "" ? parseInt(fieldClaim.usageMonths) : null, manufacturedAt: fieldClaim.manufacturedAt ? `${fieldClaim.manufacturedAt}-01` : null } }
+        : form;
+
       const res = await fetch("/api/nc/complaints", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? "등록에 실패했습니다."); return; }
@@ -191,6 +219,77 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* 필드 클레임 정보 (field / warranty 일 때만) */}
+            {isFieldClaim && (
+              <div className="bg-white rounded-2xl border border-emerald-200 p-5 space-y-4">
+                <h2 className="section-title flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-emerald-600" />
+                  필드 클레임 정보
+                </h2>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>차종</Label>
+                    <Input value={fieldClaim.vehicleModel} onChange={(e) => setFc("vehicleModel", e.target.value)} placeholder="예: G90, Tucson" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>제조년월</Label>
+                    <Input type="month" value={fieldClaim.manufacturedAt} onChange={(e) => setFc("manufacturedAt", e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>VIN</Label>
+                    <Input value={fieldClaim.vehicleVin} onChange={(e) => setFc("vehicleVin", e.target.value)} placeholder="차량 식별번호" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>사용기간 (개월)</Label>
+                    <Input type="number" value={fieldClaim.usageMonths} onChange={(e) => setFc("usageMonths", e.target.value)} placeholder="예: 24" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>발생 지역</Label>
+                    <Input value={fieldClaim.region} onChange={(e) => setFc("region", e.target.value)} placeholder="예: 서울, 경기, 미국 서부" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>딜러 / 사업소</Label>
+                    <Input value={fieldClaim.dealerName} onChange={(e) => setFc("dealerName", e.target.value)} placeholder="예: 현대 강남 서비스센터" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>주행거리 (km)</Label>
+                    <Input type="number" value={fieldClaim.mileageKm} onChange={(e) => setFc("mileageKm", e.target.value)} placeholder="예: 35000" className="mt-1" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>불량코드 (DTC)</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input value={dtcInput} onChange={(e) => setDtcInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDtc(); } }}
+                      placeholder="예: P0171, C1234" className="flex-1 uppercase" />
+                    <Button type="button" variant="outline" size="sm" onClick={addDtc} className="h-9 px-3">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {fieldClaim.dtcCodes.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {fieldClaim.dtcCodes.map((code) => (
+                        <span key={code} className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-mono font-medium text-emerald-800">
+                          {code}
+                          <button type="button" onClick={() => removeDtc(code)} className="text-emerald-400 hover:text-red-500">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>고객 증상 기술</Label>
+                  <Textarea value={fieldClaim.symptomDescription} onChange={(e) => setFc("symptomDescription", e.target.value)}
+                    placeholder="고객이 보고한 증상을 그대로 기재하세요." rows={3} className="mt-1" />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 사이드 */}
