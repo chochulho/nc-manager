@@ -267,6 +267,40 @@ export const ncActivities = pgTable("nc_activities", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+// ── Analysis Reports ──────────────────────────────────────────────────────────
+
+export const ncAnalysisReports = pgTable("nc_analysis_reports", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  complaintId: text("complaint_id").notNull().references(() => customerComplaints.id, { onDelete: "cascade" }),
+  status: text("status", { enum: ["draft", "final"] }).default("draft").notNull(),
+  sections: jsonb("sections").notNull().$type<{
+    problemDescription: string;
+    immediateContainment: string;
+    rootCause: string;
+    permanentActions: string;
+    prevention: string;
+    conclusion: string;
+  }>(),
+  createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+// ── Defect Notifications ──────────────────────────────────────────────────────
+
+export const ncDefectNotifications = pgTable("nc_defect_notifications", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint"] }).notNull(),
+  entityId: text("entity_id").notNull(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  recipientEmails: text("recipient_emails").array().notNull(),
+  sentByUserId: text("sent_by_user_id").notNull().references(() => users.id),
+  sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 // ── Sequence counters ─────────────────────────────────────────────────────────
 
 export const ncSequences = pgTable("nc_sequences", {

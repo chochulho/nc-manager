@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Edit2, X, Clock, AlertCircle, ClipboardCheck, Plus } from "lucide-react";
 import Link from "next/link";
 import { AttachmentSection } from "@/components/nc/attachment-section";
+import { NotificationSection } from "@/components/nc/notification-section";
+import { AnalysisReportSection } from "@/components/nc/analysis-report-section";
 
 interface Option { id: string; name: string; code?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -289,6 +291,21 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
             )}
           </div>
 
+          <AnalysisReportSection
+            complaintId={complaint.id}
+            capaId={complaint.capaId}
+            complaintInfo={{
+              complaintNumber: complaint.complaintNumber,
+              title: complaint.title,
+              customerName: customers.find((c) => c.id === complaint.customerId)?.name ?? "-",
+              partName: complaint.partId ? (parts.find((p) => p.id === complaint.partId)?.name ?? "-") : "-",
+              receivedAt: complaint.receivedAt,
+              severity: complaint.severity,
+              resolutionType: complaint.resolutionType,
+            }}
+            onComplaintClosed={() => router.refresh()}
+          />
+          <NotificationSection entityType="customer_complaint" entityId={complaint.id} />
           <AttachmentSection entityType="customer_complaint" entityId={complaint.id} />
         </div>
 

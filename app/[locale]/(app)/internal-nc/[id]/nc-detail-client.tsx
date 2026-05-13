@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Edit2, X, ClipboardCheck, Plus } from "lucide-react";
 import Link from "next/link";
 import { AttachmentSection } from "@/components/nc/attachment-section";
+import { NotificationSection } from "@/components/nc/notification-section";
 
 interface Option { id: string; name: string; code?: string; number?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -338,6 +339,7 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
             )}
           </div>
 
+          <NotificationSection entityType="internal_nc" entityId={nc.id} />
           <AttachmentSection entityType="internal_nc" entityId={nc.id} />
         </div>
 
