@@ -13,6 +13,7 @@ import Link from "next/link";
 import { AttachmentSection } from "@/components/nc/attachment-section";
 import { NotificationSection } from "@/components/nc/notification-section";
 import { AnalysisReportSection } from "@/components/nc/analysis-report-section";
+import { FieldClaimDetailSection } from "@/components/nc/field-claim-detail-section";
 
 interface Option { id: string; name: string; code?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -220,6 +221,11 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
               </dl>
             )}
           </div>
+
+          {/* 필드 클레임 정보 */}
+          {(complaint.discoveryStage === "field" || complaint.discoveryStage === "warranty") && (
+            <FieldClaimDetailSection complaintId={complaint.id} />
+          )}
 
           {/* 대응 진행 */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">

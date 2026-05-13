@@ -267,6 +267,26 @@ export const ncActivities = pgTable("nc_activities", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+// ── Field Claim Details ───────────────────────────────────────────────────────
+
+export const ncFieldClaimDetails = pgTable("nc_field_claim_details", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  complaintId: text("complaint_id").notNull().unique().references(() => customerComplaints.id, { onDelete: "cascade" }),
+  vehicleModel: text("vehicle_model"),
+  vehicleVin: text("vehicle_vin"),
+  manufacturedAt: timestamp("manufactured_at", { mode: "date" }),
+  region: text("region"),
+  dealerName: text("dealer_name"),
+  mileageKm: numeric("mileage_km"),
+  usageMonths: integer("usage_months"),
+  dtcCodes: text("dtc_codes").array(),
+  symptomDescription: text("symptom_description"),
+  extraData: jsonb("extra_data"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 // ── Analysis Reports ──────────────────────────────────────────────────────────
 
 export const ncAnalysisReports = pgTable("nc_analysis_reports", {
