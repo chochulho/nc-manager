@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { capas, capaActions } from "@/lib/db/schema";
+import { users, organizations } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { sendCapaAssignmentEmail } from "@/lib/email";
+
+const APP_URL = process.env.NEXTAUTH_URL ?? "https://nc-manager.vercel.app";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -34,7 +38,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json();
 
   const [existing] = await db
-    .select({ id: capas.id })
+    .select({ id: capas.id, championUserId: capas.championUserId })
     .from(capas)
     .where(and(eq(capas.id, id), eq(capas.orgId, session.user.organizationId)));
 
@@ -55,6 +59,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .set(updates as Parameters<typeof db.update>[0] extends never ? never : any)
     .where(eq(capas.id, id))
     .returning();
+
+  // champion 변경 시 알림
+  const newChampion = body.championUserId;
+  if (newChampion && newChampion !== existing.championUserId && newChampion !== session.user.id) {
+    try {
+      const [champion] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, newChampion));
+      const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.user.organizationId));
+      if (champion?.email) {
+        await sendCapaAssignmentEmail({
+          to: champion.email,
+          recipientName: champion.name ?? "담당자",
+          orgName: org?.name ?? "",
+          capaNumber: updated.capaNumber,
+          title: updated.title,
+          assignerName: session.user.name ?? "관리자",
+          capaUrl: `${APP_URL}/capa/${id}`,
+        });
+      }
+    } catch { /* 이메일 실패는 API 응답에 영향 없음 */ }
+  }
 
   return NextResponse.json(updated);
 }

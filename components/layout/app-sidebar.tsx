@@ -8,7 +8,7 @@ import { signOut, useSession } from "next-auth/react";
 import {
   LayoutDashboard, AlertTriangle, MessageSquareWarning, ClipboardCheck,
   Database, Users, Shield, LogOut, ChevronDown,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, MapPin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -49,6 +49,7 @@ export function AppSidebar() {
     { href: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
     { href: "/internal-nc", label: t("internalNc"), icon: AlertTriangle },
     { href: "/complaints", label: t("complaints"), icon: MessageSquareWarning },
+    { href: "/field-analysis", label: t("fieldAnalysis"), icon: MapPin },
     { href: "/capa", label: t("capa"), icon: ClipboardCheck },
     { href: "/masters", label: t("masters"), icon: Database },
     ...(isOrgAdmin ? [{ href: "/settings/members", label: t("orgMembers"), icon: Users }] : []),

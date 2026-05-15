@@ -321,6 +321,19 @@ export const ncDefectNotifications = pgTable("nc_defect_notifications", {
   sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+// ── SLA Reminder Logs ─────────────────────────────────────────────────────────
+
+export const ncSlaReminderLogs = pgTable("nc_sla_reminder_logs", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  entityType: text("entity_type", {
+    enum: ["complaint_initial", "complaint_final", "capa_action"],
+  }).notNull(),
+  entityId: text("entity_id").notNull(),
+  sentToEmail: text("sent_to_email").notNull(),
+  sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 // ── Sequence counters ─────────────────────────────────────────────────────────
 
 export const ncSequences = pgTable("nc_sequences", {

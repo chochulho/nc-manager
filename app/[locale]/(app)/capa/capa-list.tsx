@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { Plus, ClipboardCheck } from "lucide-react";
+import { Plus, ClipboardCheck, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
 import { PeriodFilter } from "@/components/nc/period-filter";
@@ -46,12 +46,20 @@ export function CAPAList({
           <ClipboardCheck className="h-6 w-6 text-blue-600" />
           {t("title")}
         </h1>
-        <Link href="/capa/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-1" />
-            {t("new")}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <a href={`/api/nc/export/capa?year=${year}&period=${period}`} download>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-1" />
+              Excel
+            </Button>
+          </a>
+          <Link href="/capa/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-1" />
+              {t("new")}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4">

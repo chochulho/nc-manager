@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Plus, MessageSquareWarning, AlertCircle, Clock } from "lucide-react";
+import { Plus, MessageSquareWarning, AlertCircle, Clock, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
@@ -60,12 +60,20 @@ export function ComplaintList({
           <MessageSquareWarning className="h-6 w-6 text-red-600" />
           {t("title")}
         </h1>
-        <Link href="/complaints/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-1" />
-            {t("new")}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <a href={`/api/nc/export/complaints?year=${year}&period=${period}`} download>
+            <Button variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-1" />
+              Excel
+            </Button>
+          </a>
+          <Link href="/complaints/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-1" />
+              {t("new")}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4">
