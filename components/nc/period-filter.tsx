@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname } from "@/lib/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
 const CURRENT_YEAR = new Date().getFullYear();
