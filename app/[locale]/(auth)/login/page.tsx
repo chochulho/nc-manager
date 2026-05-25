@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -24,12 +23,9 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-      if (result?.error) {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
         toast.error("이메일 또는 비밀번호가 올바르지 않습니다.");
       } else {
         router.push(callbackUrl);
@@ -83,21 +79,9 @@ export default function LoginPage() {
         </Button>
       </form>
 
-      {process.env.NEXT_PUBLIC_GOOGLE_ENABLED === "true" && (
-        <Button
-          variant="outline"
-          className="w-full mt-3"
-          onClick={() => signIn("google", { callbackUrl })}
-        >
-          {t("loginWithGoogle")}
-        </Button>
-      )}
-
       <p className="text-center text-sm text-muted-foreground mt-6">
-        {t("noAccount")}{" "}
-        <Link href="/register" className="font-semibold text-primary hover:underline">
-          {t("registerButton")}
-        </Link>
+        계정이 없으신가요?{" "}
+        <span className="text-muted-foreground">Quality Hub에서 가입 후 이용해주세요.</span>
       </p>
     </div>
   );

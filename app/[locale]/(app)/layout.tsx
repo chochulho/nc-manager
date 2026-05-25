@@ -8,7 +8,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <AppSidebar />
+      <AppSidebar session={session} />
       <main className="flex-1 overflow-y-auto bg-background">
         <div className="p-6">{children}</div>
       </main>

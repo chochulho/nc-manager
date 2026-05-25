@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, AlertTriangle, MessageSquareWarning, ClipboardCheck,
   Database, Users, Shield, LogOut, ChevronDown,
@@ -19,13 +18,19 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { AppSession } from "@/lib/auth";
 
 const STORAGE_KEY = "nc-sidebar-collapsed";
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  session: AppSession;
+}
+
+export function AppSidebar({ session }: AppSidebarProps) {
   const t = useTranslations("nav");
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -42,8 +47,15 @@ export function AppSidebar() {
     });
   }
 
-  const isAdmin = session?.user?.isAdmin ?? false;
-  const isOrgAdmin = session?.user?.orgRole === "ADMIN" || isAdmin;
+  async function handleSignOut() {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
+  const isAdmin = session.user.isAdmin ?? false;
+  const isOrgAdmin = session.user.orgRole === "ADMIN" || isAdmin;
 
   const navItems = [
     { href: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
@@ -56,7 +68,7 @@ export function AppSidebar() {
     ...(isAdmin ? [{ href: "/admin", label: t("admin"), icon: Shield }] : []),
   ];
 
-  const userInitials = session?.user?.name
+  const userInitials = session.user.name
     ? session.user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "??";
 
@@ -78,7 +90,7 @@ export function AppSidebar() {
           {!isCollapsed && (
             <div className="flex flex-col flex-1 min-w-0">
               <span className="font-semibold text-sm truncate text-sidebar-foreground">NC Manager</span>
-              {session?.user?.organizationName && (
+              {session.user.organizationName && (
                 <span className="text-[10px] text-muted-foreground truncate">{session.user.organizationName}</span>
               )}
             </div>
@@ -145,25 +157,25 @@ export function AppSidebar() {
                   <TooltipTrigger asChild>
                     <button className="flex justify-center w-full rounded-md p-1.5 hover:bg-sidebar-accent transition-colors">
                       <Avatar className="h-7 w-7">
-                        <AvatarImage src={session?.user?.image ?? undefined} />
+                        <AvatarImage src={session.user.image ?? undefined} />
                         <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
                       </Avatar>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="text-xs">
-                    <p className="font-medium">{session?.user?.name}</p>
-                    <p className="text-muted-foreground">{session?.user?.email}</p>
+                    <p className="font-medium">{session.user.name}</p>
+                    <p className="text-muted-foreground">{session.user.email}</p>
                   </TooltipContent>
                 </Tooltip>
               ) : (
                 <button className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-sidebar-accent transition-colors">
                   <Avatar className="h-7 w-7">
-                    <AvatarImage src={session?.user?.image ?? undefined} />
+                    <AvatarImage src={session.user.image ?? undefined} />
                     <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left min-w-0">
-                    <p className="font-medium truncate text-xs">{session?.user?.name ?? t("user")}</p>
-                    <p className="text-muted-foreground truncate text-xs">{session?.user?.email}</p>
+                    <p className="font-medium truncate text-xs">{session.user.name ?? t("user")}</p>
+                    <p className="text-muted-foreground truncate text-xs">{session.user.email}</p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                 </button>
@@ -171,7 +183,7 @@ export function AppSidebar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="top" className="w-48">
               <DropdownMenuItem
-                onClick={() => signOut({ callbackUrl: "/login" })}
+                onClick={handleSignOut}
                 className="text-destructive cursor-pointer"
               >
                 <LogOut className="mr-2 h-4 w-4" />

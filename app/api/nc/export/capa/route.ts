@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { capas, users } from "@/lib/db/schema";
-import { eq, and, gte, lte, desc, inArray } from "drizzle-orm";
+import { capas } from "@/lib/db/schema";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange, periodLabel } from "@/lib/period-utils";
 import * as XLSX from "xlsx";
 
@@ -57,17 +57,6 @@ export async function GET(req: NextRequest) {
     .orderBy(desc(capas.createdAt))
     .limit(5000);
 
-  // Fetch champion names in batch
-  const championIds = [...new Set(capaRows.map((r) => r.championUserId).filter(Boolean))] as string[];
-  const championMap = new Map<string, string>();
-  if (championIds.length > 0) {
-    const champUsers = await db
-      .select({ id: users.id, name: users.name })
-      .from(users)
-      .where(inArray(users.id, championIds));
-    for (const u of champUsers) championMap.set(u.id, u.name ?? "");
-  }
-
   const fmt = (d: Date | null) => d ? new Date(d).toLocaleDateString("ko-KR") : "";
 
   const data = capaRows.map((r) => ({
@@ -76,7 +65,7 @@ export async function GET(req: NextRequest) {
     "출처유형": SOURCE_LABELS[r.sourceType] ?? r.sourceType,
     "방법론": METHODOLOGY_LABELS[r.methodology] ?? r.methodology,
     "상태": STATUS_LABELS[r.status] ?? r.status,
-    "담당자(Champion)": r.championUserId ? (championMap.get(r.championUserId) ?? "") : "",
+    "담당자ID(Champion)": r.championUserId ?? "",
     "문제설명": r.problemStatement ?? "",
     "유효성평가": r.effectivenessVerdict ? (VERDICT_LABELS[r.effectivenessVerdict] ?? r.effectivenessVerdict) : "",
     "유효성검토기한": fmt(r.effectivenessReviewDueAt),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { internalNCs, ncParts, ncCategoriesL2, ncSuppliers, users } from "@/lib/db/schema";
+import { internalNCs, ncParts, ncCategoriesL2, ncSuppliers } from "@/lib/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange, periodLabel } from "@/lib/period-utils";
 import * as XLSX from "xlsx";
@@ -53,13 +53,12 @@ export async function GET(req: NextRequest) {
       partName: ncParts.partName,
       categoryCode: ncCategoriesL2.code,
       supplierName: ncSuppliers.name,
-      discoveredByName: users.name,
+      discoveredByUserId: internalNCs.discoveredByUserId,
     })
     .from(internalNCs)
     .leftJoin(ncParts, eq(internalNCs.partId, ncParts.id))
     .leftJoin(ncCategoriesL2, eq(internalNCs.categoryL2Id, ncCategoriesL2.id))
     .leftJoin(ncSuppliers, eq(internalNCs.occurrenceSupplierId, ncSuppliers.id))
-    .leftJoin(users, eq(internalNCs.discoveredByUserId, users.id))
     .where(and(...conditions))
     .orderBy(desc(internalNCs.discoveredAt))
     .limit(5000);
@@ -81,7 +80,7 @@ export async function GET(req: NextRequest) {
     "내용": r.description ?? "",
     "처분유형": r.dispositionType ? (DISPOSITION_LABELS[r.dispositionType] ?? r.dispositionType) : "",
     "CAPA필요": r.capaRequired ? "Y" : "N",
-    "발견자": r.discoveredByName ?? "",
+    "발견자(ID)": r.discoveredByUserId ?? "",
     "등록일": r.createdAt ? new Date(r.createdAt).toLocaleDateString("ko-KR") : "",
   }));
 

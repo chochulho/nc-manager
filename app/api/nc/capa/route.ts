@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { capas, ncSequences, internalNCs, customerComplaints } from "@/lib/db/schema";
-import { users, organizations } from "@/lib/db/schema";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
 import { sendCapaAssignmentEmail } from "@/lib/email";
 
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://nc-manager.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
+  ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
+  : "https://nc-manager.vercel.app";
 
 async function nextCapaNumber(orgId: string): Promise<string> {
   const year = new Date().getFullYear();
@@ -93,13 +95,15 @@ export async function POST(req: NextRequest) {
   // champion 배정 알림
   if (body.championUserId && body.championUserId !== session.user.id) {
     try {
-      const [champion] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, body.championUserId));
-      const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.user.organizationId));
-      if (champion?.email) {
+      const supabase = createSupabaseAdminClient();
+      const { data: userData } = await supabase.auth.admin.getUserById(body.championUserId);
+      const championEmail = userData?.user?.email;
+      const championName = userData?.user?.user_metadata?.full_name ?? "담당자";
+      if (championEmail) {
         await sendCapaAssignmentEmail({
-          to: champion.email,
-          recipientName: champion.name ?? "담당자",
-          orgName: org?.name ?? "",
+          to: championEmail,
+          recipientName: championName,
+          orgName: session.user.organizationName ?? "",
           capaNumber: capa.capaNumber,
           title: capa.title,
           assignerName: session.user.name ?? "관리자",

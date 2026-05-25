@@ -2,8 +2,6 @@ import {
   pgTable, text, timestamp, boolean, numeric, jsonb, integer, primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { organizations } from "./org";
-import { users } from "./auth";
 import {
   ncSites, ncProcesses, ncSuppliers, ncParts, ncCustomers,
   ncCategoriesL2, ncCategoriesL3,
@@ -13,7 +11,7 @@ import {
 
 export const internalNCs = pgTable("nc_internal_ncs", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   ncNumber: text("nc_number").notNull(),
 
   discoveredAt: timestamp("discovered_at", { mode: "date" }).notNull(),
@@ -22,7 +20,7 @@ export const internalNCs = pgTable("nc_internal_ncs", {
   }).notNull(),
   discoveredBySiteId: text("discovered_by_site_id").references(() => ncSites.id),
   discoveredByProcessId: text("discovered_by_process_id").references(() => ncProcesses.id),
-  discoveredByUserId: text("discovered_by_user_id").notNull().references(() => users.id),
+  discoveredByUserId: text("discovered_by_user_id").notNull(),
 
   occurrenceSiteId: text("occurrence_site_id").references(() => ncSites.id),
   occurrenceProcessId: text("occurrence_process_id").references(() => ncProcesses.id),
@@ -51,12 +49,12 @@ export const internalNCs = pgTable("nc_internal_ncs", {
   containmentLocation: text("containment_location"),
   containmentQuantity: numeric("containment_quantity"),
   containedAt: timestamp("contained_at", { mode: "date" }),
-  containedByUserId: text("contained_by_user_id").references(() => users.id),
+  containedByUserId: text("contained_by_user_id"),
 
   dispositionType: text("disposition_type", {
     enum: ["rework", "deviation", "scrap", "return_to_supplier", "use_as_is"],
   }),
-  dispositionApprovedByUserId: text("disposition_approved_by_user_id").references(() => users.id),
+  dispositionApprovedByUserId: text("disposition_approved_by_user_id"),
   dispositionApprovedAt: timestamp("disposition_approved_at", { mode: "date" }),
   dispositionNotes: text("disposition_notes"),
 
@@ -76,7 +74,7 @@ export const internalNCs = pgTable("nc_internal_ncs", {
 
 export const customerComplaints = pgTable("nc_customer_complaints", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   complaintNumber: text("complaint_number").notNull(),
 
   customerId: text("customer_id").notNull().references(() => ncCustomers.id),
@@ -88,7 +86,7 @@ export const customerComplaints = pgTable("nc_customer_complaints", {
     enum: ["portal", "email", "phone", "meeting", "informal"],
   }).notNull(),
   isFormal: boolean("is_formal").default(true).notNull(),
-  receivedByUserId: text("received_by_user_id").notNull().references(() => users.id),
+  receivedByUserId: text("received_by_user_id").notNull(),
 
   discoveryStage: text("discovery_stage", {
     enum: ["inline_0km", "field", "warranty", "other"],
@@ -139,7 +137,7 @@ export const customerComplaints = pgTable("nc_customer_complaints", {
 
 export const capas = pgTable("nc_capas", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   capaNumber: text("capa_number").notNull(),
 
   sourceType: text("source_type", {
@@ -165,7 +163,7 @@ export const capas = pgTable("nc_capas", {
     enum: ["open", "in_progress", "actions_implemented", "effectiveness_monitoring", "closed"],
   }).default("open").notNull(),
 
-  championUserId: text("champion_user_id").references(() => users.id),
+  championUserId: text("champion_user_id"),
 
   effectivenessReviewDueAt: timestamp("effectiveness_review_due_at", { mode: "date" }),
   effectivenessReviewedAt: timestamp("effectiveness_reviewed_at", { mode: "date" }),
@@ -189,7 +187,7 @@ export const capaActions = pgTable("nc_capa_actions", {
   capaId: text("capa_id").notNull().references(() => capas.id, { onDelete: "cascade" }),
   actionType: text("action_type", { enum: ["correction", "corrective", "preventive"] }).notNull(),
   description: text("description").notNull(),
-  responsibleUserId: text("responsible_user_id").references(() => users.id),
+  responsibleUserId: text("responsible_user_id"),
   dueAt: timestamp("due_at", { mode: "date" }),
   completedAt: timestamp("completed_at", { mode: "date" }),
   evidence: text("evidence"),
@@ -211,7 +209,7 @@ export const horizontalDeployments = pgTable("nc_horizontal_deployments", {
 
 export const approvalWorkflows = pgTable("nc_approval_workflows", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   entityType: text("entity_type", { enum: ["internal_nc_disposition", "capa_close", "complaint_close"] }).notNull(),
   name: text("name").notNull(),
   steps: jsonb("steps").notNull().$type<Array<{ order: number; role: string; label: string }>>(),
@@ -226,7 +224,7 @@ export const approvalRequests = pgTable("nc_approval_requests", {
   entityId: text("entity_id").notNull(),
   currentStep: integer("current_step").default(0).notNull(),
   status: text("status", { enum: ["pending", "approved", "rejected", "cancelled"] }).default("pending").notNull(),
-  requestedById: text("requested_by_id").notNull().references(() => users.id),
+  requestedById: text("requested_by_id").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   resolvedAt: timestamp("resolved_at", { mode: "date" }),
 });
@@ -235,7 +233,7 @@ export const approvalActions = pgTable("nc_approval_actions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   requestId: text("request_id").notNull().references(() => approvalRequests.id, { onDelete: "cascade" }),
   step: integer("step").notNull(),
-  approverId: text("approver_id").notNull().references(() => users.id),
+  approverId: text("approver_id").notNull(),
   action: text("action", { enum: ["approved", "rejected", "requested_changes"] }).notNull(),
   comment: text("comment"),
   actedAt: timestamp("acted_at", { mode: "date" }).defaultNow().notNull(),
@@ -248,7 +246,7 @@ export const ncAttachments = pgTable("nc_attachments", {
   orgId: text("org_id").notNull(),
   entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa"] }).notNull(),
   entityId: text("entity_id").notNull(),
-  uploadedById: text("uploaded_by_id").notNull().references(() => users.id),
+  uploadedById: text("uploaded_by_id").notNull(),
   filename: text("filename").notNull(),
   storageKey: text("storage_key").notNull(),
   mimeType: text("mime_type"),
@@ -261,7 +259,7 @@ export const ncActivities = pgTable("nc_activities", {
   orgId: text("org_id").notNull(),
   entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa"] }).notNull(),
   entityId: text("entity_id").notNull(),
-  userId: text("user_id").references(() => users.id),
+  userId: text("user_id"),
   action: text("action").notNull(),
   payload: jsonb("payload"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -271,7 +269,7 @@ export const ncActivities = pgTable("nc_activities", {
 
 export const ncFieldClaimDetails = pgTable("nc_field_claim_details", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   complaintId: text("complaint_id").notNull().unique().references(() => customerComplaints.id, { onDelete: "cascade" }),
   vehicleModel: text("vehicle_model"),
   vehicleVin: text("vehicle_vin"),
@@ -291,7 +289,7 @@ export const ncFieldClaimDetails = pgTable("nc_field_claim_details", {
 
 export const ncAnalysisReports = pgTable("nc_analysis_reports", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   complaintId: text("complaint_id").notNull().references(() => customerComplaints.id, { onDelete: "cascade" }),
   status: text("status", { enum: ["draft", "final"] }).default("draft").notNull(),
   sections: jsonb("sections").notNull().$type<{
@@ -302,7 +300,7 @@ export const ncAnalysisReports = pgTable("nc_analysis_reports", {
     prevention: string;
     conclusion: string;
   }>(),
-  createdByUserId: text("created_by_user_id").notNull().references(() => users.id),
+  createdByUserId: text("created_by_user_id").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -311,13 +309,13 @@ export const ncAnalysisReports = pgTable("nc_analysis_reports", {
 
 export const ncDefectNotifications = pgTable("nc_defect_notifications", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint"] }).notNull(),
   entityId: text("entity_id").notNull(),
   subject: text("subject").notNull(),
   body: text("body").notNull(),
   recipientEmails: text("recipient_emails").array().notNull(),
-  sentByUserId: text("sent_by_user_id").notNull().references(() => users.id),
+  sentByUserId: text("sent_by_user_id").notNull(),
   sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
 });
 
@@ -325,7 +323,7 @@ export const ncDefectNotifications = pgTable("nc_defect_notifications", {
 
 export const ncSlaReminderLogs = pgTable("nc_sla_reminder_logs", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  orgId: text("org_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  orgId: text("org_id").notNull(),
   entityType: text("entity_type", {
     enum: ["complaint_initial", "complaint_final", "capa_action"],
   }).notNull(),
@@ -348,22 +346,15 @@ export const ncSequences = pgTable("nc_sequences", {
 // ── Relations ─────────────────────────────────────────────────────────────────
 
 export const internalNCsRelations = relations(internalNCs, ({ one }) => ({
-  org: one(organizations, { fields: [internalNCs.orgId], references: [organizations.id] }),
-  discoveredByUser: one(users, { fields: [internalNCs.discoveredByUserId], references: [users.id] }),
   part: one(ncParts, { fields: [internalNCs.partId], references: [ncParts.id] }),
-  customer: one(ncCustomers, { fields: [internalNCs.occurrenceSupplierId], references: [ncCustomers.id] }),
 }));
 
 export const customerComplaintsRelations = relations(customerComplaints, ({ one }) => ({
-  org: one(organizations, { fields: [customerComplaints.orgId], references: [organizations.id] }),
   customer: one(ncCustomers, { fields: [customerComplaints.customerId], references: [ncCustomers.id] }),
-  receivedByUser: one(users, { fields: [customerComplaints.receivedByUserId], references: [users.id] }),
   part: one(ncParts, { fields: [customerComplaints.partId], references: [ncParts.id] }),
 }));
 
-export const capaRelations = relations(capas, ({ one, many }) => ({
-  org: one(organizations, { fields: [capas.orgId], references: [organizations.id] }),
-  champion: one(users, { fields: [capas.championUserId], references: [users.id] }),
+export const capaRelations = relations(capas, ({ many }) => ({
   actions: many(capaActions),
   horizontalDeployments: many(horizontalDeployments),
 }));

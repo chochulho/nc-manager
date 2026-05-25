@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { ncDefectNotifications } from "@/lib/db/schema";
-import { organizations } from "@/lib/db/schema/org";
-import { users } from "@/lib/db/schema/auth";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and, desc } from "drizzle-orm";
 import { sendDefectNotificationEmail } from "@/lib/email";
 
@@ -26,10 +25,9 @@ export async function GET(req: NextRequest) {
       body: ncDefectNotifications.body,
       recipientEmails: ncDefectNotifications.recipientEmails,
       sentAt: ncDefectNotifications.sentAt,
-      sentByUser: { id: users.id, name: users.name, email: users.email },
+      sentByUserId: ncDefectNotifications.sentByUserId,
     })
     .from(ncDefectNotifications)
-    .innerJoin(users, eq(users.id, ncDefectNotifications.sentByUserId))
     .where(
       and(
         eq(ncDefectNotifications.orgId, session.user.organizationId),
@@ -39,7 +37,23 @@ export async function GET(req: NextRequest) {
     )
     .orderBy(desc(ncDefectNotifications.sentAt));
 
-  return NextResponse.json(rows);
+  // Enrich with user info from Supabase
+  const supabase = createSupabaseAdminClient();
+  const enriched = await Promise.all(
+    rows.map(async (row) => {
+      const { data: userData } = await supabase.auth.admin.getUserById(row.sentByUserId);
+      return {
+        ...row,
+        sentByUser: {
+          id: row.sentByUserId,
+          name: userData?.user?.user_metadata?.full_name ?? null,
+          email: userData?.user?.email ?? "",
+        },
+      };
+    })
+  );
+
+  return NextResponse.json(enriched);
 }
 
 export async function POST(req: NextRequest) {
@@ -66,17 +80,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `올바르지 않은 이메일: ${invalidEmails.join(", ")}` }, { status: 400 });
   }
 
-  const [org] = await db
-    .select({ name: organizations.name })
-    .from(organizations)
-    .where(eq(organizations.id, session.user.organizationId));
-
   await sendDefectNotificationEmail({
     to: recipientEmails,
     subject,
     body: msgBody,
     senderName: session.user.name ?? session.user.email ?? "담당자",
-    orgName: org?.name ?? "",
+    orgName: session.user.organizationName ?? "",
   });
 
   const [inserted] = await db

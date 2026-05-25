@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   customerComplaints, capas, capaActions,
-  ncSlaReminderLogs, organizations,
+  ncSlaReminderLogs,
 } from "@/lib/db/schema";
-import { users } from "@/lib/db/schema";
-import { eq, and, isNotNull, isNull, notInArray, lte, gte } from "drizzle-orm";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { eq, and, isNotNull, notInArray, lte, gte } from "drizzle-orm";
 import { sendSlaReminderEmail } from "@/lib/email";
 
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://nc-manager.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
+  ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
+  : "https://nc-manager.vercel.app";
 
 // Vercel Cron calls this with Authorization: Bearer <CRON_SECRET>
 function isAuthorized(req: NextRequest): boolean {
@@ -23,6 +25,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const supabase = createSupabaseAdminClient();
   const now = new Date();
   // 알림 대상: 오늘부터 48시간 이내 마감 (이미 지난 것 포함)
   const windowEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000);
@@ -46,19 +49,19 @@ export async function GET(req: NextRequest) {
       finalReportSentAt: customerComplaints.finalReportSentAt,
       status: customerComplaints.status,
       receivedByUserId: customerComplaints.receivedByUserId,
-      orgName: organizations.name,
-      userName: users.name,
-      userEmail: users.email,
     })
     .from(customerComplaints)
-    .leftJoin(organizations, eq(customerComplaints.orgId, organizations.id))
-    .leftJoin(users, eq(customerComplaints.receivedByUserId, users.id))
     .where(
       notInArray(customerComplaints.status, ["closed", "closed_ntf"])
     );
 
   for (const c of pendingComplaints) {
-    if (!c.userEmail) continue;
+    // Look up user info from Supabase
+    const { data: userData } = await supabase.auth.admin.getUserById(c.receivedByUserId);
+    const userEmail = userData?.user?.email;
+    const userName = userData?.user?.user_metadata?.full_name ?? "담당자";
+
+    if (!userEmail) continue;
 
     // Initial response SLA
     if (
@@ -73,7 +76,7 @@ export async function GET(req: NextRequest) {
           and(
             eq(ncSlaReminderLogs.entityType, "complaint_initial"),
             eq(ncSlaReminderLogs.entityId, c.id),
-            eq(ncSlaReminderLogs.sentToEmail, c.userEmail),
+            eq(ncSlaReminderLogs.sentToEmail, userEmail),
             gte(ncSlaReminderLogs.sentAt, todayStart)
           )
         )
@@ -82,9 +85,9 @@ export async function GET(req: NextRequest) {
       if (!alreadySent) {
         try {
           await sendSlaReminderEmail({
-            to: c.userEmail,
-            recipientName: c.userName ?? "담당자",
-            orgName: c.orgName ?? "",
+            to: userEmail,
+            recipientName: userName,
+            orgName: "",
             complaintNumber: c.complaintNumber,
             title: c.title,
             slaType: "initial_response",
@@ -95,7 +98,7 @@ export async function GET(req: NextRequest) {
             orgId: c.orgId,
             entityType: "complaint_initial",
             entityId: c.id,
-            sentToEmail: c.userEmail,
+            sentToEmail: userEmail,
           });
           sent++;
         } catch {
@@ -117,7 +120,7 @@ export async function GET(req: NextRequest) {
           and(
             eq(ncSlaReminderLogs.entityType, "complaint_final"),
             eq(ncSlaReminderLogs.entityId, c.id),
-            eq(ncSlaReminderLogs.sentToEmail, c.userEmail),
+            eq(ncSlaReminderLogs.sentToEmail, userEmail),
             gte(ncSlaReminderLogs.sentAt, todayStart)
           )
         )
@@ -126,9 +129,9 @@ export async function GET(req: NextRequest) {
       if (!alreadySent) {
         try {
           await sendSlaReminderEmail({
-            to: c.userEmail,
-            recipientName: c.userName ?? "담당자",
-            orgName: c.orgName ?? "",
+            to: userEmail,
+            recipientName: userName,
+            orgName: "",
             complaintNumber: c.complaintNumber,
             title: c.title,
             slaType: "final_report",
@@ -139,7 +142,7 @@ export async function GET(req: NextRequest) {
             orgId: c.orgId,
             entityType: "complaint_final",
             entityId: c.id,
-            sentToEmail: c.userEmail,
+            sentToEmail: userEmail,
           });
           sent++;
         } catch {
@@ -160,14 +163,10 @@ export async function GET(req: NextRequest) {
       capaNumber: capas.capaNumber,
       capaTitle: capas.title,
       capaOrgId: capas.orgId,
-      orgName: organizations.name,
-      userName: users.name,
-      userEmail: users.email,
+      responsibleUserId: capaActions.responsibleUserId,
     })
     .from(capaActions)
     .innerJoin(capas, eq(capaActions.capaId, capas.id))
-    .leftJoin(organizations, eq(capas.orgId, organizations.id))
-    .leftJoin(users, eq(capaActions.responsibleUserId, users.id))
     .where(
       and(
         isNotNull(capaActions.dueAt),
@@ -178,7 +177,13 @@ export async function GET(req: NextRequest) {
     );
 
   for (const a of pendingActions) {
-    if (!a.userEmail || !a.dueAt || !a.capaOrgId) continue;
+    if (!a.dueAt || !a.capaOrgId || !a.responsibleUserId) continue;
+
+    const { data: userData } = await supabase.auth.admin.getUserById(a.responsibleUserId);
+    const userEmail = userData?.user?.email;
+    const userName = userData?.user?.user_metadata?.full_name ?? "담당자";
+
+    if (!userEmail) continue;
 
     const alreadySent = await db
       .select({ id: ncSlaReminderLogs.id })
@@ -187,7 +192,7 @@ export async function GET(req: NextRequest) {
         and(
           eq(ncSlaReminderLogs.entityType, "capa_action"),
           eq(ncSlaReminderLogs.entityId, a.id),
-          eq(ncSlaReminderLogs.sentToEmail, a.userEmail),
+          eq(ncSlaReminderLogs.sentToEmail, userEmail),
           gte(ncSlaReminderLogs.sentAt, todayStart)
         )
       )
@@ -195,11 +200,10 @@ export async function GET(req: NextRequest) {
 
     if (!alreadySent) {
       try {
-        // Reuse SLA reminder email template for action due date
         await sendSlaReminderEmail({
-          to: a.userEmail,
-          recipientName: a.userName ?? "담당자",
-          orgName: a.orgName ?? "",
+          to: userEmail,
+          recipientName: userName,
+          orgName: "",
           complaintNumber: a.capaNumber,
           title: `[조치항목] ${a.description}`,
           slaType: "final_report",
@@ -210,7 +214,7 @@ export async function GET(req: NextRequest) {
           orgId: a.capaOrgId,
           entityType: "capa_action",
           entityId: a.id,
-          sentToEmail: a.userEmail,
+          sentToEmail: userEmail,
         });
         sent++;
       } catch {

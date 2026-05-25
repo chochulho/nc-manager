@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { capas, capaActions } from "@/lib/db/schema";
-import { users, organizations } from "@/lib/db/schema";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and } from "drizzle-orm";
 import { sendCapaAssignmentEmail } from "@/lib/email";
 
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://nc-manager.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
+  ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
+  : "https://nc-manager.vercel.app";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -64,13 +66,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const newChampion = body.championUserId;
   if (newChampion && newChampion !== existing.championUserId && newChampion !== session.user.id) {
     try {
-      const [champion] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, newChampion));
-      const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.user.organizationId));
-      if (champion?.email) {
+      const supabase = createSupabaseAdminClient();
+      const { data: userData } = await supabase.auth.admin.getUserById(newChampion);
+      const championEmail = userData?.user?.email;
+      const championName = userData?.user?.user_metadata?.full_name ?? "담당자";
+      if (championEmail) {
         await sendCapaAssignmentEmail({
-          to: champion.email,
-          recipientName: champion.name ?? "담당자",
-          orgName: org?.name ?? "",
+          to: championEmail,
+          recipientName: championName,
+          orgName: session.user.organizationName ?? "",
           capaNumber: updated.capaNumber,
           title: updated.title,
           assignerName: session.user.name ?? "관리자",

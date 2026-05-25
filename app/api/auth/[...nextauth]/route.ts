@@ -1,3 +1,11 @@
-import { handlers } from "@/lib/auth";
+// This route is no longer used. Auth is handled by Supabase.
+// Kept as a stub to avoid 404s from old bookmarks.
+import { NextResponse } from "next/server";
 
-export const { GET, POST } = handlers;
+export async function GET() {
+  return NextResponse.json({ error: "Not found" }, { status: 404 });
+}
+
+export async function POST() {
+  return NextResponse.json({ error: "Not found" }, { status: 404 });
+}

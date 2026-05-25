@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { customerComplaints, ncCustomers, ncParts, users } from "@/lib/db/schema";
+import { customerComplaints, ncCustomers, ncParts } from "@/lib/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange, periodLabel } from "@/lib/period-utils";
 import * as XLSX from "xlsx";
@@ -57,12 +57,11 @@ export async function GET(req: NextRequest) {
       customerName: ncCustomers.name,
       partName: ncParts.partName,
       partNumber: ncParts.partNumber,
-      receivedByName: users.name,
+      receivedByUserId: customerComplaints.receivedByUserId,
     })
     .from(customerComplaints)
     .leftJoin(ncCustomers, eq(customerComplaints.customerId, ncCustomers.id))
     .leftJoin(ncParts, eq(customerComplaints.partId, ncParts.id))
-    .leftJoin(users, eq(customerComplaints.receivedByUserId, users.id))
     .where(and(...conditions))
     .orderBy(desc(customerComplaints.receivedAt))
     .limit(5000);
@@ -91,7 +90,7 @@ export async function GET(req: NextRequest) {
     "최종보고기한": fmt(r.finalReportDueAt),
     "최종보고완료": fmt(r.finalReportSentAt),
     "내용": r.description ?? "",
-    "접수담당자": r.receivedByName ?? "",
+    "접수담당자(ID)": r.receivedByUserId ?? "",
     "등록일": fmt(r.createdAt),
   }));
 

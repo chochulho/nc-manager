@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { capas, capaActions } from "@/lib/db/schema";
-import { users, organizations } from "@/lib/db/schema";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and } from "drizzle-orm";
 import { sendCapaActionAssignmentEmail } from "@/lib/email";
 
-const APP_URL = process.env.NEXTAUTH_URL ?? "https://nc-manager.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
+  ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
+  : "https://nc-manager.vercel.app";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -64,13 +66,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // responsible 배정 알림
   if (responsibleUserId && responsibleUserId !== session.user.id) {
     try {
-      const [responsible] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, responsibleUserId));
-      const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, capa.orgId));
-      if (responsible?.email) {
+      const supabase = createSupabaseAdminClient();
+      const { data: userData } = await supabase.auth.admin.getUserById(responsibleUserId);
+      const responsibleEmail = userData?.user?.email;
+      const responsibleName = userData?.user?.user_metadata?.full_name ?? "담당자";
+      if (responsibleEmail) {
         await sendCapaActionAssignmentEmail({
-          to: responsible.email,
-          recipientName: responsible.name ?? "담당자",
-          orgName: org?.name ?? "",
+          to: responsibleEmail,
+          recipientName: responsibleName,
+          orgName: session.user.organizationName ?? "",
           capaNumber: capa.capaNumber,
           capaTitle: capa.title,
           actionDescription: description,
