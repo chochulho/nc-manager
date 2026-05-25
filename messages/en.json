@@ -341,6 +341,14 @@
       "major": "Major",
       "minor": "Minor"
     },
+    "vehicleModelPlaceholder": "e.g. G90, Tucson",
+    "vinPlaceholder": "Vehicle Identification Number",
+    "regionPlaceholder": "e.g. Seoul, US West",
+    "dealerPlaceholder": "e.g. Service Center Name",
+    "dtcPlaceholder": "e.g. P0171, C1234",
+    "symptomPlaceholder": "Describe the symptom as reported by the customer.",
+    "customerSitePlaceholder": "e.g. Hwaseong Plant",
+    "customerRefPlaceholder": "Customer internal reference number",
     "emptyState": "No customer complaints found for the selected period.",
     "registerFirst": "Register your first complaint"
   },

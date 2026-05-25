@@ -230,7 +230,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>{t("vehicleModel")}</Label>
-                    <Input value={fieldClaim.vehicleModel} onChange={(e) => setFc("vehicleModel", e.target.value)} placeholder="예: G90, Tucson" className="mt-1" />
+                    <Input value={fieldClaim.vehicleModel} onChange={(e) => setFc("vehicleModel", e.target.value)} placeholder={t("vehicleModelPlaceholder")} className="mt-1" />
                   </div>
                   <div>
                     <Label>{t("manufacturedAt")}</Label>
@@ -238,7 +238,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                   </div>
                   <div>
                     <Label>VIN</Label>
-                    <Input value={fieldClaim.vehicleVin} onChange={(e) => setFc("vehicleVin", e.target.value)} placeholder="차량 식별번호" className="mt-1" />
+                    <Input value={fieldClaim.vehicleVin} onChange={(e) => setFc("vehicleVin", e.target.value)} placeholder={t("vinPlaceholder")} className="mt-1" />
                   </div>
                   <div>
                     <Label>{t("usageMonths")}</Label>
@@ -246,11 +246,11 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                   </div>
                   <div>
                     <Label>{t("region")}</Label>
-                    <Input value={fieldClaim.region} onChange={(e) => setFc("region", e.target.value)} placeholder="예: 서울, 미국 서부" className="mt-1" />
+                    <Input value={fieldClaim.region} onChange={(e) => setFc("region", e.target.value)} placeholder={t("regionPlaceholder")} className="mt-1" />
                   </div>
                   <div>
                     <Label>{t("dealer")}</Label>
-                    <Input value={fieldClaim.dealerName} onChange={(e) => setFc("dealerName", e.target.value)} placeholder="예: 현대 강남 서비스센터" className="mt-1" />
+                    <Input value={fieldClaim.dealerName} onChange={(e) => setFc("dealerName", e.target.value)} placeholder={t("dealerPlaceholder")} className="mt-1" />
                   </div>
                   <div>
                     <Label>{t("mileageKm")}</Label>
@@ -262,7 +262,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                   <div className="flex gap-2 mt-1">
                     <Input value={dtcInput} onChange={(e) => setDtcInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDtc(); } }}
-                      placeholder="예: P0171, C1234" className="flex-1 uppercase" />
+                      placeholder={t("dtcPlaceholder")} className="flex-1 uppercase" />
                     <Button type="button" variant="outline" size="sm" onClick={addDtc} className="h-9 px-3">
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -283,7 +283,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                 <div>
                   <Label>{t("symptomDescription")}</Label>
                   <Textarea value={fieldClaim.symptomDescription} onChange={(e) => setFc("symptomDescription", e.target.value)}
-                    placeholder="고객이 보고한 증상을 그대로 기재하세요." rows={3} className="mt-1" />
+                    placeholder={t("symptomPlaceholder")} rows={3} className="mt-1" />
                 </div>
               </div>
             )}
@@ -302,11 +302,11 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
               </div>
               <div>
                 <Label>{t("customerSite")}</Label>
-                <Input value={form.customerSiteName} onChange={(e) => set("customerSiteName", e.target.value)} placeholder="예: 화성공장" className="mt-1" />
+                <Input value={form.customerSiteName} onChange={(e) => set("customerSiteName", e.target.value)} placeholder={t("customerSitePlaceholder")} className="mt-1" />
               </div>
               <div>
                 <Label>{t("customerReference")}</Label>
-                <Input value={form.customerReference} onChange={(e) => set("customerReference", e.target.value)} placeholder="고객사 내부 관리번호" className="mt-1" />
+                <Input value={form.customerReference} onChange={(e) => set("customerReference", e.target.value)} placeholder={t("customerRefPlaceholder")} className="mt-1" />
               </div>
             </div>
 
