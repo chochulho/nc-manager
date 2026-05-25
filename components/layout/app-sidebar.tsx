@@ -54,8 +54,13 @@ export function AppSidebar({ session }: AppSidebarProps) {
     router.refresh();
   }
 
-  const isAdmin = session.user.isAdmin ?? false;
+  const isAdmin = session.user.isAdmin === true;
   const isOrgAdmin = session.user.orgRole === "ADMIN" || isAdmin;
+
+  // 개발 디버그 (배포 후 확인되면 제거)
+  if (typeof window !== "undefined") {
+    console.log("[NC Sidebar]", { isAdmin, isOrgAdmin, orgRole: session.user.orgRole, email: session.user.email });
+  }
 
   const navItems = [
     { href: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
