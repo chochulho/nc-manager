@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { customerComplaints, ncSequences, ncCustomers, ncFieldClaimDetails } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { sql } from "drizzle-orm";
+import { buildSiteFilter } from "@/lib/site-filter";
 
 async function nextComplaintNumber(orgId: string): Promise<string> {
   const year = new Date().getFullYear();
@@ -24,10 +25,12 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, customerComplaints.siteId);
+
   const items = await db
     .select()
     .from(customerComplaints)
-    .where(eq(customerComplaints.orgId, session.user.organizationId))
+    .where(and(eq(customerComplaints.orgId, session.user.organizationId), siteFilter))
     .orderBy(customerComplaints.createdAt);
 
   return NextResponse.json(items);
@@ -41,6 +44,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const {
+    siteId,
     customerId, customerSiteName, customerReference,
     receivedAt, receivedChannel, isFormal,
     discoveryStage, partId, lotNumber, quantityClaimed,
@@ -77,6 +81,7 @@ export async function POST(req: NextRequest) {
     .values({
       orgId: session.user.organizationId,
       complaintNumber,
+      siteId: siteId || null,
       customerId,
       customerSiteName: customerSiteName || null,
       customerReference: customerReference || null,

@@ -1,5 +1,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { db } from "@/lib/db";
+import { ncUserSites } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 
 export interface AppSession {
   user: {
@@ -11,6 +14,13 @@ export interface AppSession {
     organizationId: string | null;
     orgRole: "ADMIN" | "MEMBER";
     organizationName: string | null;
+    /**
+     * 접근 가능한 사업장 ID 목록.
+     * - null  → org ADMIN 또는 isAdmin (전체 사업장 접근 가능)
+     * - []    → 사업장 미배정 (데이터 조회 차단)
+     * - [id…] → 해당 사업장만 조회 가능
+     */
+    allowedSiteIds: string[] | null;
   };
 }
 
@@ -80,6 +90,25 @@ export async function auth(): Promise<AppSession | null> {
     }
   }
 
+  // ── 사업장 접근 권한 조회 ────────────────────────────────────────────────
+  // org ADMIN or isAdmin → null (전체 접근)
+  // 일반 MEMBER → nc_user_sites 에서 허용된 site ID 목록 조회
+  const resolvedOrgRole = isAdmin ? "ADMIN" : orgRole;
+  let allowedSiteIds: string[] | null = null;
+
+  if (resolvedOrgRole !== "ADMIN" && resolvedOrgId) {
+    const userSiteRows = await db
+      .select({ siteId: ncUserSites.siteId })
+      .from(ncUserSites)
+      .where(
+        and(
+          eq(ncUserSites.userId, user.id),
+          eq(ncUserSites.orgId, resolvedOrgId),
+        )
+      );
+    allowedSiteIds = userSiteRows.map((r) => r.siteId);
+  }
+
   return {
     user: {
       id: user.id,
@@ -88,8 +117,9 @@ export async function auth(): Promise<AppSession | null> {
       image: user.user_metadata?.avatar_url ?? null,
       isAdmin,
       organizationId: resolvedOrgId,
-      orgRole: isAdmin ? "ADMIN" : orgRole,
+      orgRole: resolvedOrgRole,
       organizationName: resolvedOrgName,
+      allowedSiteIds,
     },
   };
 }

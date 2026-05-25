@@ -1,5 +1,5 @@
 import {
-  pgTable, text, timestamp, integer, boolean,
+  pgTable, text, timestamp, integer, boolean, uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -75,6 +75,20 @@ export const ncCategoriesL3 = pgTable("nc_categories_l3", {
   sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
+
+// ── User-Site Access Mapping ────────────────────────────────────────────────
+// 사용자별 접근 가능한 사업장 목록 (NC Manager 자체 권한 테이블)
+// orgRole=ADMIN 또는 isAdmin인 경우 이 테이블을 무시하고 전체 접근
+
+export const ncUserSites = pgTable("nc_user_sites", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),   // Supabase auth user UUID
+  orgId: text("org_id").notNull(),
+  siteId: text("site_id").notNull().references(() => ncSites.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("nc_user_sites_user_site_uidx").on(t.userId, t.siteId),
+]);
 
 // ── Relations ──
 export const ncPartsRelations = relations(ncParts, ({ one }) => ({

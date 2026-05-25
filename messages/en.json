@@ -354,26 +354,13 @@
     }
   },
   "settings": {
-    "membersTitle": "Organization Members",
-    "inviteSection": "Invite Member",
-    "inviteEmail": "Email Address",
-    "inviteRole": "Role",
-    "inviteButton": "Send Invite",
-    "inviting": "Sending...",
-    "membersSection": "Members",
+    "membersTitle": "Members · Site Access",
+    "membersSection": "Organization Members",
     "roles": {
       "ADMIN": "Admin",
       "MEMBER": "Member"
     },
     "noName": "(No name)",
-    "pendingInvite": "Invite Pending",
-    "inviteButtonLabel": "Invite",
-    "membersCount": "{count} members",
-    "confirmRemove": "Remove this member from the organization?",
-    "toastInviteSent": "Invite sent to {email}.",
-    "toastMemberAdded": "Member added.",
-    "toastMemberRemoved": "Member removed.",
-    "toastInviteFailed": "Failed to send invite.",
-    "toastRemoveFailed": "Failed to remove member."
+    "membersCount": "{count} members"
   }
 }

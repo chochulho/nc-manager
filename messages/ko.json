@@ -354,26 +354,13 @@
     }
   },
   "settings": {
-    "membersTitle": "조직 멤버",
-    "inviteSection": "멤버 초대",
-    "inviteEmail": "이메일 주소",
-    "inviteRole": "역할",
-    "inviteButton": "초대 보내기",
-    "inviting": "초대 중...",
-    "membersSection": "멤버",
+    "membersTitle": "멤버 · 사업장 접근 관리",
+    "membersSection": "조직 멤버",
     "roles": {
       "ADMIN": "관리자",
       "MEMBER": "멤버"
     },
     "noName": "(이름 없음)",
-    "pendingInvite": "초대 대기 중",
-    "inviteButtonLabel": "초대",
-    "membersCount": "{count}명",
-    "confirmRemove": "멤버를 조직에서 제거하시겠습니까?",
-    "toastInviteSent": "{email}로 초대 이메일을 발송했습니다.",
-    "toastMemberAdded": "멤버를 추가했습니다.",
-    "toastMemberRemoved": "멤버를 제거했습니다.",
-    "toastInviteFailed": "초대에 실패했습니다.",
-    "toastRemoveFailed": "제거에 실패했습니다."
+    "membersCount": "{count}명"
   }
 }

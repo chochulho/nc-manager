@@ -7,6 +7,7 @@ import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
 import { sendCapaAssignmentEmail } from "@/lib/email";
+import { buildSiteFilter } from "@/lib/site-filter";
 
 const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
   ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
@@ -35,7 +36,10 @@ export async function GET(req: NextRequest) {
   const { year, period } = parsePeriodParams(searchParams.get("year") ?? undefined, searchParams.get("period") ?? undefined);
   const range = periodToDateRange(year, period);
 
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, capas.siteId);
+
   const conditions = [eq(capas.orgId, session.user.organizationId)];
+  if (siteFilter) conditions.push(siteFilter);
   if (range) {
     conditions.push(gte(capas.createdAt, range.gte));
     conditions.push(lte(capas.createdAt, range.lte));
@@ -66,11 +70,24 @@ export async function POST(req: NextRequest) {
 
   const capaNumber = await nextCapaNumber(session.user.organizationId);
 
+  // 소스 엔티티로부터 siteId 복사 (접근 제어 기준 일관성)
+  let sourceSiteId: string | null = null;
+  if (sourceType === "internal_nc") {
+    const [src] = await db.select({ siteId: internalNCs.occurrenceSiteId }).from(internalNCs)
+      .where(and(eq(internalNCs.id, sourceId), eq(internalNCs.orgId, session.user.organizationId))).limit(1);
+    sourceSiteId = src?.siteId ?? null;
+  } else if (sourceType === "customer_complaint") {
+    const [src] = await db.select({ siteId: customerComplaints.siteId }).from(customerComplaints)
+      .where(and(eq(customerComplaints.id, sourceId), eq(customerComplaints.orgId, session.user.organizationId))).limit(1);
+    sourceSiteId = src?.siteId ?? null;
+  }
+
   const [capa] = await db
     .insert(capas)
     .values({
       orgId: session.user.organizationId,
       capaNumber,
+      siteId: sourceSiteId,
       sourceType,
       sourceId,
       title,

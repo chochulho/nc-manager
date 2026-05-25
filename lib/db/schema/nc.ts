@@ -77,6 +77,7 @@ export const customerComplaints = pgTable("nc_customer_complaints", {
   orgId: text("org_id").notNull(),
   complaintNumber: text("complaint_number").notNull(),
 
+  siteId: text("site_id").references(() => ncSites.id),  // 접수/처리 사업장 (접근 제어 기준)
   customerId: text("customer_id").notNull().references(() => ncCustomers.id),
   customerSiteName: text("customer_site_name"),
   customerReference: text("customer_reference"),
@@ -140,6 +141,7 @@ export const capas = pgTable("nc_capas", {
   orgId: text("org_id").notNull(),
   capaNumber: text("capa_number").notNull(),
 
+  siteId: text("site_id").references(() => ncSites.id),  // 상위 NC/Complaint에서 복사 (접근 제어 기준)
   sourceType: text("source_type", {
     enum: ["internal_nc", "customer_complaint", "audit", "change", "gauge", "other"],
   }).notNull(),
