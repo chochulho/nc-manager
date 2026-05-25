@@ -77,13 +77,17 @@ export async function auth(): Promise<AppSession | null> {
 
   if (isAdmin && !orgId) {
     const adminClient = createSupabaseAdminClient();
-    const { data: firstOrg } = await adminClient
+    const { data: orgs, error: orgError } = await adminClient
       .from("organizations")
       .select("id, name")
       .order("created_at", { ascending: true })
-      .limit(1)
-      .single();
+      .limit(1);
 
+    if (orgError) {
+      console.error("[auth] organizations query error:", orgError.message);
+    }
+
+    const firstOrg = orgs?.[0] ?? null;
     if (firstOrg) {
       resolvedOrgId = firstOrg.id;
       resolvedOrgName = firstOrg.name;
