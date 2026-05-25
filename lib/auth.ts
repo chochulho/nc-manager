@@ -43,6 +43,50 @@ function checkIsAdmin(email: string): boolean {
 }
 
 /**
+ * org_members 테이블에서 사용자의 조직 멤버십을 조회한다.
+ * organizations(name) 조인이 실패할 경우 조인 없이 재시도한다.
+ */
+async function getMembership(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string
+): Promise<{ org_id: string; role: string; orgName: string | null } | null> {
+  // 1차 시도: organizations 조인 포함
+  const { data: full, error: fullErr } = await supabase
+    .from("org_members")
+    .select("org_id, role, organizations(name)")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!fullErr && full?.org_id) {
+    const orgName = (full.organizations as { name?: string } | null)?.name ?? null;
+    return { org_id: full.org_id, role: full.role, orgName };
+  }
+
+  if (fullErr) {
+    console.error("[auth] org_members join query error:", fullErr.message, fullErr.code);
+  }
+
+  // 2차 시도: 조인 없이 org_id, role만 조회
+  const { data: simple, error: simpleErr } = await supabase
+    .from("org_members")
+    .select("org_id, role")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (simpleErr) {
+    console.error("[auth] org_members simple query error:", simpleErr.message, simpleErr.code);
+  }
+
+  if (simple?.org_id) {
+    return { org_id: simple.org_id, role: simple.role, orgName: null };
+  }
+
+  return null;
+}
+
+/**
  * Get current authenticated user with org membership info.
  * Returns null if not authenticated.
  * Use this in API routes and server components.
@@ -53,21 +97,15 @@ export async function auth(): Promise<AppSession | null> {
 
   if (error || !user || !user.email) return null;
 
-  // Get org membership from quality-hub's org_members table
-  const { data: membership } = await supabase
-    .from("org_members")
-    .select("org_id, role, organizations(name)")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .single();
+  // Get org membership (with robust fallback if join fails)
+  const membership = await getMembership(supabase, user.id);
 
   const orgId = membership?.org_id ?? null;
-  const orgName = (membership?.organizations as { name?: string } | null)?.name ?? null;
+  const orgName = membership?.orgName ?? null;
   const orgRole = mapRole(membership?.role ?? null);
 
   // isAdmin: ADMIN_EMAILS 목록 OR quality-hub org_members에서 owner 역할
-  const isAdmin =
-    checkIsAdmin(user.email) || membership?.role === "owner";
+  const isAdmin = checkIsAdmin(user.email) || membership?.role === "owner";
 
   // ── 슈퍼어드민이지만 org가 없는 경우 ─────────────────────────────────
   // quality-hub 슈퍼어드민은 org_members에 없을 수 있음.
@@ -84,13 +122,18 @@ export async function auth(): Promise<AppSession | null> {
       .limit(1);
 
     if (orgError) {
-      console.error("[auth] organizations query error:", orgError.message);
+      console.error("[auth] organizations query error:", orgError.message, orgError.code);
+    } else {
+      console.log("[auth] admin fallback: found", orgs?.length ?? 0, "orgs for", user.email);
     }
 
     const firstOrg = orgs?.[0] ?? null;
     if (firstOrg) {
       resolvedOrgId = firstOrg.id;
       resolvedOrgName = firstOrg.name;
+      console.log("[auth] admin fallback resolved orgId:", resolvedOrgId);
+    } else {
+      console.warn("[auth] no organizations found for admin:", user.email, "→ organizationId will be null");
     }
   }
 
