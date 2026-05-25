@@ -1,31 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Save } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-const SOURCE_TYPE_OPTIONS = [
-  { value: "internal_nc", label: "내부 NC" },
-  { value: "customer_complaint", label: "고객 클레임" },
-  { value: "audit", label: "감사" },
-  { value: "change", label: "변경" },
-  { value: "gauge", label: "게이지" },
-  { value: "other", label: "기타" },
-];
-
-const METHODOLOGY_OPTIONS = [
-  { value: "8d", label: "8D (8-Discipline)" },
-  { value: "simple_capa", label: "Simple CAPA" },
-  { value: "a3", label: "A3" },
-];
 
 interface NcItem { id: string; ncNumber: string; title: string }
 interface ComplaintItem { id: string; complaintNumber: string; title: string }
@@ -40,6 +26,8 @@ interface Props {
 }
 
 export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, ncList, complaintList }: Props) {
+  const t = useTranslations("capa");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -82,7 +70,7 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
       <div className="page-header">
         <div className="flex items-center gap-3">
           <Link href="/capa"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-          <h1 className="page-title">CAPA 신규 등록</h1>
+          <h1 className="page-title">{t("newForm")}</h1>
         </div>
       </div>
 
@@ -90,36 +78,36 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">기본 정보</h2>
+              <h2 className="section-title">{t("basicInfo")}</h2>
               <div>
-                <Label>CAPA 제목 *</Label>
+                <Label>{t("title")} *</Label>
                 <Input
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
                   required
-                  placeholder="시정조치 제목을 입력하세요"
+                  placeholder={t("title")}
                   className="mt-1"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>방법론</Label>
+                  <Label>{t("methodology")}</Label>
                   <Select value={form.methodology} onValueChange={(v) => set("methodology", v)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {METHODOLOGY_OPTIONS.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                      ))}
+                      <SelectItem value="8d">{t("methodologies.8d")}</SelectItem>
+                      <SelectItem value="simple_capa">{t("methodologies.simple_capa")}</SelectItem>
+                      <SelectItem value="a3">{t("methodologies.a3")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div>
-                <Label>문제 설명</Label>
+                <Label>{t("problemStatement")}</Label>
                 <Textarea
                   value={form.problemStatement}
                   onChange={(e) => set("problemStatement", e.target.value)}
-                  placeholder="발생한 문제를 구체적으로 설명하세요"
+                  placeholder={t("problemStatement")}
                   rows={4}
                   className="mt-1"
                 />
@@ -129,20 +117,23 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
 
           <div className="space-y-5">
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">출처 정보</h2>
+              <h2 className="section-title">{t("sourceInfo")}</h2>
               <div>
-                <Label>출처 유형 *</Label>
+                <Label>{t("sourceType")} *</Label>
                 <Select value={form.sourceType} onValueChange={(v) => setForm((prev) => ({ ...prev, sourceType: v, sourceId: "" }))}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {SOURCE_TYPE_OPTIONS.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
+                    <SelectItem value="internal_nc">{t("sourceTypes.internal_nc")}</SelectItem>
+                    <SelectItem value="customer_complaint">{t("sourceTypes.customer_complaint")}</SelectItem>
+                    <SelectItem value="audit">{t("sourceTypes.audit")}</SelectItem>
+                    <SelectItem value="change">{t("sourceTypes.change")}</SelectItem>
+                    <SelectItem value="gauge">{t("sourceTypes.gauge")}</SelectItem>
+                    <SelectItem value="other">{t("sourceTypes.other")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>출처 *</Label>
+                <Label>{t("source")} *</Label>
                 {sourceLabel ? (
                   <div className="mt-1 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800 font-medium">
                     {sourceLabel}
@@ -150,7 +141,7 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
                   </div>
                 ) : form.sourceType === "internal_nc" ? (
                   <Select value={form.sourceId} onValueChange={(v) => set("sourceId", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="NC 선택" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={t("selectNc")} /></SelectTrigger>
                     <SelectContent>
                       {ncList.map((nc) => (
                         <SelectItem key={nc.id} value={nc.id}>[{nc.ncNumber}] {nc.title}</SelectItem>
@@ -159,7 +150,7 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
                   </Select>
                 ) : form.sourceType === "customer_complaint" ? (
                   <Select value={form.sourceId} onValueChange={(v) => set("sourceId", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="클레임 선택" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={t("selectComplaint")} /></SelectTrigger>
                     <SelectContent>
                       {complaintList.map((cc) => (
                         <SelectItem key={cc.id} value={cc.id}>[{cc.complaintNumber}] {cc.title}</SelectItem>
@@ -170,7 +161,7 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
                   <Input
                     value={form.sourceId}
                     onChange={(e) => set("sourceId", e.target.value)}
-                    placeholder="출처 ID 입력"
+                    placeholder={t("sourceId")}
                     className="mt-1"
                   />
                 )}
@@ -179,7 +170,7 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
 
             <Button type="submit" className="w-full" disabled={loading}>
               <Save className="h-4 w-4 mr-2" />
-              {loading ? "저장 중..." : "CAPA 등록하기"}
+              {loading ? tc("saving") : t("registerButton")}
             </Button>
           </div>
         </div>

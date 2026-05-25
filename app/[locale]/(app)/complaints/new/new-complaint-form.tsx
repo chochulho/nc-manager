@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save, Paperclip, X, Plus, MapPin } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n/navigation";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 
 interface Option { id: string; name: string; code?: string }
@@ -21,28 +22,10 @@ interface Props {
   categoriesL2: CategoryL2[];
 }
 
-const RECEIVED_CHANNELS = [
-  { value: "portal", label: "포털" },
-  { value: "email", label: "이메일" },
-  { value: "phone", label: "전화" },
-  { value: "meeting", label: "미팅" },
-  { value: "informal", label: "비공식" },
-];
-
-const DISCOVERY_STAGES = [
-  { value: "inline_0km", label: "Inline/0km" },
-  { value: "field", label: "필드" },
-  { value: "warranty", label: "보증" },
-  { value: "other", label: "기타" },
-];
-
-const SEVERITIES = [
-  { value: "critical", label: "긴급 (Critical)" },
-  { value: "major", label: "주요 (Major)" },
-  { value: "minor", label: "경미 (Minor)" },
-];
-
 export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
+  const t = useTranslations("complaint");
+  const tc = useTranslations("common");
+  const tn = useTranslations("nc");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -136,7 +119,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
       <div className="page-header">
         <div className="flex items-center gap-3">
           <Link href="/complaints"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
-          <h1 className="page-title">고객 클레임 신규 등록</h1>
+          <h1 className="page-title">{t("newForm")}</h1>
         </div>
       </div>
 
@@ -145,98 +128,112 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
           <div className="lg:col-span-2 space-y-5">
             {/* 기본 정보 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">기본 정보</h2>
+              <h2 className="section-title">{t("basicInfo")}</h2>
               <div>
-                <Label>제목 *</Label>
-                <Input value={form.title} onChange={(e) => set("title", e.target.value)} required placeholder="클레임 제목을 간략히 입력하세요" className="mt-1" />
+                <Label>{tc("title")} *</Label>
+                <Input value={form.title} onChange={(e) => set("title", e.target.value)} required placeholder={t("title2")} className="mt-1" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>수신일 *</Label>
+                  <Label>{t("receivedAt")} *</Label>
                   <Input type="date" value={form.receivedAt} onChange={(e) => set("receivedAt", e.target.value)} required className="mt-1" />
                 </div>
                 <div>
-                  <Label>수신 채널 *</Label>
+                  <Label>{t("receivedChannel")} *</Label>
                   <Select value={form.receivedChannel} onValueChange={(v: string) => set("receivedChannel", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
-                    <SelectContent>{RECEIVED_CHANNELS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="portal">{t("channels.portal")}</SelectItem>
+                      <SelectItem value="email">{t("channels.email")}</SelectItem>
+                      <SelectItem value="phone">{t("channels.phone")}</SelectItem>
+                      <SelectItem value="meeting">{t("channels.meeting")}</SelectItem>
+                      <SelectItem value="informal">{t("channels.informal")}</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>발생 단계 *</Label>
+                  <Label>{t("discoveryStage")} *</Label>
                   <Select value={form.discoveryStage} onValueChange={(v: string) => set("discoveryStage", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
-                    <SelectContent>{DISCOVERY_STAGES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inline_0km">{t("stages.inline_0km")}</SelectItem>
+                      <SelectItem value="field">{t("stages.field")}</SelectItem>
+                      <SelectItem value="warranty">{t("stages.warranty")}</SelectItem>
+                      <SelectItem value="other">{t("stages.other")}</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>심각도 *</Label>
+                  <Label>{t("severity")} *</Label>
                   <Select value={form.severity} onValueChange={(v: string) => set("severity", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
-                    <SelectContent>{SEVERITIES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="critical">{tn("severities.critical")}</SelectItem>
+                      <SelectItem value="major">{tn("severities.major")}</SelectItem>
+                      <SelectItem value="minor">{tn("severities.minor")}</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>분류 (L2)</Label>
+                  <Label>{tn("category")}</Label>
                   <Select value={form.categoryL2Id} onValueChange={(v: string) => set("categoryL2Id", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
                     <SelectContent>{categoriesL2.map(c => <SelectItem key={c.id} value={c.id}>[{c.code}] {c.nameKo}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>공식 클레임 여부</Label>
+                  <Label>{t("isFormal")}</Label>
                   <Select value={form.isFormal ? "true" : "false"} onValueChange={(v: string) => set("isFormal", v === "true")}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="true">공식 (Formal)</SelectItem>
-                      <SelectItem value="false">비공식 (Informal)</SelectItem>
+                      <SelectItem value="true">{t("formal")}</SelectItem>
+                      <SelectItem value="false">{t("informal")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div>
-                <Label>고객 설명</Label>
-                <Textarea value={form.customerDescription} onChange={(e) => set("customerDescription", e.target.value)} placeholder="고객이 제시한 불만 내용" rows={4} className="mt-1" />
+                <Label>{t("customerDescription")}</Label>
+                <Textarea value={form.customerDescription} onChange={(e) => set("customerDescription", e.target.value)} placeholder={t("customerDescription")} rows={4} className="mt-1" />
               </div>
             </div>
 
             {/* 대상 정보 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">대상 정보</h2>
+              <h2 className="section-title">{t("targetInfo")}</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>부품</Label>
+                  <Label>{tn("part")}</Label>
                   <Select value={form.partId} onValueChange={(v: string) => set("partId", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
                     <SelectContent>{parts.map(p => <SelectItem key={p.id} value={p.id}>{p.number} — {p.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>LOT 번호</Label>
+                  <Label>{t("lotNumber")}</Label>
                   <Input value={form.lotNumber} onChange={(e) => set("lotNumber", e.target.value)} placeholder="LOT-XXXXXX" className="mt-1" />
                 </div>
                 <div>
-                  <Label>클레임 수량</Label>
+                  <Label>{t("quantity")}</Label>
                   <Input type="number" value={form.quantityClaimed} onChange={(e) => set("quantityClaimed", e.target.value)} placeholder="0" className="mt-1" />
                 </div>
               </div>
             </div>
 
-            {/* 필드 클레임 정보 (field / warranty 일 때만) */}
+            {/* 필드 클레임 정보 */}
             {isFieldClaim && (
               <div className="bg-white rounded-2xl border border-emerald-200 p-5 space-y-4">
                 <h2 className="section-title flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-emerald-600" />
-                  필드 클레임 정보
+                  {t("fieldClaimSection")}
                 </h2>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>차종</Label>
+                    <Label>{t("vehicleModel")}</Label>
                     <Input value={fieldClaim.vehicleModel} onChange={(e) => setFc("vehicleModel", e.target.value)} placeholder="예: G90, Tucson" className="mt-1" />
                   </div>
                   <div>
-                    <Label>제조년월</Label>
+                    <Label>{t("manufacturedAt")}</Label>
                     <Input type="month" value={fieldClaim.manufacturedAt} onChange={(e) => setFc("manufacturedAt", e.target.value)} className="mt-1" />
                   </div>
                   <div>
@@ -244,25 +241,24 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                     <Input value={fieldClaim.vehicleVin} onChange={(e) => setFc("vehicleVin", e.target.value)} placeholder="차량 식별번호" className="mt-1" />
                   </div>
                   <div>
-                    <Label>사용기간 (개월)</Label>
+                    <Label>{t("usageMonths")}</Label>
                     <Input type="number" value={fieldClaim.usageMonths} onChange={(e) => setFc("usageMonths", e.target.value)} placeholder="예: 24" className="mt-1" />
                   </div>
                   <div>
-                    <Label>발생 지역</Label>
-                    <Input value={fieldClaim.region} onChange={(e) => setFc("region", e.target.value)} placeholder="예: 서울, 경기, 미국 서부" className="mt-1" />
+                    <Label>{t("region")}</Label>
+                    <Input value={fieldClaim.region} onChange={(e) => setFc("region", e.target.value)} placeholder="예: 서울, 미국 서부" className="mt-1" />
                   </div>
                   <div>
-                    <Label>딜러 / 사업소</Label>
+                    <Label>{t("dealer")}</Label>
                     <Input value={fieldClaim.dealerName} onChange={(e) => setFc("dealerName", e.target.value)} placeholder="예: 현대 강남 서비스센터" className="mt-1" />
                   </div>
                   <div>
-                    <Label>주행거리 (km)</Label>
+                    <Label>{t("mileageKm")}</Label>
                     <Input type="number" value={fieldClaim.mileageKm} onChange={(e) => setFc("mileageKm", e.target.value)} placeholder="예: 35000" className="mt-1" />
                   </div>
                 </div>
-
                 <div>
-                  <Label>불량코드 (DTC)</Label>
+                  <Label>{t("dtcCodes")}</Label>
                   <div className="flex gap-2 mt-1">
                     <Input value={dtcInput} onChange={(e) => setDtcInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDtc(); } }}
@@ -284,9 +280,8 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                     </div>
                   )}
                 </div>
-
                 <div>
-                  <Label>고객 증상 기술</Label>
+                  <Label>{t("symptomDescription")}</Label>
                   <Textarea value={fieldClaim.symptomDescription} onChange={(e) => setFc("symptomDescription", e.target.value)}
                     placeholder="고객이 보고한 증상을 그대로 기재하세요." rows={3} className="mt-1" />
                 </div>
@@ -297,41 +292,40 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
           {/* 사이드 */}
           <div className="space-y-5">
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">고객사 정보</h2>
+              <h2 className="section-title">{t("customerInfo")}</h2>
               <div>
-                <Label>고객사 *</Label>
+                <Label>{t("customer")} *</Label>
                 <Select value={form.customerId} onValueChange={(v: string) => set("customerId", v)}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
                   <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>고객사 공장명</Label>
+                <Label>{t("customerSite")}</Label>
                 <Input value={form.customerSiteName} onChange={(e) => set("customerSiteName", e.target.value)} placeholder="예: 화성공장" className="mt-1" />
               </div>
               <div>
-                <Label>고객사 참조번호</Label>
+                <Label>{t("customerReference")}</Label>
                 <Input value={form.customerReference} onChange={(e) => set("customerReference", e.target.value)} placeholder="고객사 내부 관리번호" className="mt-1" />
               </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
-              <h2 className="section-title">속성</h2>
+              <h2 className="section-title">{tc("attributes")}</h2>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.safetyRelated} onChange={(e) => set("safetyRelated", e.target.checked)} className="h-4 w-4 rounded" />
-                <span className="text-sm font-medium">안전 관련 (Safety)</span>
+                <span className="text-sm font-medium">{tc("safetyRelated")}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={form.recallRisk} onChange={(e) => set("recallRisk", e.target.checked)} className="h-4 w-4 rounded" />
-                <span className="text-sm font-medium text-red-600">리콜 위험 (Recall Risk)</span>
+                <span className="text-sm font-medium text-red-600">{t("recallRisk")}</span>
               </label>
             </div>
 
-            {/* 파일 첨부 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
               <h2 className="section-title flex items-center gap-2">
                 <Paperclip className="h-4 w-4" />
-                첨부파일 (등록 시 함께 업로드)
+                {tc("attachmentsHint")}
               </h2>
               <label
                 className="block border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors"
@@ -345,7 +339,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                 <input type="file" multiple className="hidden"
                   onChange={(e) => { if (e.target.files) setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]); }} />
                 <Paperclip className="h-5 w-5 mx-auto mb-1.5 text-gray-400" />
-                <p className="text-sm text-muted-foreground">클릭하거나 파일을 끌어다 놓으세요</p>
+                <p className="text-sm text-muted-foreground">{tc("dropzoneHint")}</p>
               </label>
               {pendingFiles.length > 0 && (
                 <div className="space-y-1">
@@ -366,7 +360,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
 
             <Button type="submit" className="w-full" disabled={loading}>
               <Save className="h-4 w-4 mr-2" />
-              {loading ? "저장 중..." : "등록하기"}
+              {loading ? tc("saving") : tc("register")}
             </Button>
           </div>
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/lib/i18n/navigation";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Paperclip, X } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n/navigation";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 
 interface Option { id: string; name: string; code?: string; number?: string }
@@ -26,22 +26,9 @@ interface Props {
   categoriesL2: CategoryL2[];
 }
 
-const DISCOVERY_STAGES = [
-  { value: "incoming", label: "입고검사" },
-  { value: "in_process", label: "공정 중" },
-  { value: "outgoing", label: "출하검사" },
-  { value: "internal_audit", label: "내부감사" },
-  { value: "msa", label: "MSA" },
-  { value: "other", label: "기타" },
-];
-
-const SEVERITIES = [
-  { value: "critical", label: "긴급 (Critical)" },
-  { value: "major", label: "주요 (Major)" },
-  { value: "minor", label: "경미 (Minor)" },
-];
-
 export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: Props) {
+  const t = useTranslations("nc");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -84,7 +71,6 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
         return;
       }
 
-      // 선택된 파일 업로드
       if (pendingFiles.length > 0) {
         let uploaded = 0;
         for (const file of pendingFiles) {
@@ -116,32 +102,32 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="page-title">내부 부적합 신규 등록</h1>
+          <h1 className="page-title">{t("newForm")}</h1>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* 기본 정보 */}
           <div className="lg:col-span-2 space-y-5">
+            {/* 기본 정보 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">기본 정보</h2>
+              <h2 className="section-title">{t("basicInfo")}</h2>
 
               <div>
-                <Label htmlFor="title">제목 *</Label>
+                <Label htmlFor="title">{tc("title")} *</Label>
                 <Input
                   id="title"
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
                   required
-                  placeholder="부적합 제목을 간략히 입력하세요"
+                  placeholder={t("title")}
                   className="mt-1"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>발견일 *</Label>
+                  <Label>{t("discoveredAt")} *</Label>
                   <Input
                     type="date"
                     value={form.discoveredAt}
@@ -151,15 +137,18 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
                   />
                 </div>
                 <div>
-                  <Label>발견 단계 *</Label>
+                  <Label>{t("discoveryStage")} *</Label>
                   <Select value={form.discoveryStage} onValueChange={(v: string) => set("discoveryStage", v)}>
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="선택" />
+                      <SelectValue placeholder={tc("select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      {DISCOVERY_STAGES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
+                      <SelectItem value="incoming">{t("stages.incoming")}</SelectItem>
+                      <SelectItem value="in_process">{t("stages.in_process")}</SelectItem>
+                      <SelectItem value="outgoing">{t("stages.outgoing")}</SelectItem>
+                      <SelectItem value="internal_audit">{t("stages.internal_audit")}</SelectItem>
+                      <SelectItem value="msa">{t("stages.msa")}</SelectItem>
+                      <SelectItem value="other">{t("stages.other")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -167,23 +156,23 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>심각도 *</Label>
+                  <Label>{t("severity")} *</Label>
                   <Select value={form.severity} onValueChange={(v: string) => set("severity", v)}>
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="선택" />
+                      <SelectValue placeholder={tc("select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      {SEVERITIES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
+                      <SelectItem value="critical">{t("severities.critical")}</SelectItem>
+                      <SelectItem value="major">{t("severities.major")}</SelectItem>
+                      <SelectItem value="minor">{t("severities.minor")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>분류 (L2)</Label>
+                  <Label>{t("category")}</Label>
                   <Select value={form.categoryL2Id} onValueChange={(v: string) => set("categoryL2Id", v)}>
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="선택" />
+                      <SelectValue placeholder={tc("select")} />
                     </SelectTrigger>
                     <SelectContent>
                       {categoriesL2.map((c) => (
@@ -195,11 +184,11 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
               </div>
 
               <div>
-                <Label>내용</Label>
+                <Label>{t("description")}</Label>
                 <Textarea
                   value={form.description}
                   onChange={(e) => set("description", e.target.value)}
-                  placeholder="부적합 상세 내용을 입력하세요"
+                  placeholder={t("description")}
                   rows={4}
                   className="mt-1"
                 />
@@ -208,13 +197,13 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
 
             {/* 대상 정보 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">대상 정보</h2>
+              <h2 className="section-title">{tc("targetInfo")}</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>부품</Label>
+                  <Label>{t("part")}</Label>
                   <Select value={form.partId} onValueChange={(v: string) => set("partId", v)}>
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="선택" />
+                      <SelectValue placeholder={tc("select")} />
                     </SelectTrigger>
                     <SelectContent>
                       {parts.map((p) => (
@@ -224,7 +213,7 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
                   </Select>
                 </div>
                 <div>
-                  <Label>LOT 번호</Label>
+                  <Label>{tc("lotNumber")}</Label>
                   <Input
                     value={form.lotNumber}
                     onChange={(e) => set("lotNumber", e.target.value)}
@@ -233,7 +222,7 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
                   />
                 </div>
                 <div>
-                  <Label>검사 수량</Label>
+                  <Label>{t("quantityInspected")}</Label>
                   <Input
                     type="number"
                     value={form.quantityInspected}
@@ -243,7 +232,7 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
                   />
                 </div>
                 <div>
-                  <Label>부적합 수량</Label>
+                  <Label>{t("quantityNc")}</Label>
                   <Input
                     type="number"
                     value={form.quantityNc}
@@ -259,12 +248,12 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
           {/* 사이드 */}
           <div className="space-y-5">
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-              <h2 className="section-title">발생 위치</h2>
+              <h2 className="section-title">{t("occurrenceLocation")}</h2>
               <div>
-                <Label>발견 사업장</Label>
+                <Label>{t("discoveredBySite")}</Label>
                 <Select value={form.discoveredBySiteId} onValueChange={(v: string) => set("discoveredBySiteId", v)}>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="선택" />
+                    <SelectValue placeholder={tc("select")} />
                   </SelectTrigger>
                   <SelectContent>
                     {sites.map((s) => (
@@ -274,10 +263,10 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
                 </Select>
               </div>
               <div>
-                <Label>발견 공정</Label>
+                <Label>{t("discoveredByProcess")}</Label>
                 <Select value={form.discoveredByProcessId} onValueChange={(v: string) => set("discoveredByProcessId", v)}>
                   <SelectTrigger className="mt-1">
-                    <SelectValue placeholder="선택" />
+                    <SelectValue placeholder={tc("select")} />
                   </SelectTrigger>
                   <SelectContent>
                     {processes.map((p) => (
@@ -288,10 +277,10 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
               </div>
               {form.discoveryStage === "incoming" && (
                 <div>
-                  <Label>공급자</Label>
+                  <Label>{t("supplier")}</Label>
                   <Select value={form.occurrenceSupplierId} onValueChange={(v: string) => set("occurrenceSupplierId", v)}>
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="선택" />
+                      <SelectValue placeholder={tc("select")} />
                     </SelectTrigger>
                     <SelectContent>
                       {suppliers.map((s) => (
@@ -304,41 +293,25 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
-              <h2 className="section-title">속성</h2>
+              <h2 className="section-title">{tc("attributes")}</h2>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.safetyRelated}
-                  onChange={(e) => set("safetyRelated", e.target.checked)}
-                  className="h-4 w-4 rounded"
-                />
-                <span className="text-sm font-medium">안전 관련 (Safety)</span>
+                <input type="checkbox" checked={form.safetyRelated} onChange={(e) => set("safetyRelated", e.target.checked)} className="h-4 w-4 rounded" />
+                <span className="text-sm font-medium">{tc("safetyRelated")}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.regulatoryRelated}
-                  onChange={(e) => set("regulatoryRelated", e.target.checked)}
-                  className="h-4 w-4 rounded"
-                />
-                <span className="text-sm font-medium">법규 관련 (Regulatory)</span>
+                <input type="checkbox" checked={form.regulatoryRelated} onChange={(e) => set("regulatoryRelated", e.target.checked)} className="h-4 w-4 rounded" />
+                <span className="text-sm font-medium">{t("regulatoryRelated")}</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.capaRequired}
-                  onChange={(e) => set("capaRequired", e.target.checked)}
-                  className="h-4 w-4 rounded"
-                />
-                <span className="text-sm font-medium">CAPA 필요</span>
+                <input type="checkbox" checked={form.capaRequired} onChange={(e) => set("capaRequired", e.target.checked)} className="h-4 w-4 rounded" />
+                <span className="text-sm font-medium">{t("capaRequired")}</span>
               </label>
             </div>
 
-            {/* 파일 첨부 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
               <h2 className="section-title flex items-center gap-2">
                 <Paperclip className="h-4 w-4" />
-                첨부파일 (등록 시 함께 업로드)
+                {tc("attachmentsHint")}
               </h2>
               <label
                 className="block border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors"
@@ -349,16 +322,10 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
                   setPendingFiles((prev) => [...prev, ...dropped]);
                 }}
               >
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
-                  }}
-                />
+                <input type="file" multiple className="hidden"
+                  onChange={(e) => { if (e.target.files) setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]); }} />
                 <Paperclip className="h-5 w-5 mx-auto mb-1.5 text-gray-400" />
-                <p className="text-sm text-muted-foreground">클릭하거나 파일을 끌어다 놓으세요</p>
+                <p className="text-sm text-muted-foreground">{tc("dropzoneHint")}</p>
               </label>
               {pendingFiles.length > 0 && (
                 <div className="space-y-1">
@@ -379,7 +346,7 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
 
             <Button type="submit" className="w-full" disabled={loading}>
               <Save className="h-4 w-4 mr-2" />
-              {loading ? "저장 중..." : "등록하기"}
+              {loading ? tc("saving") : tc("register")}
             </Button>
           </div>
         </div>
