@@ -68,9 +68,9 @@ export function MembersClient({ initialMembers, sites, userSiteMap }: Props) {
               : current.filter((id) => id !== siteId),
           };
         });
-        toast.error("접근 권한 변경에 실패했습니다.");
+        toast.error(t("accessChangeFailed"));
       } else {
-        toast.success(currentlyAllowed ? "사업장 접근 권한을 제거했습니다." : "사업장 접근 권한을 추가했습니다.");
+        toast.success(currentlyAllowed ? t("accessRemoved") : t("accessAdded"));
       }
     } catch {
       // 네트워크 오류 시 롤백
@@ -83,7 +83,7 @@ export function MembersClient({ initialMembers, sites, userSiteMap }: Props) {
             : current.filter((id) => id !== siteId),
         };
       });
-      toast.error("요청에 실패했습니다.");
+      toast.error(t("requestFailed"));
     } finally {
       setLoadingKey(null);
     }
@@ -94,7 +94,7 @@ export function MembersClient({ initialMembers, sites, userSiteMap }: Props) {
       <div className="page-header">
         <h1 className="page-title">{t("membersTitle")}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          멤버별 사업장 접근 권한을 설정합니다. ADMIN 역할은 모든 사업장에 자동으로 접근 가능합니다.
+          {t("membersDesc")}
         </p>
       </div>
 
@@ -102,10 +102,10 @@ export function MembersClient({ initialMembers, sites, userSiteMap }: Props) {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-amber-600" />
-            <p className="text-sm font-medium text-amber-800">등록된 사업장이 없습니다</p>
+            <p className="text-sm font-medium text-amber-800">{t("noSites")}</p>
           </div>
           <p className="text-xs text-amber-600 mt-0.5 ml-6">
-            마스터 데이터 &gt; 사업장에서 사업장을 먼저 등록해 주세요.
+            {t("noSitesHint")}
           </p>
         </div>
       )}
@@ -114,12 +114,12 @@ export function MembersClient({ initialMembers, sites, userSiteMap }: Props) {
         <div className="px-5 py-4 border-b flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
           <span className="font-semibold text-sm">
-            조직 멤버 ({initialMembers.length}명)
+            {t("membersSection")} ({t("membersCount", { count: initialMembers.length })})
           </span>
           {sites.length > 0 && (
             <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              사업장 접근 권한
+              {t("siteAccess")}
             </span>
           )}
         </div>
@@ -160,7 +160,7 @@ export function MembersClient({ initialMembers, sites, userSiteMap }: Props) {
                     {isAdmin ? (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <CheckSquare className="h-3.5 w-3.5 text-green-500" />
-                        <span>모든 사업장 접근 가능 (ADMIN)</span>
+                        <span>{t("adminFullAccess")}</span>
                       </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">

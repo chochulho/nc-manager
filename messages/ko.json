@@ -83,7 +83,8 @@
     "dropzoneHint": "클릭하거나 파일을 끌어다 놓으세요",
     "printReport": "보고서 출력",
     "registeredSuccess": "{number} 등록 완료",
-    "registeredSuccessAttachments": "{number} 등록 완료 (첨부 {count}개)"
+    "registeredSuccessAttachments": "{number} 등록 완료 (첨부 {count}개)",
+    "eg": "예:"
   },
   "language": {
     "ko": "한국어",
@@ -178,6 +179,7 @@
     "dispositionType": "처분 유형",
     "dispositionNotes": "처분 메모",
     "copqTotal": "COPQ 합계",
+    "copqUnit": "원",
     "viewCapa": "CAPA 보기",
     "costScrap": "폐기 비용 (KRW)",
     "costRework": "재작업 비용 (KRW)",
@@ -286,6 +288,7 @@
     },
     "copqSection": "비용 (COPQ)",
     "copqTotal": "COPQ 합계",
+    "copqUnit": "원",
     "costRecallReturn": "리콜/반환 (KRW)",
     "costPenalty": "페널티 (KRW)",
     "costOther": "기타 (KRW)",
@@ -474,29 +477,89 @@
   },
   "masters": {
     "title": "마스터 관리",
+    "code": "코드",
+    "name": "이름",
+    "loading": "로딩 중...",
+    "add": "추가",
+    "save": "저장",
+    "cancel": "취소",
+    "requiredCodeAndName": "코드와 이름을 입력하세요.",
+    "saveFailed": "저장에 실패했습니다.",
+    "updated": "수정됐습니다.",
+    "created": "등록됐습니다.",
+    "deleteConfirm": "비활성화하시겠습니까?",
+    "deleted": "삭제됐습니다.",
+    "siteField": "사업장",
+    "customerField": "고객사",
+    "optionalSelect": "선택 (선택사항)",
     "customers": {
       "label": "고객사",
-      "desc": "고객사 마스터 및 SLA 관리"
+      "desc": "고객사 마스터 및 SLA 관리",
+      "pageTitle": "고객사 관리",
+      "editTitle": "고객사 수정",
+      "newTitle": "신규 고객사",
+      "namePlaceholder": "(주)완성차",
+      "empty": "등록된 고객사가 없습니다.",
+      "requiredFields": "코드와 이름을 입력하세요.",
+      "slaSection": "SLA 설정 (고객 클레임 대응 기한)",
+      "initialResponse": "초도 대응 (시간)",
+      "containment": "봉쇄조치 (시간)",
+      "finalReport": "최종보고서 (일)",
+      "colInitialResponse": "초도대응(h)",
+      "colContainment": "봉쇄조치(h)",
+      "colFinalReport": "최종보고(d)"
     },
     "suppliers": {
       "label": "공급자",
-      "desc": "협력사/공급자 마스터"
+      "desc": "협력사/공급자 마스터",
+      "pageTitle": "공급자 관리",
+      "editTitle": "공급자 수정",
+      "newTitle": "신규 공급자",
+      "namePlaceholder": "(주)예시부품",
+      "empty": "등록된 공급자가 없습니다."
     },
     "parts": {
       "label": "부품",
-      "desc": "부품 마스터 관리"
+      "desc": "부품 마스터 관리",
+      "pageTitle": "부품 관리",
+      "editTitle": "부품 수정",
+      "newTitle": "신규 부품",
+      "partNumber": "품번",
+      "partName": "품명",
+      "namePlaceholder": "브레이크 패드",
+      "requiredFields": "품번과 품명을 입력하세요.",
+      "empty": "등록된 부품이 없습니다."
     },
     "sites": {
       "label": "사업장",
-      "desc": "사업장/공장 마스터"
+      "desc": "사업장/공장 마스터",
+      "pageTitle": "사업장 관리",
+      "editTitle": "사업장 수정",
+      "newTitle": "신규 사업장",
+      "codePlaceholder": "SITE-01",
+      "namePlaceholder": "본사 공장",
+      "empty": "등록된 사업장이 없습니다."
     },
     "processes": {
       "label": "공정",
-      "desc": "공정 마스터 관리"
+      "desc": "공정 마스터 관리",
+      "pageTitle": "공정 관리",
+      "editTitle": "공정 수정",
+      "newTitle": "신규 공정",
+      "codePlaceholder": "P-001",
+      "namePlaceholder": "프레스 공정",
+      "empty": "등록된 공정이 없습니다."
     },
     "categories": {
       "label": "분류체계",
-      "desc": "NC 분류 코드 관리"
+      "desc": "NC 분류 코드 관리",
+      "pageTitle": "분류체계 (NC Category)",
+      "description": "시스템 기본 분류 (IATF 16949 기반) — 조직별 커스텀 분류는 추후 지원 예정",
+      "colCode": "코드",
+      "colKorean": "한국어",
+      "colEnglish": "English",
+      "colType": "구분",
+      "systemBadge": "시스템"
     }
   },
   "ll": {
@@ -732,6 +795,48 @@
       "MEMBER": "멤버"
     },
     "noName": "(이름 없음)",
-    "membersCount": "{count}명"
+    "membersCount": "{count}명",
+    "membersDesc": "멤버별 사업장 접근 권한을 설정합니다. ADMIN 역할은 모든 사업장에 자동으로 접근 가능합니다.",
+    "noSites": "등록된 사업장이 없습니다",
+    "noSitesHint": "마스터 데이터 > 사업장에서 사업장을 먼저 등록해 주세요.",
+    "siteAccess": "사업장 접근 권한",
+    "adminFullAccess": "모든 사업장 접근 가능 (ADMIN)",
+    "accessChangeFailed": "접근 권한 변경에 실패했습니다.",
+    "accessRemoved": "사업장 접근 권한을 제거했습니다.",
+    "accessAdded": "사업장 접근 권한을 추가했습니다.",
+    "requestFailed": "요청에 실패했습니다."
+  },
+  "admin": {
+    "title": "관리자",
+    "currentSession": "현재 세션",
+    "email": "이메일",
+    "currentOrg": "현재 조직",
+    "noOrg": "없음 (페이지 접근 불가)",
+    "orgId": "조직 ID",
+    "sessionDiag": "세션 진단",
+    "sessionDiagDesc": "조직 ID가 없으면 내부NC·클레임·CAPA 등 모든 페이지가 대시보드로 리다이렉트됩니다.",
+    "runDiag": "세션 진단 실행",
+    "qualityHubOrgs": "Quality Hub 조직",
+    "qualityHubOrgsDesc": "Supabase org_members 기반 — 멤버 관리는 Quality Hub에서",
+    "openQualityHub": "Quality Hub 열기",
+    "noOrgsWarning": "⚠ 조직 없음 — 아래에서 조직을 생성하면 모든 페이지를 사용할 수 있습니다.",
+    "newOrg": "새 조직 생성",
+    "orgNamePlaceholder": "조직 이름 (예: 테스트 제조사)",
+    "create": "생성",
+    "orgCreationHint": "생성 후 현재 계정이 해당 조직의 owner로 자동 등록됩니다.",
+    "systemData": "시스템 데이터",
+    "ncCategories": "NC 분류체계 (카테고리)",
+    "categoryCount": "현재 {count}개 시스템 카테고리",
+    "alreadySeeded": "이미 시드됨",
+    "seedCategories": "카테고리 시드",
+    "seedSuccess": "카테고리 시드 완료",
+    "seedFailed": "시드 실패",
+    "requestFailed": "요청 실패",
+    "orgNameRequired": "조직 이름을 입력하세요",
+    "orgCreated": "조직 생성 완료 — 페이지를 새로고침 하세요",
+    "orgCreateFailed": "조직 생성 실패",
+    "diagFailed": "진단 실패: ",
+    "active": "활성",
+    "suspended": "정지"
   }
 }

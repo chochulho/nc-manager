@@ -242,7 +242,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                   </div>
                   <div>
                     <Label>{t("usageMonths")}</Label>
-                    <Input type="number" value={fieldClaim.usageMonths} onChange={(e) => setFc("usageMonths", e.target.value)} placeholder="예: 24" className="mt-1" />
+                    <Input type="number" value={fieldClaim.usageMonths} onChange={(e) => setFc("usageMonths", e.target.value)} placeholder={`${tc("eg")} 24`} className="mt-1" />
                   </div>
                   <div>
                     <Label>{t("region")}</Label>
@@ -254,7 +254,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                   </div>
                   <div>
                     <Label>{t("mileageKm")}</Label>
-                    <Input type="number" value={fieldClaim.mileageKm} onChange={(e) => setFc("mileageKm", e.target.value)} placeholder="예: 35000" className="mt-1" />
+                    <Input type="number" value={fieldClaim.mileageKm} onChange={(e) => setFc("mileageKm", e.target.value)} placeholder={`${tc("eg")} 35000`} className="mt-1" />
                   </div>
                 </div>
                 <div>

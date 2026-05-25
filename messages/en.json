@@ -83,7 +83,8 @@
     "dropzoneHint": "Click or drag & drop files here",
     "printReport": "Print Report",
     "registeredSuccess": "{number} registered",
-    "registeredSuccessAttachments": "{number} registered ({count} attachments)"
+    "registeredSuccessAttachments": "{number} registered ({count} attachments)",
+    "eg": "e.g."
   },
   "language": {
     "ko": "한국어",
@@ -178,6 +179,7 @@
     "dispositionType": "Disposition Type",
     "dispositionNotes": "Disposition Notes",
     "copqTotal": "COPQ Total",
+    "copqUnit": "₩",
     "viewCapa": "View CAPA",
     "costScrap": "Scrap Cost (KRW)",
     "costRework": "Rework Cost (KRW)",
@@ -286,6 +288,7 @@
     },
     "copqSection": "Cost (COPQ)",
     "copqTotal": "COPQ Total",
+    "copqUnit": "₩",
     "costRecallReturn": "Recall/Return Cost (KRW)",
     "costPenalty": "Penalty (KRW)",
     "costOther": "Other Cost (KRW)",
@@ -699,29 +702,89 @@
   },
   "masters": {
     "title": "Master Data",
+    "code": "Code",
+    "name": "Name",
+    "loading": "Loading...",
+    "add": "Add",
+    "save": "Save",
+    "cancel": "Cancel",
+    "requiredCodeAndName": "Please enter a code and name.",
+    "saveFailed": "Failed to save.",
+    "updated": "Updated successfully.",
+    "created": "Created successfully.",
+    "deleteConfirm": "Deactivate this item?",
+    "deleted": "Deleted successfully.",
+    "siteField": "Site",
+    "customerField": "Customer",
+    "optionalSelect": "Select (optional)",
     "customers": {
       "label": "Customers",
-      "desc": "Customer master & SLA management"
+      "desc": "Customer master & SLA management",
+      "pageTitle": "Customer Management",
+      "editTitle": "Edit Customer",
+      "newTitle": "New Customer",
+      "namePlaceholder": "Acme Motors",
+      "empty": "No customers registered.",
+      "requiredFields": "Please enter a code and name.",
+      "slaSection": "SLA Settings (Customer Complaint Response)",
+      "initialResponse": "Initial Response (hours)",
+      "containment": "Containment (hours)",
+      "finalReport": "Final Report (days)",
+      "colInitialResponse": "Initial(h)",
+      "colContainment": "Containment(h)",
+      "colFinalReport": "Final(d)"
     },
     "suppliers": {
       "label": "Suppliers",
-      "desc": "Supplier / vendor master"
+      "desc": "Supplier / vendor master",
+      "pageTitle": "Supplier Management",
+      "editTitle": "Edit Supplier",
+      "newTitle": "New Supplier",
+      "namePlaceholder": "Example Parts Co.",
+      "empty": "No suppliers registered."
     },
     "parts": {
       "label": "Parts",
-      "desc": "Part master management"
+      "desc": "Part master management",
+      "pageTitle": "Part Management",
+      "editTitle": "Edit Part",
+      "newTitle": "New Part",
+      "partNumber": "Part No.",
+      "partName": "Part Name",
+      "namePlaceholder": "Brake Pad",
+      "requiredFields": "Please enter a part number and name.",
+      "empty": "No parts registered."
     },
     "sites": {
       "label": "Sites",
-      "desc": "Site / plant master"
+      "desc": "Site / plant master",
+      "pageTitle": "Site Management",
+      "editTitle": "Edit Site",
+      "newTitle": "New Site",
+      "codePlaceholder": "SITE-01",
+      "namePlaceholder": "Main Plant",
+      "empty": "No sites registered."
     },
     "processes": {
       "label": "Processes",
-      "desc": "Process master management"
+      "desc": "Process master management",
+      "pageTitle": "Process Management",
+      "editTitle": "Edit Process",
+      "newTitle": "New Process",
+      "codePlaceholder": "P-001",
+      "namePlaceholder": "Press Process",
+      "empty": "No processes registered."
     },
     "categories": {
       "label": "Categories",
-      "desc": "NC category code management"
+      "desc": "NC category code management",
+      "pageTitle": "NC Category",
+      "description": "System default categories (IATF 16949 based) — org-level custom categories coming soon",
+      "colCode": "Code",
+      "colKorean": "Korean",
+      "colEnglish": "English",
+      "colType": "Type",
+      "systemBadge": "System"
     }
   },
   "settings": {
@@ -732,6 +795,48 @@
       "MEMBER": "Member"
     },
     "noName": "(No name)",
-    "membersCount": "{count} members"
+    "membersCount": "{count} members",
+    "membersDesc": "Set site access permissions per member. ADMIN role automatically has access to all sites.",
+    "noSites": "No sites registered",
+    "noSitesHint": "Please register a site first in Master Data > Sites.",
+    "siteAccess": "Site Access",
+    "adminFullAccess": "Full access to all sites (ADMIN)",
+    "accessChangeFailed": "Failed to update site access.",
+    "accessRemoved": "Site access removed.",
+    "accessAdded": "Site access granted.",
+    "requestFailed": "Request failed."
+  },
+  "admin": {
+    "title": "Admin",
+    "currentSession": "Current Session",
+    "email": "Email",
+    "currentOrg": "Current Organization",
+    "noOrg": "None (page access denied)",
+    "orgId": "Org ID",
+    "sessionDiag": "Session Diagnostics",
+    "sessionDiagDesc": "Without an org ID, all pages (internal NC, complaints, CAPA, etc.) will redirect to the dashboard.",
+    "runDiag": "Run Diagnostics",
+    "qualityHubOrgs": "Quality Hub Organizations",
+    "qualityHubOrgsDesc": "Based on Supabase org_members — manage members in Quality Hub",
+    "openQualityHub": "Open Quality Hub",
+    "noOrgsWarning": "⚠ No organization — create one below to unlock all pages.",
+    "newOrg": "Create New Organization",
+    "orgNamePlaceholder": "Organization name (e.g. Test Manufacturer)",
+    "create": "Create",
+    "orgCreationHint": "After creation, your account will be automatically registered as the owner.",
+    "systemData": "System Data",
+    "ncCategories": "NC Categories",
+    "categoryCount": "Currently {count} system categories",
+    "alreadySeeded": "Already seeded",
+    "seedCategories": "Seed Categories",
+    "seedSuccess": "Categories seeded successfully",
+    "seedFailed": "Seed failed",
+    "requestFailed": "Request failed",
+    "orgNameRequired": "Please enter an organization name",
+    "orgCreated": "Organization created — please refresh the page",
+    "orgCreateFailed": "Failed to create organization",
+    "diagFailed": "Diagnostics failed: ",
+    "active": "Active",
+    "suspended": "Suspended"
   }
 }

@@ -280,7 +280,7 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <dt className="text-muted-foreground">{t("copqTotal")}</dt>
-                  <dd className="font-medium mt-0.5 text-lg">{copqTotal.toLocaleString()} 원</dd>
+                  <dd className="font-medium mt-0.5 text-lg">{copqTotal.toLocaleString()} {t("copqUnit")}</dd>
                 </div>
                 {complaint.resolutionType && (
                   <div>

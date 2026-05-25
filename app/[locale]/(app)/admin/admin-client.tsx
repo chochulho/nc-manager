@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Shield, Building2, ExternalLink, Database, RefreshCw, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ interface Props {
 }
 
 export default function AdminClient({ orgs, categoryCount, currentUser }: Props) {
+  const t = useTranslations("admin");
   const [seeding, setSeeding] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [creatingOrg, setCreatingOrg] = useState(false);
@@ -47,12 +49,12 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
       const res = await fetch("/api/nc/admin/seed-categories", { method: "POST" });
       const data = await res.json();
       if (res.ok) {
-        toast.success(data.message ?? "카테고리 시드 완료");
+        toast.success(data.message ?? t("seedSuccess"));
       } else {
-        toast.error(data.error ?? "시드 실패");
+        toast.error(data.error ?? t("seedFailed"));
       }
     } catch {
-      toast.error("요청 실패");
+      toast.error(t("requestFailed"));
     } finally {
       setSeeding(false);
     }
@@ -60,7 +62,7 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
 
   async function handleCreateOrg() {
     if (!newOrgName.trim()) {
-      toast.error("조직 이름을 입력하세요");
+      toast.error(t("orgNameRequired"));
       return;
     }
     setCreatingOrg(true);
@@ -72,15 +74,15 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success(data.message ?? "조직 생성 완료 — 페이지를 새로고침 하세요");
+        toast.success(data.message ?? t("orgCreated"));
         setNewOrgName("");
         // Refresh the page to show updated org list and re-run auth
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        toast.error(data.error ?? "조직 생성 실패");
+        toast.error(data.error ?? t("orgCreateFailed"));
       }
     } catch {
-      toast.error("요청 실패");
+      toast.error(t("requestFailed"));
     } finally {
       setCreatingOrg(false);
     }
@@ -93,15 +95,15 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
       const data = await res.json();
       setDiagResult(data);
     } catch (err) {
-      toast.error("진단 실패: " + String(err));
+      toast.error(t("diagFailed") + String(err));
     } finally {
       setDiagnosing(false);
     }
   }
 
   const statusBadge = (status: string) => {
-    if (status === "active") return <Badge className="bg-green-100 text-green-800">활성</Badge>;
-    if (status === "suspended") return <Badge variant="destructive">정지</Badge>;
+    if (status === "active") return <Badge className="bg-green-100 text-green-800">{t("active")}</Badge>;
+    if (status === "suspended") return <Badge variant="destructive">{t("suspended")}</Badge>;
     return <Badge variant="secondary">{status}</Badge>;
   };
 
@@ -109,20 +111,20 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Shield className="h-5 w-5 text-muted-foreground" />
-        <h1 className="text-2xl font-bold">관리자</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
       </div>
 
       {/* 현재 세션 정보 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium text-muted-foreground">현재 세션</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">{t("currentSession")}</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-2 text-sm">
-          <span className="text-muted-foreground">이메일</span>
+          <span className="text-muted-foreground">{t("email")}</span>
           <span>{currentUser.email}</span>
-          <span className="text-muted-foreground">현재 조직</span>
-          <span>{currentUser.organizationName ?? <span className="text-red-500 font-semibold">없음 (페이지 접근 불가)</span>}</span>
-          <span className="text-muted-foreground">조직 ID</span>
+          <span className="text-muted-foreground">{t("currentOrg")}</span>
+          <span>{currentUser.organizationName ?? <span className="text-red-500 font-semibold">{t("noOrg")}</span>}</span>
+          <span className="text-muted-foreground">{t("orgId")}</span>
           <span className="font-mono text-xs truncate">{currentUser.organizationId ?? "—"}</span>
         </CardContent>
       </Card>
@@ -132,10 +134,10 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm">
             <Search className="h-4 w-4" />
-            세션 진단
+            {t("sessionDiag")}
           </CardTitle>
           <CardDescription>
-            조직 ID가 없으면 내부NC·클레임·CAPA 등 모든 페이지가 대시보드로 리다이렉트됩니다.
+            {t("sessionDiagDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -147,7 +149,7 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
             className="gap-1"
           >
             <Search className={`h-3 w-3 ${diagnosing ? "animate-spin" : ""}`} />
-            세션 진단 실행
+            {t("runDiag")}
           </Button>
 
           {diagResult && (
@@ -178,10 +180,10 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-4 w-4" />
-                Quality Hub 조직
+                {t("qualityHubOrgs")}
               </CardTitle>
               <CardDescription>
-                Supabase org_members 기반 — 멤버 관리는 Quality Hub에서
+                {t("qualityHubOrgsDesc")}
               </CardDescription>
             </div>
             <a
@@ -191,7 +193,7 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
             >
               <Button variant="outline" size="sm" className="gap-1">
                 <ExternalLink className="h-3 w-3" />
-                Quality Hub 열기
+                {t("openQualityHub")}
               </Button>
             </a>
           </div>
@@ -199,7 +201,7 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
         <CardContent className="space-y-4">
           {orgs.length === 0 ? (
             <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              ⚠ 조직 없음 — 아래에서 조직을 생성하면 모든 페이지를 사용할 수 있습니다.
+              {t("noOrgsWarning")}
             </p>
           ) : (
             <div className="divide-y">
@@ -220,12 +222,12 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
 
           {/* 조직 생성 폼 */}
           <div className="pt-2 border-t space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">새 조직 생성</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("newOrg")}</p>
             <div className="flex gap-2">
               <Input
                 value={newOrgName}
                 onChange={(e) => setNewOrgName(e.target.value)}
-                placeholder="조직 이름 (예: 테스트 제조사)"
+                placeholder={t("orgNamePlaceholder")}
                 className="flex-1 text-sm"
                 onKeyDown={(e) => e.key === "Enter" && handleCreateOrg()}
               />
@@ -236,11 +238,11 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
                 className="gap-1"
               >
                 <Plus className={`h-3 w-3 ${creatingOrg ? "animate-spin" : ""}`} />
-                생성
+                {t("create")}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              생성 후 현재 계정이 해당 조직의 owner로 자동 등록됩니다.
+              {t("orgCreationHint")}
             </p>
           </div>
         </CardContent>
@@ -251,15 +253,15 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Database className="h-4 w-4" />
-            시스템 데이터
+            {t("systemData")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">NC 분류체계 (카테고리)</p>
+              <p className="text-sm font-medium">{t("ncCategories")}</p>
               <p className="text-xs text-muted-foreground">
-                현재 {categoryCount}개 시스템 카테고리
+                {t("categoryCount", { count: categoryCount })}
               </p>
             </div>
             <Button
@@ -270,7 +272,7 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
               className="gap-1"
             >
               <RefreshCw className={`h-3 w-3 ${seeding ? "animate-spin" : ""}`} />
-              {categoryCount > 0 ? "이미 시드됨" : "카테고리 시드"}
+              {categoryCount > 0 ? t("alreadySeeded") : t("seedCategories")}
             </Button>
           </div>
         </CardContent>
