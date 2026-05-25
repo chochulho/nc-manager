@@ -49,7 +49,10 @@ export async function auth(): Promise<AppSession | null> {
   const orgId = membership?.org_id ?? null;
   const orgName = (membership?.organizations as { name?: string } | null)?.name ?? null;
   const orgRole = mapRole(membership?.role ?? null);
-  const isAdmin = checkIsAdmin(user.email);
+
+  // isAdmin: ADMIN_EMAILS 목록 OR quality-hub org_members에서 owner 역할
+  const isAdmin =
+    checkIsAdmin(user.email) || membership?.role === "owner";
 
   return {
     user: {
