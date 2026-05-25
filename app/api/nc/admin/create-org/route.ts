@@ -27,14 +27,13 @@ export async function POST(req: NextRequest) {
 
   const adminClient = createSupabaseAdminClient();
 
-  // 1. Create organization
+  // 1. Create organization (only include columns that exist in the table)
   const { data: org, error: orgErr } = await adminClient
     .from("organizations")
     .insert({
       name: orgName,
       status: "active",
       plan_id: "enterprise",
-      type: "corporate",
     })
     .select("id, name")
     .single();
