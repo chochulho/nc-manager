@@ -21,12 +21,15 @@ function mapRole(role: string | null): "ADMIN" | "MEMBER" {
 }
 
 // ADMIN_EMAILS 환경변수에 이메일이 포함되어 있는지 확인
+// 개행 문자(\n, \r), 공백 등 모두 제거 후 비교
 function checkIsAdmin(email: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS || "")
+  const raw = process.env.ADMIN_EMAILS || "";
+  const adminEmails = raw
+    .replace(/[\r\n]+/g, ",")   // 개행을 쉼표로 변환
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
-  return adminEmails.includes(email.toLowerCase());
+  return adminEmails.includes(email.trim().toLowerCase());
 }
 
 /**
