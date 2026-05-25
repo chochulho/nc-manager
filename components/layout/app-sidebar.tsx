@@ -98,7 +98,7 @@ export function AppSidebar({ session }: AppSidebarProps) {
           <button
             onClick={toggle}
             className="rounded-md p-1 text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors shrink-0"
-            aria-label={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            aria-label={isCollapsed ? t("expandSidebar") : t("collapseSidebar")}
           >
             {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
@@ -141,7 +141,7 @@ export function AppSidebar({ session }: AppSidebarProps) {
               <TooltipTrigger asChild>
                 <div><LanguageSwitcher collapsed /></div>
               </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">언어 변경</TooltipContent>
+              <TooltipContent side="right" className="text-xs">{t("changeLanguage")}</TooltipContent>
             </Tooltip>
           ) : (
             <LanguageSwitcher />

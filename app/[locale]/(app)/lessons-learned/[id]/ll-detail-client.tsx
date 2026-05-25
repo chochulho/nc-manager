@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, Link } from "@/lib/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   ArrowLeft, Pencil, Save, X, Lightbulb, ExternalLink, Trash2,
@@ -42,14 +43,23 @@ interface LLItem {
   customerName: string | null;
 }
 
-const statusConfig: Record<string, { label: string; cls: string; next: string | null; nextLabel: string | null }> = {
-  draft:     { label: "초안",    cls: "bg-gray-100 text-gray-700",     next: "review",    nextLabel: "검토 요청" },
-  review:    { label: "검토 중", cls: "bg-yellow-50 text-yellow-800",  next: "published", nextLabel: "발행" },
-  published: { label: "발행됨",  cls: "bg-green-50 text-green-800",    next: null,        nextLabel: null },
+const STATUS_CLS: Record<string, string> = {
+  draft:     "bg-gray-100 text-gray-700",
+  review:    "bg-yellow-50 text-yellow-800",
+  published: "bg-green-50 text-green-800",
 };
 
 export function LLDetailClient({ item }: { item: LLItem }) {
   const router = useRouter();
+  const t = useTranslations("ll");
+  const tc = useTranslations("common");
+
+  const statusConfig = {
+    draft:     { label: t("statuses.draft"),     next: "review"    as const, nextLabel: t("nextStatus.draft") },
+    review:    { label: t("statuses.review"),    next: "published" as const, nextLabel: t("nextStatus.review") },
+    published: { label: t("statuses.published"), next: null,                 nextLabel: null },
+  };
+
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -94,10 +104,10 @@ export function LLDetailClient({ item }: { item: LLItem }) {
       });
       if (!res.ok) {
         const d = await res.json();
-        toast.error(d.error ?? "저장 실패");
+        toast.error(d.error ?? tc("error"));
         return;
       }
-      toast.success("저장되었습니다.");
+      toast.success(tc("success"));
       setEditing(false);
       router.refresh();
     } finally {
@@ -106,8 +116,8 @@ export function LLDetailClient({ item }: { item: LLItem }) {
   }
 
   async function handleStatusAdvance() {
-    const st = statusConfig[item.status];
-    if (!st.next) return;
+    const st = statusConfig[item.status as keyof typeof statusConfig];
+    if (!st?.next) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/nc/lessons-learned/${item.id}`, {
@@ -115,8 +125,9 @@ export function LLDetailClient({ item }: { item: LLItem }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: st.next }),
       });
-      if (!res.ok) { toast.error("상태 변경 실패"); return; }
-      toast.success(`상태가 "${statusConfig[st.next]?.label}"(으)로 변경되었습니다.`);
+      if (!res.ok) { toast.error(tc("error")); return; }
+      const nextLabel = statusConfig[st.next]?.label ?? st.next;
+      toast.success(nextLabel);
       router.refresh();
     } finally {
       setSaving(false);
@@ -124,24 +135,23 @@ export function LLDetailClient({ item }: { item: LLItem }) {
   }
 
   async function handleDelete() {
-    if (!confirm("이 레슨런을 삭제하시겠습니까?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     setDeleting(true);
     try {
       await fetch(`/api/nc/lessons-learned/${item.id}`, { method: "DELETE" });
-      toast.success("삭제되었습니다.");
+      toast.success(tc("success"));
       router.push("/lessons-learned");
     } finally {
       setDeleting(false);
     }
   }
 
-  const st = statusConfig[item.status] ?? statusConfig.draft;
+  const st = statusConfig[item.status as keyof typeof statusConfig] ?? statusConfig.draft;
 
   return (
     <div className="flex gap-4 items-start">
-      {/* 메인 콘텐츠 */}
       <div className="flex-1 min-w-0">
-        {/* 헤더 */}
+        {/* Header */}
         <div className="page-header">
           <div className="flex items-center gap-3">
             <Link href="/lessons-learned">
@@ -152,7 +162,7 @@ export function LLDetailClient({ item }: { item: LLItem }) {
                 <span className="font-mono text-sm font-bold" style={{ color: "#2B4B8C" }}>
                   {item.llNumber}
                 </span>
-                <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold", st.cls)}>
+                <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold", STATUS_CLS[item.status] ?? "bg-gray-100 text-gray-700")}>
                   {st.label}
                 </span>
               </div>
@@ -172,7 +182,7 @@ export function LLDetailClient({ item }: { item: LLItem }) {
             )}
             {!editing ? (
               <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
-                <Pencil className="h-3.5 w-3.5 mr-1" /> 수정
+                <Pencil className="h-3.5 w-3.5 mr-1" /> {tc("edit")}
               </Button>
             ) : (
               <>
@@ -183,10 +193,10 @@ export function LLDetailClient({ item }: { item: LLItem }) {
                   style={{ background: "#2B4B8C" }}
                 >
                   <Save className="h-3.5 w-3.5 mr-1" />
-                  {saving ? "저장 중..." : "저장"}
+                  {saving ? tc("saving") : tc("save")}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
-                  <X className="h-3.5 w-3.5 mr-1" /> 취소
+                  <X className="h-3.5 w-3.5 mr-1" /> {tc("cancel")}
                 </Button>
               </>
             )}
@@ -202,7 +212,7 @@ export function LLDetailClient({ item }: { item: LLItem }) {
           </div>
         </div>
 
-        {/* 소스 링크 */}
+        {/* Source links */}
         {(item.ncNumber || item.complaintNumber) && (
           <div className="bg-blue-50 rounded-xl border border-blue-100 px-4 py-3 mb-5 flex flex-wrap gap-4">
             {item.ncNumber && (
@@ -212,7 +222,7 @@ export function LLDetailClient({ item }: { item: LLItem }) {
                 style={{ color: "#2B4B8C" }}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                내부 부적합 {item.ncNumber}
+                {t("sourceInternalNc")} {item.ncNumber}
                 {item.ncTitle && <span className="text-gray-500 font-normal">— {item.ncTitle}</span>}
               </Link>
             )}
@@ -223,35 +233,35 @@ export function LLDetailClient({ item }: { item: LLItem }) {
                 style={{ color: "#F26B3A" }}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
-                고객 클레임 {item.complaintNumber}
+                {t("sourceComplaint")} {item.complaintNumber}
                 {item.customerName && <span className="text-gray-500 font-normal">— {item.customerName}</span>}
               </Link>
             )}
           </div>
         )}
 
-        {/* 본문 */}
+        {/* Body */}
         {editing ? (
           <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-5">
             <div>
-              <Label>제목</Label>
+              <Label>{tc("title")}</Label>
               <Input value={form.title} onChange={(e) => setField("title", e.target.value)} />
             </div>
             <div>
-              <Label>문제 요약</Label>
+              <Label>{t("problemSummary")}</Label>
               <Textarea value={form.problemSummary} onChange={(e) => setField("problemSummary", e.target.value)} rows={3} />
             </div>
             <div>
-              <Label>근본 원인</Label>
+              <Label>{t("rootCause")}</Label>
               <Textarea value={form.rootCause} onChange={(e) => setField("rootCause", e.target.value)} rows={3} />
             </div>
             <div>
-              <Label>취해진 조치</Label>
+              <Label>{t("actionsTaken")}</Label>
               <Textarea value={form.actionsTaken} onChange={(e) => setField("actionsTaken", e.target.value)} rows={3} />
             </div>
             <div>
               <Label className="flex items-center gap-1">
-                <Lightbulb className="h-3.5 w-3.5" style={{ color: "#F26B3A" }} /> 핵심 레슨
+                <Lightbulb className="h-3.5 w-3.5" style={{ color: "#F26B3A" }} /> {t("keyLearning")}
               </Label>
               <Textarea
                 value={form.keyLearning}
@@ -262,36 +272,36 @@ export function LLDetailClient({ item }: { item: LLItem }) {
               />
             </div>
             <div>
-              <Label>예방 조치</Label>
+              <Label>{t("preventionMeasures")}</Label>
               <Textarea value={form.preventionMeasures} onChange={(e) => setField("preventionMeasures", e.target.value)} rows={2} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>적용 공정/부서</Label>
+                <Label>{t("applicableAreas")}</Label>
                 <Input value={form.applicableAreas} onChange={(e) => setField("applicableAreas", e.target.value)} />
               </div>
               <div>
-                <Label>태그 (쉼표 구분)</Label>
+                <Label>{t("tags")} <span className="text-muted-foreground font-normal text-xs">({t("tagsHint")})</span></Label>
                 <Input value={form.tagsRaw} onChange={(e) => setField("tagsRaw", e.target.value)} />
               </div>
             </div>
             <div>
-              <Label>상태</Label>
+              <Label>{t("status")}</Label>
               <Select value={form.status} onValueChange={(v) => setField("status", v as typeof form.status)}>
                 <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">초안</SelectItem>
-                  <SelectItem value="review">검토 중</SelectItem>
-                  <SelectItem value="published">발행됨</SelectItem>
+                  <SelectItem value="draft">{t("statuses.draft")}</SelectItem>
+                  <SelectItem value="review">{t("statuses.review")}</SelectItem>
+                  <SelectItem value="published">{t("statuses.published")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* 핵심 레슨 강조 카드 */}
+            {/* Key Learning highlight card */}
             {item.keyLearning && (
               <div
                 className="rounded-xl border-2 p-4"
@@ -300,7 +310,7 @@ export function LLDetailClient({ item }: { item: LLItem }) {
                 <div className="flex items-center gap-2 mb-2">
                   <Lightbulb className="h-4 w-4" style={{ color: "#F26B3A" }} />
                   <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#2B4B8C" }}>
-                    핵심 레슨
+                    {t("keyLearning")}
                   </span>
                 </div>
                 <p className="text-sm font-medium text-gray-900 leading-relaxed">{item.keyLearning}</p>
@@ -309,35 +319,37 @@ export function LLDetailClient({ item }: { item: LLItem }) {
 
             <div className="grid grid-cols-1 gap-4">
               {[
-                { label: "문제 요약",     value: item.problemSummary },
-                { label: "근본 원인",     value: item.rootCause },
-                { label: "취해진 조치",   value: item.actionsTaken },
-                { label: "예방 조치",     value: item.preventionMeasures },
-              ].map(({ label, value }) =>
+                { key: "problemSummary",    value: item.problemSummary },
+                { key: "rootCause",         value: item.rootCause },
+                { key: "actionsTaken",      value: item.actionsTaken },
+                { key: "preventionMeasures",value: item.preventionMeasures },
+              ].map(({ key, value }) =>
                 value ? (
-                  <div key={label} className="bg-white rounded-xl border border-gray-200 p-4">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">{label}</p>
+                  <div key={key} className="bg-white rounded-xl border border-gray-200 p-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                      {t(key as Parameters<typeof t>[0])}
+                    </p>
                     <p className="text-sm text-gray-800 whitespace-pre-line leading-relaxed">{value}</p>
                   </div>
                 ) : null
               )}
             </div>
 
-            {/* 메타 정보 */}
+            {/* Meta info */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {item.applicableAreas && (
                   <div>
-                    <span className="text-xs text-gray-500 block mb-0.5">적용 공정/부서</span>
+                    <span className="text-xs text-gray-500 block mb-0.5">{t("applicableAreas")}</span>
                     <span className="text-gray-800">{item.applicableAreas}</span>
                   </div>
                 )}
                 <div>
-                  <span className="text-xs text-gray-500 block mb-0.5">등록일</span>
+                  <span className="text-xs text-gray-500 block mb-0.5">{tc("registeredAt")}</span>
                   <span className="text-gray-800">{formatDate(item.createdAt)}</span>
                 </div>
                 <div>
-                  <span className="text-xs text-gray-500 block mb-0.5">최종 수정</span>
+                  <span className="text-xs text-gray-500 block mb-0.5">{t("lastModified")}</span>
                   <span className="text-gray-800">{formatDate(item.updatedAt)}</span>
                 </div>
               </div>
@@ -358,7 +370,7 @@ export function LLDetailClient({ item }: { item: LLItem }) {
         )}
       </div>
 
-      {/* 가이드 패널 */}
+      {/* Guide panel */}
       <WriteGuidePanel type="lessons_learned" className="mt-[4.5rem]" />
     </div>
   );

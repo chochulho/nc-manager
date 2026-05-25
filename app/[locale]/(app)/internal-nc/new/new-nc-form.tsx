@@ -67,7 +67,7 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "등록에 실패했습니다.");
+        toast.error(data.error ?? tc("error"));
         return;
       }
 
@@ -81,9 +81,9 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
           const r = await fetch("/api/nc/attachments", { method: "POST", body: fd });
           if (r.ok) uploaded++;
         }
-        toast.success(`${data.ncNumber} 등록 완료 (첨부 ${uploaded}개)`);
+        toast.success(tc("registeredSuccessAttachments", { number: data.ncNumber, count: uploaded }));
       } else {
-        toast.success(`${data.ncNumber} 등록 완료`);
+        toast.success(tc("registeredSuccess", { number: data.ncNumber }));
       }
 
       router.push(`/internal-nc/${data.id}`);

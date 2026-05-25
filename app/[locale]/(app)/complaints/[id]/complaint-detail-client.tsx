@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "@/lib/i18n/navigation";
+import { useRouter, Link } from "@/lib/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save, Edit2, X, Clock, AlertCircle, ClipboardCheck, Plus } from "lucide-react";
-import Link from "next/link";
 import { AttachmentSection } from "@/components/nc/attachment-section";
 import { NotificationSection } from "@/components/nc/notification-section";
 import { AnalysisReportSection } from "@/components/nc/analysis-report-section";
@@ -45,10 +45,6 @@ interface Props {
   linkedCapa: LinkedCapa | null;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  received: "접수", acknowledged: "인지", contained: "봉쇄", investigating: "조사 중",
-  "8d_in_progress": "8D 진행", final_reported: "최종보고", closed: "종결", closed_ntf: "종결(NTF)",
-};
 const STATUS_COLORS: Record<string, string> = {
   received: "bg-blue-50 text-blue-700", acknowledged: "bg-indigo-50 text-indigo-700",
   contained: "bg-yellow-50 text-yellow-700", investigating: "bg-orange-50 text-orange-700",
@@ -58,17 +54,15 @@ const STATUS_COLORS: Record<string, string> = {
 const SEVERITY_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-800", major: "bg-orange-100 text-orange-800", minor: "bg-yellow-100 text-yellow-800",
 };
-const SEVERITY_LABELS: Record<string, string> = { critical: "긴급", major: "주요", minor: "경미" };
-const CHANNEL_LABELS: Record<string, string> = { portal: "포털", email: "이메일", phone: "전화", meeting: "미팅", informal: "비공식" };
-const STAGE_LABELS: Record<string, string> = { inline_0km: "Inline/0km", field: "필드", warranty: "보증", other: "기타" };
-const RESOLUTION_TYPES = [
-  { value: "confirmed_nc", label: "실제 부적합 (Confirmed NC)" },
-  { value: "ntf", label: "이상없음 (NTF)" },
-  { value: "customer_misuse", label: "고객 과실" },
-  { value: "partial", label: "부분 인정" },
-];
 
-function SlaIndicator({ label, due, sent }: { label: string; due: Date | null; sent: Date | null }) {
+const STATUS_KEYS = ["received", "acknowledged", "contained", "investigating", "8d_in_progress", "final_reported", "closed", "closed_ntf"] as const;
+const RESOLUTION_TYPE_KEYS = ["confirmed_nc", "ntf", "customer_misuse", "partial"] as const;
+
+function SlaIndicator({
+  label, due, sent, completedLabel,
+}: {
+  label: string; due: Date | null; sent: Date | null; completedLabel: string;
+}) {
   if (!due) return null;
   const overdue = !sent && new Date() > new Date(due);
   const done = !!sent;
@@ -77,11 +71,11 @@ function SlaIndicator({ label, due, sent }: { label: string; due: Date | null; s
       <span className={`font-medium ${done ? "text-green-700" : overdue ? "text-red-700" : "text-gray-700"}`}>{label}</span>
       <div className="text-right">
         {done ? (
-          <span className="text-green-600">완료 {new Date(sent!).toLocaleDateString("ko-KR")}</span>
+          <span className="text-green-600">{completedLabel} {new Date(sent!).toLocaleDateString()}</span>
         ) : (
           <span className={overdue ? "text-red-600 font-semibold flex items-center gap-1" : "text-gray-500"}>
             {overdue && <Clock className="h-3 w-3" />}
-            {new Date(due).toLocaleDateString("ko-KR")}
+            {new Date(due).toLocaleDateString()}
           </span>
         )}
       </div>
@@ -91,6 +85,10 @@ function SlaIndicator({ label, due, sent }: { label: string; due: Date | null; s
 
 export function ComplaintDetailClient({ complaint, customers, parts, categoriesL2, linkedCapa }: Props) {
   const router = useRouter();
+  const t = useTranslations("complaint");
+  const tc = useTranslations("common");
+  const tCapa = useTranslations("capa");
+
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -129,8 +127,8 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) { toast.error("저장에 실패했습니다."); return; }
-      toast.success("저장됐습니다.");
+      if (!res.ok) { toast.error(tc("error")); return; }
+      toast.success(tc("success"));
       setEditing(false);
       router.refresh();
     } finally {
@@ -142,6 +140,10 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
   const partMap = Object.fromEntries(parts.map(p => [p.id, `${p.number} — ${p.name}`]));
   const catMap = Object.fromEntries(categoriesL2.map(c => [c.id, `[${c.code}] ${c.nameKo}`]));
 
+  const copqTotal = Number(complaint.costRecallReturn ?? 0)
+    + Number(complaint.costPenalty ?? 0)
+    + Number(complaint.costOther ?? 0);
+
   return (
     <div className="flex gap-4 items-start">
       <div className="flex-1 min-w-0">
@@ -151,10 +153,14 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
           <div>
             <div className="flex items-center gap-2">
               <h1 className="page-title">{complaint.complaintNumber}</h1>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[complaint.status] ?? ""}`}>{STATUS_LABELS[complaint.status] ?? complaint.status}</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SEVERITY_COLORS[complaint.severity] ?? ""}`}>{SEVERITY_LABELS[complaint.severity] ?? complaint.severity}</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[complaint.status] ?? ""}`}>
+                {t(`statuses.${complaint.status}` as Parameters<typeof t>[0]) ?? complaint.status}
+              </span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${SEVERITY_COLORS[complaint.severity] ?? ""}`}>
+                {t(`severities.${complaint.severity}` as Parameters<typeof t>[0]) ?? complaint.severity}
+              </span>
               {complaint.safetyRelated && <AlertCircle className="h-4 w-4 text-red-600" />}
-              {complaint.recallRisk && <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-xs font-bold">RECALL</span>}
+              {complaint.recallRisk && <span className="px-2 py-0.5 rounded-full bg-red-600 text-white text-xs font-bold">{tc("recall")}</span>}
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">{complaint.title}</p>
           </div>
@@ -162,109 +168,133 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
         <div className="flex gap-2">
           {editing ? (
             <>
-              <Button onClick={handleSave} size="sm" disabled={saving}><Save className="h-4 w-4 mr-1" />{saving ? "저장 중..." : "저장"}</Button>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(false)}><X className="h-4 w-4 mr-1" />취소</Button>
+              <Button onClick={handleSave} size="sm" disabled={saving}>
+                <Save className="h-4 w-4 mr-1" />{saving ? tc("saving") : tc("save")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                <X className="h-4 w-4 mr-1" />{tc("cancel")}
+              </Button>
             </>
           ) : (
-            <Button variant="outline" size="sm" onClick={() => setEditing(true)}><Edit2 className="h-4 w-4 mr-1" />편집</Button>
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <Edit2 className="h-4 w-4 mr-1" />{tc("edit")}
+            </Button>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-5">
-          {/* 기본 정보 */}
+          {/* Basic Info */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-            <h2 className="section-title">기본 정보</h2>
+            <h2 className="section-title">{t("basicInfo")}</h2>
             {editing ? (
               <>
-                <div><Label>제목</Label><Input value={form.title} onChange={(e) => set("title", e.target.value)} className="mt-1" /></div>
+                <div><Label>{tc("title")}</Label><Input value={form.title} onChange={(e) => set("title", e.target.value)} className="mt-1" /></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>상태</Label>
+                    <Label>{t("status")}</Label>
                     <Select value={form.status} onValueChange={(v: string) => set("status", v)}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                      <SelectContent>{Object.entries(STATUS_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}</SelectContent>
+                      <SelectContent>
+                        {STATUS_KEYS.map((v) => (
+                          <SelectItem key={v} value={v}>{t(`statuses.${v}` as Parameters<typeof t>[0])}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label>해결 유형</Label>
+                    <Label>{t("resolutionType")}</Label>
                     <Select value={form.resolutionType} onValueChange={(v: string) => set("resolutionType", v)}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
-                      <SelectContent>{RESOLUTION_TYPES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}</SelectContent>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                      <SelectContent>
+                        {RESOLUTION_TYPE_KEYS.map((v) => (
+                          <SelectItem key={v} value={v}>{t(`resolutionTypes.${v}` as Parameters<typeof t>[0])}</SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label>부품</Label>
+                    <Label>{t("part")}</Label>
                     <Select value={form.partId} onValueChange={(v: string) => set("partId", v)}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder="선택" /></SelectTrigger>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
                       <SelectContent>{parts.map(p => <SelectItem key={p.id} value={p.id}>{p.number} — {p.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div><Label>LOT 번호</Label><Input value={form.lotNumber} onChange={(e) => set("lotNumber", e.target.value)} className="mt-1" /></div>
-                  <div><Label>클레임 수량</Label><Input type="number" value={form.quantityClaimed} onChange={(e) => set("quantityClaimed", e.target.value)} className="mt-1" /></div>
-                  <div><Label>확인 수량</Label><Input type="number" value={form.quantityConfirmed} onChange={(e) => set("quantityConfirmed", e.target.value)} className="mt-1" /></div>
+                  <div><Label>{t("lotNumber")}</Label><Input value={form.lotNumber} onChange={(e) => set("lotNumber", e.target.value)} className="mt-1" /></div>
+                  <div><Label>{t("quantity")}</Label><Input type="number" value={form.quantityClaimed} onChange={(e) => set("quantityClaimed", e.target.value)} className="mt-1" /></div>
+                  <div><Label>{t("quantityConfirmed")}</Label><Input type="number" value={form.quantityConfirmed} onChange={(e) => set("quantityConfirmed", e.target.value)} className="mt-1" /></div>
                 </div>
-                <div><Label>고객 설명</Label><Textarea value={form.customerDescription} onChange={(e) => set("customerDescription", e.target.value)} rows={4} className="mt-1" /></div>
+                <div><Label>{t("customerDescription")}</Label><Textarea value={form.customerDescription} onChange={(e) => set("customerDescription", e.target.value)} rows={4} className="mt-1" /></div>
               </>
             ) : (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <div><dt className="text-muted-foreground">수신일</dt><dd className="font-medium mt-0.5">{new Date(complaint.receivedAt).toLocaleDateString("ko-KR")}</dd></div>
-                <div><dt className="text-muted-foreground">수신 채널</dt><dd className="font-medium mt-0.5">{CHANNEL_LABELS[complaint.receivedChannel] ?? complaint.receivedChannel}</dd></div>
-                <div><dt className="text-muted-foreground">발생 단계</dt><dd className="font-medium mt-0.5">{STAGE_LABELS[complaint.discoveryStage] ?? complaint.discoveryStage}</dd></div>
-                <div><dt className="text-muted-foreground">공식 여부</dt><dd className="font-medium mt-0.5">{complaint.isFormal ? "공식" : "비공식"}</dd></div>
-                <div><dt className="text-muted-foreground">부품</dt><dd className="font-medium mt-0.5">{complaint.partId ? partMap[complaint.partId] ?? "-" : "-"}</dd></div>
-                <div><dt className="text-muted-foreground">분류</dt><dd className="font-medium mt-0.5">{complaint.categoryL2Id ? catMap[complaint.categoryL2Id] ?? "-" : "-"}</dd></div>
-                <div><dt className="text-muted-foreground">클레임 수량</dt><dd className="font-medium mt-0.5">{complaint.quantityClaimed ?? "-"}</dd></div>
-                <div><dt className="text-muted-foreground">확인 수량</dt><dd className="font-medium mt-0.5">{complaint.quantityConfirmed ?? "-"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("receivedAt")}</dt><dd className="font-medium mt-0.5">{new Date(complaint.receivedAt).toLocaleDateString()}</dd></div>
+                <div><dt className="text-muted-foreground">{t("receivedChannel")}</dt><dd className="font-medium mt-0.5">{t(`channels.${complaint.receivedChannel}` as Parameters<typeof t>[0]) ?? complaint.receivedChannel}</dd></div>
+                <div><dt className="text-muted-foreground">{t("discoveryStage")}</dt><dd className="font-medium mt-0.5">{t(`stages.${complaint.discoveryStage}` as Parameters<typeof t>[0]) ?? complaint.discoveryStage}</dd></div>
+                <div><dt className="text-muted-foreground">{t("isFormal")}</dt><dd className="font-medium mt-0.5">{complaint.isFormal ? t("formal") : t("informal")}</dd></div>
+                <div><dt className="text-muted-foreground">{t("part")}</dt><dd className="font-medium mt-0.5">{complaint.partId ? partMap[complaint.partId] ?? "-" : "-"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("category")}</dt><dd className="font-medium mt-0.5">{complaint.categoryL2Id ? catMap[complaint.categoryL2Id] ?? "-" : "-"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("quantity")}</dt><dd className="font-medium mt-0.5">{complaint.quantityClaimed ?? "-"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("quantityConfirmed")}</dt><dd className="font-medium mt-0.5">{complaint.quantityConfirmed ?? "-"}</dd></div>
                 {complaint.customerDescription && (
-                  <div className="col-span-2"><dt className="text-muted-foreground">고객 설명</dt><dd className="font-medium mt-0.5 whitespace-pre-wrap">{complaint.customerDescription}</dd></div>
+                  <div className="col-span-2"><dt className="text-muted-foreground">{t("customerDescription")}</dt><dd className="font-medium mt-0.5 whitespace-pre-wrap">{complaint.customerDescription}</dd></div>
                 )}
               </dl>
             )}
           </div>
 
-          {/* 필드 클레임 정보 */}
+          {/* Field Claim Details */}
           {(complaint.discoveryStage === "field" || complaint.discoveryStage === "warranty") && (
             <FieldClaimDetailSection complaintId={complaint.id} />
           )}
 
-          {/* 대응 진행 */}
+          {/* Response Tracking */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-            <h2 className="section-title">대응 진행 (Response Tracking)</h2>
+            <h2 className="section-title">{t("sla.responseTracking")}</h2>
             {editing ? (
               <div className="grid grid-cols-3 gap-4">
-                <div><Label>초도 대응 완료일</Label><Input type="date" value={form.initialResponseSentAt} onChange={(e) => set("initialResponseSentAt", e.target.value)} className="mt-1" /></div>
-                <div><Label>봉쇄조치 완료일</Label><Input type="date" value={form.containedAt} onChange={(e) => set("containedAt", e.target.value)} className="mt-1" /></div>
-                <div><Label>최종보고 발송일</Label><Input type="date" value={form.finalReportSentAt} onChange={(e) => set("finalReportSentAt", e.target.value)} className="mt-1" /></div>
+                <div><Label>{t("sla.initialResponseSentAt")}</Label><Input type="date" value={form.initialResponseSentAt} onChange={(e) => set("initialResponseSentAt", e.target.value)} className="mt-1" /></div>
+                <div><Label>{t("sla.containedAt")}</Label><Input type="date" value={form.containedAt} onChange={(e) => set("containedAt", e.target.value)} className="mt-1" /></div>
+                <div><Label>{t("sla.finalReportSentAt")}</Label><Input type="date" value={form.finalReportSentAt} onChange={(e) => set("finalReportSentAt", e.target.value)} className="mt-1" /></div>
               </div>
             ) : (
               <div className="space-y-2">
-                <SlaIndicator label="초도 대응" due={complaint.initialResponseDueAt} sent={complaint.initialResponseSentAt} />
-                <SlaIndicator label="봉쇄조치" due={complaint.containmentDueAt} sent={complaint.containedAt} />
-                <SlaIndicator label="최종보고" due={complaint.finalReportDueAt} sent={complaint.finalReportSentAt} />
+                <SlaIndicator label={t("sla.initialResponse")} due={complaint.initialResponseDueAt} sent={complaint.initialResponseSentAt} completedLabel={t("sla.completed")} />
+                <SlaIndicator label={t("sla.containment")} due={complaint.containmentDueAt} sent={complaint.containedAt} completedLabel={t("sla.completed")} />
+                <SlaIndicator label={t("sla.finalReport")} due={complaint.finalReportDueAt} sent={complaint.finalReportSentAt} completedLabel={t("sla.completed")} />
               </div>
             )}
           </div>
 
           {/* COPQ */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-            <h2 className="section-title">비용 (COPQ)</h2>
+            <h2 className="section-title">{t("copqSection")}</h2>
             {editing ? (
               <div className="grid grid-cols-3 gap-4">
-                <div><Label>리콜/반환 (KRW)</Label><Input type="number" value={form.costRecallReturn} onChange={(e) => set("costRecallReturn", e.target.value)} placeholder="0" className="mt-1" /></div>
-                <div><Label>페널티 (KRW)</Label><Input type="number" value={form.costPenalty} onChange={(e) => set("costPenalty", e.target.value)} placeholder="0" className="mt-1" /></div>
-                <div><Label>기타 (KRW)</Label><Input type="number" value={form.costOther} onChange={(e) => set("costOther", e.target.value)} placeholder="0" className="mt-1" /></div>
+                <div><Label>{t("costRecallReturn")}</Label><Input type="number" value={form.costRecallReturn} onChange={(e) => set("costRecallReturn", e.target.value)} placeholder="0" className="mt-1" /></div>
+                <div><Label>{t("costPenalty")}</Label><Input type="number" value={form.costPenalty} onChange={(e) => set("costPenalty", e.target.value)} placeholder="0" className="mt-1" /></div>
+                <div><Label>{t("costOther")}</Label><Input type="number" value={form.costOther} onChange={(e) => set("costOther", e.target.value)} placeholder="0" className="mt-1" /></div>
               </div>
             ) : (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <div><dt className="text-muted-foreground">COPQ 합계</dt><dd className="font-medium mt-0.5 text-lg">{(Number(complaint.costRecallReturn ?? 0) + Number(complaint.costPenalty ?? 0) + Number(complaint.costOther ?? 0)).toLocaleString("ko-KR")} 원</dd></div>
-                {complaint.resolutionType && <div><dt className="text-muted-foreground">해결 유형</dt><dd className="font-medium mt-0.5">{RESOLUTION_TYPES.find(r => r.value === complaint.resolutionType)?.label ?? complaint.resolutionType}</dd></div>}
+                <div>
+                  <dt className="text-muted-foreground">{t("copqTotal")}</dt>
+                  <dd className="font-medium mt-0.5 text-lg">{copqTotal.toLocaleString()} 원</dd>
+                </div>
+                {complaint.resolutionType && (
+                  <div>
+                    <dt className="text-muted-foreground">{t("resolutionType")}</dt>
+                    <dd className="font-medium mt-0.5">
+                      {t(`resolutionTypes.${complaint.resolutionType}` as Parameters<typeof t>[0]) ?? complaint.resolutionType}
+                    </dd>
+                  </div>
+                )}
               </dl>
             )}
           </div>
 
-          {/* CAPA 연결 */}
+          {/* CAPA Link */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <h2 className="section-title flex items-center gap-2 mb-3">
               <ClipboardCheck className="h-4 w-4 text-blue-600" />
@@ -277,22 +307,19 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
                     {linkedCapa.capaNumber}
                   </Link>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {linkedCapa.status === "open" ? "접수" : linkedCapa.status === "in_progress" ? "진행 중"
-                      : linkedCapa.status === "actions_implemented" ? "조치 완료"
-                      : linkedCapa.status === "effectiveness_monitoring" ? "유효성 확인"
-                      : linkedCapa.status === "closed" ? "종결" : linkedCapa.status}
+                    {tCapa(`statuses.${linkedCapa.status}` as Parameters<typeof tCapa>[0]) ?? linkedCapa.status}
                   </p>
                 </div>
                 <Link href={`/capa/${linkedCapa.id}`}>
-                  <Button variant="outline" size="sm">CAPA 보기</Button>
+                  <Button variant="outline" size="sm">{t("viewCapa")}</Button>
                 </Link>
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">연결된 CAPA가 없습니다.</p>
+                <p className="text-sm text-muted-foreground">{t("noLinkedCapa")}</p>
                 <Link href={`/capa/new?sourceType=customer_complaint&sourceId=${complaint.id}`}>
                   <Button size="sm" variant="outline">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> CAPA 생성
+                    <Plus className="h-3.5 w-3.5 mr-1" /> {t("createCapa")}
                   </Button>
                 </Link>
               </div>
@@ -317,49 +344,49 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
           <AttachmentSection entityType="customer_complaint" entityId={complaint.id} />
         </div>
 
-        {/* 사이드 */}
+        {/* Sidebar */}
         <div className="space-y-5">
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-            <h2 className="section-title">고객사</h2>
+            <h2 className="section-title">{t("customer")}</h2>
             {editing ? (
               <div className="space-y-3">
                 <div>
-                  <Label>고객사</Label>
+                  <Label>{t("customer")}</Label>
                   <Select value={form.customerId} onValueChange={(v: string) => set("customerId", v)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div><Label>고객사 공장명</Label><Input value={form.customerSiteName} onChange={(e) => set("customerSiteName", e.target.value)} className="mt-1" /></div>
-                <div><Label>고객사 참조번호</Label><Input value={form.customerReference} onChange={(e) => set("customerReference", e.target.value)} className="mt-1" /></div>
+                <div><Label>{t("customerSite")}</Label><Input value={form.customerSiteName} onChange={(e) => set("customerSiteName", e.target.value)} className="mt-1" /></div>
+                <div><Label>{t("customerReference")}</Label><Input value={form.customerReference} onChange={(e) => set("customerReference", e.target.value)} className="mt-1" /></div>
               </div>
             ) : (
               <dl className="space-y-3 text-sm">
-                <div><dt className="text-muted-foreground">고객사</dt><dd className="font-medium mt-0.5">{customerMap[complaint.customerId] ?? "-"}</dd></div>
-                {complaint.customerSiteName && <div><dt className="text-muted-foreground">공장명</dt><dd className="font-medium mt-0.5">{complaint.customerSiteName}</dd></div>}
-                {complaint.customerReference && <div><dt className="text-muted-foreground">참조번호</dt><dd className="font-medium mt-0.5 font-mono text-xs">{complaint.customerReference}</dd></div>}
+                <div><dt className="text-muted-foreground">{t("customer")}</dt><dd className="font-medium mt-0.5">{customerMap[complaint.customerId] ?? "-"}</dd></div>
+                {complaint.customerSiteName && <div><dt className="text-muted-foreground">{t("customerSite")}</dt><dd className="font-medium mt-0.5">{complaint.customerSiteName}</dd></div>}
+                {complaint.customerReference && <div><dt className="text-muted-foreground">{t("customerReference")}</dt><dd className="font-medium mt-0.5 font-mono text-xs">{complaint.customerReference}</dd></div>}
               </dl>
             )}
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
-            <h2 className="section-title">속성</h2>
+            <h2 className="section-title">{tc("attributes")}</h2>
             {editing ? (
               <div className="space-y-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.safetyRelated} onChange={(e) => set("safetyRelated", e.target.checked)} className="h-4 w-4 rounded" />
-                  <span className="text-sm font-medium">안전 관련 (Safety)</span>
+                  <span className="text-sm font-medium">{tc("safetyRelated")}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.recallRisk} onChange={(e) => set("recallRisk", e.target.checked)} className="h-4 w-4 rounded" />
-                  <span className="text-sm font-medium text-red-600">리콜 위험 (Recall Risk)</span>
+                  <span className="text-sm font-medium text-red-600">{t("recallRisk")}</span>
                 </label>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {complaint.safetyRelated && <span className="px-2 py-1 rounded-full bg-red-50 text-red-700 text-xs font-medium">Safety</span>}
                 {complaint.recallRisk && <span className="px-2 py-1 rounded-full bg-red-600 text-white text-xs font-bold">Recall Risk</span>}
-                {!complaint.safetyRelated && !complaint.recallRisk && <span className="text-sm text-muted-foreground">없음</span>}
+                {!complaint.safetyRelated && !complaint.recallRisk && <span className="text-sm text-muted-foreground">{tc("none")}</span>}
               </div>
             )}
           </div>

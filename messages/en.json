@@ -11,7 +11,10 @@
     "admin": "Admin",
     "notifications": "Notifications",
     "logout": "Logout",
-    "user": "User"
+    "user": "User",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar",
+    "changeLanguage": "Change Language"
   },
   "auth": {
     "login": "Login",
@@ -78,7 +81,9 @@
     "safetyRelated": "Safety Related",
     "attachmentsHint": "Attachments (Upload on Registration)",
     "dropzoneHint": "Click or drag & drop files here",
-    "printReport": "Print Report"
+    "printReport": "Print Report",
+    "registeredSuccess": "{number} registered",
+    "registeredSuccessAttachments": "{number} registered ({count} attachments)"
   },
   "language": {
     "ko": "한국어",
@@ -170,6 +175,15 @@
       "disposition_decided": "Start CAPA",
       "capa_in_progress": "Close"
     },
+    "dispositionType": "Disposition Type",
+    "dispositionNotes": "Disposition Notes",
+    "copqTotal": "COPQ Total",
+    "viewCapa": "View CAPA",
+    "costScrap": "Scrap Cost (KRW)",
+    "costRework": "Rework Cost (KRW)",
+    "costOther": "Other Cost (KRW)",
+    "quantityConfirmed": "Confirmed Qty",
+    "dispositionSection": "Disposition",
     "emptyState": "No internal NCs found for the selected period.",
     "registerFirst": "Register your first NC"
   },
@@ -184,7 +198,6 @@
     "discoveryStage": "Discovery Stage",
     "severity": "Severity",
     "status": "Status",
-    "sla": "SLA",
     "title2": "Complaint Title",
     "quantity": "Complaint Quantity",
     "defectDescription": "Defect Description",
@@ -251,6 +264,82 @@
       "investigating": "Start 8D",
       "8d_in_progress": "Final Report",
       "final_reported": "Close"
+    },
+    "quantityConfirmed": "Confirmed Qty",
+    "resolutionType": "Resolution Type",
+    "viewCapa": "View CAPA",
+    "resolutionTypes": {
+      "confirmed_nc": "Confirmed NC",
+      "ntf": "NTF (No Trouble Found)",
+      "customer_misuse": "Customer Misuse",
+      "partial": "Partial"
+    },
+    "sla": {
+      "responseTracking": "Response Tracking",
+      "initialResponse": "Initial Response",
+      "containment": "Containment",
+      "finalReport": "Final Report",
+      "initialResponseSentAt": "Initial Response Completed",
+      "containedAt": "Containment Completed",
+      "finalReportSentAt": "Final Report Sent",
+      "completed": "Completed"
+    },
+    "copqSection": "Cost (COPQ)",
+    "copqTotal": "COPQ Total",
+    "costRecallReturn": "Recall/Return Cost (KRW)",
+    "costPenalty": "Penalty (KRW)",
+    "costOther": "Other Cost (KRW)",
+    "category": "Category",
+    "part": "Part",
+    "report": {
+      "title": "Analysis Report",
+      "draft": "Draft",
+      "final": "Final",
+      "create": "Write Report",
+      "createFromCapa": "Create from CAPA",
+      "importFromCapa": "Import from CAPA",
+      "tempSave": "Save Draft",
+      "finalizeOnly": "Finalize Report Only",
+      "finalizeAndClose": "Finalize + Close Complaint",
+      "finalize": "Finalize",
+      "notEntered": "Not entered",
+      "ntfBanner": "This is an NTF case. You can close the complaint directly from the report after writing it.",
+      "faultBanner": "This is a customer fault case. You can close the complaint directly from the report after writing it.",
+      "claimOverview": "Complaint Overview (Auto)",
+      "judgment": "Judgment",
+      "createdMsg": "Analysis report created.",
+      "createdFromCapaMsg": "Report created from CAPA data.",
+      "importedCapa": "CAPA data imported.",
+      "importConfirm": "This will overwrite current content with CAPA data. Continue?",
+      "deleteConfirm": "Delete this analysis report?",
+      "closeSuccess": "Report finalized and complaint closed.",
+      "closeNtfSuccess": "Report finalized and complaint closed (NTF).",
+      "closeFailedMsg": "Report finalized but complaint close failed.",
+      "downloadPpt": "Downloading PPT file.",
+      "resolutionLabels": {
+        "ntf": "NTF (No Trouble Found)",
+        "customer_misuse": "Customer Fault",
+        "confirmed_nc": "Confirmed NC",
+        "partial": "Partial"
+      },
+      "sections": {
+        "problemDescription": "Problem Description",
+        "immediateContainment": "Immediate Containment",
+        "immediateContainmentNtf": "Initial Response",
+        "rootCause": "Root Cause Analysis",
+        "rootCauseNtf": "NTF Verification Result",
+        "rootCauseFault": "Fault Attribution Analysis",
+        "permanentActions": "Permanent Actions",
+        "permanentActionsNtf": "Additional Action Plan",
+        "prevention": "Recurrence Prevention",
+        "preventionNtf": "Customer Feedback & Future Response",
+        "conclusion": "Conclusion"
+      }
+    },
+    "severities": {
+      "critical": "Critical",
+      "major": "Major",
+      "minor": "Minor"
     },
     "emptyState": "No customer complaints found for the selected period.",
     "registerFirst": "Register your first complaint"
@@ -371,6 +460,7 @@
     "registeredAt": "Registered At",
     "selectNc": "Select NC",
     "selectComplaint": "Select Complaint",
+    "requiredFields": "Title, source type and source are required.",
     "emptyState": "No CAPAs found for the selected period.",
     "registerFirst": "Register your first CAPA"
   },
@@ -402,7 +492,16 @@
     "registerFirst": "Register the first lesson learned",
     "source": "Source",
     "keyLearningSummary": "Key Learning (Summary)",
-    "notWritten": "Not filled"
+    "notWritten": "Not filled",
+    "nextStatus": {
+      "draft": "Request Review",
+      "review": "Publish"
+    },
+    "sourceInternalNc": "Internal NC",
+    "sourceComplaint": "Customer Complaint",
+    "tagsHint": "Comma-separated",
+    "lastModified": "Last Modified",
+    "deleteConfirm": "Delete this lesson learned?"
   },
   "periodFilter": {
     "year": "Year",
@@ -476,6 +575,38 @@
       "major": "Major",
       "minor": "Minor"
     }
+  },
+  "attachments": {
+    "title": "Attachments",
+    "addFile": "Add File",
+    "uploadFailed": "Upload failed",
+    "uploadSuccess": "{count} file(s) uploaded",
+    "deleteConfirm": "Delete \"{filename}\"?",
+    "dropzoneDetail": "Images, PDF, Excel — max 20MB",
+    "images": "Images",
+    "files": "Files",
+    "empty": "No attachments."
+  },
+  "notifications": {
+    "title": "Defect Notification",
+    "send": "Send Notification",
+    "recipientEmail": "Recipient Email",
+    "subject": "Subject",
+    "body": "Body",
+    "subjectPlaceholder": "[NC Notice] Part Name — Defect Mode",
+    "bodyPlaceholder": "Describe the defect.",
+    "sending": "Sending...",
+    "sendEmail": "Send Email",
+    "recipient": "To",
+    "sender": "Sender",
+    "invalidEmail": "Please enter a valid email address.",
+    "duplicateEmail": "Email already added.",
+    "requiredSubject": "Subject is required.",
+    "requiredBody": "Body is required.",
+    "requiredRecipient": "At least one recipient is required.",
+    "sendFailed": "Failed to send.",
+    "sendSuccess": "Email sent successfully.",
+    "empty": "No notifications sent yet."
   },
   "guide": {
     "collapsed": "Guide",

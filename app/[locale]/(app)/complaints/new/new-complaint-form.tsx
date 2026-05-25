@@ -90,7 +90,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "등록에 실패했습니다."); return; }
+      if (!res.ok) { toast.error(data.error ?? tc("error")); return; }
 
       if (pendingFiles.length > 0) {
         let uploaded = 0;
@@ -102,9 +102,9 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
           const r = await fetch("/api/nc/attachments", { method: "POST", body: fd });
           if (r.ok) uploaded++;
         }
-        toast.success(`${data.complaintNumber} 등록 완료 (첨부 ${uploaded}개)`);
+        toast.success(tc("registeredSuccessAttachments", { number: data.complaintNumber, count: uploaded }));
       } else {
-        toast.success(`${data.complaintNumber} 등록 완료`);
+        toast.success(tc("registeredSuccess", { number: data.complaintNumber }));
       }
 
       router.push(`/complaints/${data.id}`);

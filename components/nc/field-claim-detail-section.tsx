@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { MapPin, Plus, X, Edit2, Save, Loader2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,9 @@ interface Props {
 }
 
 export function FieldClaimDetailSection({ complaintId }: Props) {
+  const t = useTranslations("complaint");
+  const tc = useTranslations("common");
+
   const [detail, setDetail] = useState<FieldDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -73,7 +77,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ complaintId }),
       });
-      if (!res.ok) { toast.error("생성에 실패했습니다."); return; }
+      if (!res.ok) { toast.error(tc("error")); return; }
       const data = await res.json();
       setDetail(data);
       resetForm(data);
@@ -97,12 +101,12 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
           manufacturedAt: form.manufacturedAt ? `${form.manufacturedAt}-01` : null,
         }),
       });
-      if (!res.ok) { toast.error("저장에 실패했습니다."); return; }
+      if (!res.ok) { toast.error(tc("error")); return; }
       const updated = await res.json();
       setDetail(updated);
       resetForm(updated);
       setEditing(false);
-      toast.success("저장됐습니다.");
+      toast.success(tc("success"));
     } finally {
       setSaving(false);
     }
@@ -110,17 +114,17 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
 
   async function handleDelete() {
     if (!detail) return;
-    if (!confirm("필드 클레임 정보를 삭제하시겠습니까?")) return;
+    if (!confirm(t("fieldClaimSection") + "?")) return;
     await fetch(`/api/nc/field-claim-details/${detail.id}`, { method: "DELETE" });
     setDetail(null);
     setEditing(false);
-    toast.success("삭제됐습니다.");
+    toast.success(tc("success"));
   }
 
   function addDtc() {
     const val = dtcInput.trim().toUpperCase();
     if (!val) return;
-    if (form.dtcCodes.includes(val)) { toast.error("이미 추가된 코드입니다."); return; }
+    if (form.dtcCodes.includes(val)) { toast.error(tc("error")); return; }
     setForm((p) => ({ ...p, dtcCodes: [...p.dtcCodes, val] }));
     setDtcInput("");
   }
@@ -141,13 +145,13 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
       <div className="flex items-center justify-between">
         <h2 className="section-title flex items-center gap-2">
           <MapPin className="h-4 w-4 text-emerald-600" />
-          필드 클레임 정보
+          {t("fieldClaimSection")}
         </h2>
         {detail ? (
           <div className="flex items-center gap-1.5">
             {!editing && (
               <Button variant="outline" size="sm" onClick={() => { setEditing(true); setExpanded(true); }}>
-                <Edit2 className="h-3.5 w-3.5 mr-1" />편집
+                <Edit2 className="h-3.5 w-3.5 mr-1" />{tc("edit")}
               </Button>
             )}
             <button onClick={() => setExpanded((v) => !v)} className="p-1 text-gray-400 hover:text-gray-600">
@@ -157,7 +161,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
         ) : (
           <Button variant="outline" size="sm" onClick={handleCreate} disabled={creating}>
             {creating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Plus className="h-3.5 w-3.5 mr-1" />}
-            정보 입력
+            {tc("add")}
           </Button>
         )}
       </div>
@@ -166,58 +170,58 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
         <div className="space-y-4">
           {editing ? (
             <>
-              {/* 차량 정보 */}
+              {/* Vehicle info */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">차종</Label>
+                  <Label className="text-xs">{t("vehicleModel")}</Label>
                   <Input value={form.vehicleModel} onChange={(e) => setForm((p) => ({ ...p, vehicleModel: e.target.value }))}
-                    placeholder="예: G90, Tucson" className="mt-1 h-8 text-sm" />
+                    placeholder="G90, Tucson..." className="mt-1 h-8 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">제조년월</Label>
+                  <Label className="text-xs">{t("manufacturedAt")}</Label>
                   <Input type="month" value={form.manufacturedAt} onChange={(e) => setForm((p) => ({ ...p, manufacturedAt: e.target.value }))}
                     className="mt-1 h-8 text-sm" />
                 </div>
                 <div>
                   <Label className="text-xs">VIN</Label>
                   <Input value={form.vehicleVin} onChange={(e) => setForm((p) => ({ ...p, vehicleVin: e.target.value }))}
-                    placeholder="차량 식별번호" className="mt-1 h-8 text-sm" />
+                    className="mt-1 h-8 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">사용기간 (개월)</Label>
+                  <Label className="text-xs">{t("usageMonths")}</Label>
                   <Input type="number" value={form.usageMonths} onChange={(e) => setForm((p) => ({ ...p, usageMonths: e.target.value }))}
-                    placeholder="예: 24" className="mt-1 h-8 text-sm" />
+                    placeholder="24" className="mt-1 h-8 text-sm" />
                 </div>
               </div>
 
-              {/* 발생 위치 */}
+              {/* Location */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">발생 지역</Label>
+                  <Label className="text-xs">{t("region")}</Label>
                   <Input value={form.region} onChange={(e) => setForm((p) => ({ ...p, region: e.target.value }))}
-                    placeholder="예: 서울, 경기, 미국 서부" className="mt-1 h-8 text-sm" />
+                    className="mt-1 h-8 text-sm" />
                 </div>
                 <div>
-                  <Label className="text-xs">딜러 / 사업소</Label>
+                  <Label className="text-xs">{t("dealer")}</Label>
                   <Input value={form.dealerName} onChange={(e) => setForm((p) => ({ ...p, dealerName: e.target.value }))}
-                    placeholder="예: 현대 강남 서비스센터" className="mt-1 h-8 text-sm" />
+                    className="mt-1 h-8 text-sm" />
                 </div>
               </div>
 
-              {/* 주행거리 */}
+              {/* Mileage */}
               <div>
-                <Label className="text-xs">주행거리 (km)</Label>
+                <Label className="text-xs">{t("mileageKm")}</Label>
                 <Input type="number" value={form.mileageKm} onChange={(e) => setForm((p) => ({ ...p, mileageKm: e.target.value }))}
-                  placeholder="예: 35000" className="mt-1 h-8 text-sm w-1/2" />
+                  placeholder="35000" className="mt-1 h-8 text-sm w-1/2" />
               </div>
 
-              {/* DTC 코드 */}
+              {/* DTC codes */}
               <div>
-                <Label className="text-xs">불량코드 (DTC)</Label>
+                <Label className="text-xs">{t("dtcCodes")}</Label>
                 <div className="flex gap-2 mt-1">
                   <Input value={dtcInput} onChange={(e) => setDtcInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addDtc(); } }}
-                    placeholder="예: P0171, C1234" className="flex-1 h-8 text-sm uppercase" />
+                    placeholder="P0171, C1234" className="flex-1 h-8 text-sm uppercase" />
                   <Button size="sm" variant="outline" onClick={addDtc} className="h-8">
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
@@ -236,38 +240,38 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
                 )}
               </div>
 
-              {/* 고객 증상 */}
+              {/* Symptom */}
               <div>
-                <Label className="text-xs">고객 증상 기술</Label>
+                <Label className="text-xs">{t("symptomDescription")}</Label>
                 <Textarea value={form.symptomDescription} onChange={(e) => setForm((p) => ({ ...p, symptomDescription: e.target.value }))}
-                  placeholder="고객이 보고한 증상을 그대로 기재하세요." rows={3} className="mt-1 text-sm" />
+                  rows={3} className="mt-1 text-sm" />
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                 <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={handleDelete}>
-                  <Trash2 className="h-3.5 w-3.5 mr-1" />삭제
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />{tc("delete")}
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => { setEditing(false); if (detail) resetForm(detail); }}>취소</Button>
+                  <Button variant="ghost" size="sm" onClick={() => { setEditing(false); if (detail) resetForm(detail); }}>{tc("cancel")}</Button>
                   <Button size="sm" onClick={handleSave} disabled={saving}>
                     {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-                    저장
+                    {tc("save")}
                   </Button>
                 </div>
               </div>
             </>
           ) : hasData ? (
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {detail.vehicleModel && <><dt className="text-muted-foreground">차종</dt><dd className="font-medium">{detail.vehicleModel}</dd></>}
-              {detail.manufacturedAt && <><dt className="text-muted-foreground">제조년월</dt><dd className="font-medium">{new Date(detail.manufacturedAt).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit" })}</dd></>}
+              {detail.vehicleModel && <><dt className="text-muted-foreground">{t("vehicleModel")}</dt><dd className="font-medium">{detail.vehicleModel}</dd></>}
+              {detail.manufacturedAt && <><dt className="text-muted-foreground">{t("manufacturedAt")}</dt><dd className="font-medium">{new Date(detail.manufacturedAt).toLocaleDateString(undefined, { year: "numeric", month: "2-digit" })}</dd></>}
               {detail.vehicleVin && <><dt className="text-muted-foreground">VIN</dt><dd className="font-medium font-mono text-xs">{detail.vehicleVin}</dd></>}
-              {detail.usageMonths != null && <><dt className="text-muted-foreground">사용기간</dt><dd className="font-medium">{detail.usageMonths}개월</dd></>}
-              {detail.region && <><dt className="text-muted-foreground">발생 지역</dt><dd className="font-medium">{detail.region}</dd></>}
-              {detail.dealerName && <><dt className="text-muted-foreground">딜러/사업소</dt><dd className="font-medium">{detail.dealerName}</dd></>}
-              {detail.mileageKm && <><dt className="text-muted-foreground">주행거리</dt><dd className="font-medium">{Number(detail.mileageKm).toLocaleString("ko-KR")} km</dd></>}
+              {detail.usageMonths != null && <><dt className="text-muted-foreground">{t("usageMonths")}</dt><dd className="font-medium">{detail.usageMonths}</dd></>}
+              {detail.region && <><dt className="text-muted-foreground">{t("region")}</dt><dd className="font-medium">{detail.region}</dd></>}
+              {detail.dealerName && <><dt className="text-muted-foreground">{t("dealer")}</dt><dd className="font-medium">{detail.dealerName}</dd></>}
+              {detail.mileageKm && <><dt className="text-muted-foreground">{t("mileageKm")}</dt><dd className="font-medium">{Number(detail.mileageKm).toLocaleString()} km</dd></>}
               {detail.dtcCodes && detail.dtcCodes.length > 0 && (
                 <>
-                  <dt className="text-muted-foreground">불량코드 (DTC)</dt>
+                  <dt className="text-muted-foreground">{t("dtcCodes")}</dt>
                   <dd className="flex flex-wrap gap-1">
                     {detail.dtcCodes.map((code) => (
                       <span key={code} className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-mono font-medium text-emerald-800">{code}</span>
@@ -277,13 +281,13 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
               )}
               {detail.symptomDescription && (
                 <div className="col-span-2">
-                  <dt className="text-muted-foreground">고객 증상</dt>
+                  <dt className="text-muted-foreground">{t("symptomDescription")}</dt>
                   <dd className="font-medium mt-0.5 whitespace-pre-wrap">{detail.symptomDescription}</dd>
                 </div>
               )}
             </dl>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-2">입력된 정보가 없습니다.</p>
+            <p className="text-sm text-muted-foreground text-center py-2">{tc("noData")}</p>
           )}
         </div>
       )}

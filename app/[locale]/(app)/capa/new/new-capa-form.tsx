@@ -45,7 +45,7 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.title || !form.sourceType || !form.sourceId) {
-      toast.error("제목, 출처 유형, 출처 ID는 필수입니다.");
+      toast.error(t("requiredFields"));
       return;
     }
     setLoading(true);
@@ -56,8 +56,8 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "등록에 실패했습니다."); return; }
-      toast.success(`${data.capaNumber} 등록 완료`);
+      if (!res.ok) { toast.error(data.error ?? tc("error")); return; }
+      toast.success(tc("registeredSuccess", { number: data.capaNumber }));
       router.push(`/capa/${data.id}`);
     } finally {
       setLoading(false);

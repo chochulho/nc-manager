@@ -11,7 +11,10 @@
     "admin": "관리자",
     "notifications": "알림",
     "logout": "로그아웃",
-    "user": "사용자"
+    "user": "사용자",
+    "expandSidebar": "사이드바 펼치기",
+    "collapseSidebar": "사이드바 접기",
+    "changeLanguage": "언어 변경"
   },
   "auth": {
     "login": "로그인",
@@ -78,7 +81,9 @@
     "safetyRelated": "안전 관련 (Safety)",
     "attachmentsHint": "첨부파일 (등록 시 함께 업로드)",
     "dropzoneHint": "클릭하거나 파일을 끌어다 놓으세요",
-    "printReport": "보고서 출력"
+    "printReport": "보고서 출력",
+    "registeredSuccess": "{number} 등록 완료",
+    "registeredSuccessAttachments": "{number} 등록 완료 (첨부 {count}개)"
   },
   "language": {
     "ko": "한국어",
@@ -170,6 +175,15 @@
       "disposition_decided": "CAPA 시작",
       "capa_in_progress": "종결"
     },
+    "dispositionType": "처분 유형",
+    "dispositionNotes": "처분 메모",
+    "copqTotal": "COPQ 합계",
+    "viewCapa": "CAPA 보기",
+    "costScrap": "폐기 비용 (KRW)",
+    "costRework": "재작업 비용 (KRW)",
+    "costOther": "기타 비용 (KRW)",
+    "quantityConfirmed": "확인 수량",
+    "dispositionSection": "처분 (Disposition)",
     "emptyState": "해당 기간에 등록된 내부 부적합이 없습니다.",
     "registerFirst": "첫 번째 NC 등록하기"
   },
@@ -184,7 +198,6 @@
     "discoveryStage": "발견 단계",
     "severity": "심각도",
     "status": "상태",
-    "sla": "SLA",
     "title2": "클레임 제목",
     "quantity": "클레임 수량",
     "defectDescription": "불량 내용",
@@ -251,6 +264,82 @@
       "investigating": "8D 시작",
       "8d_in_progress": "최종보고",
       "final_reported": "종결"
+    },
+    "quantityConfirmed": "확인 수량",
+    "resolutionType": "해결 유형",
+    "viewCapa": "CAPA 보기",
+    "resolutionTypes": {
+      "confirmed_nc": "실제 부적합 (Confirmed NC)",
+      "ntf": "이상없음 (NTF)",
+      "customer_misuse": "고객 과실",
+      "partial": "부분 인정"
+    },
+    "sla": {
+      "responseTracking": "대응 진행",
+      "initialResponse": "초도 대응",
+      "containment": "봉쇄조치",
+      "finalReport": "최종보고",
+      "initialResponseSentAt": "초도 대응 완료일",
+      "containedAt": "봉쇄조치 완료일",
+      "finalReportSentAt": "최종보고 발송일",
+      "completed": "완료"
+    },
+    "copqSection": "비용 (COPQ)",
+    "copqTotal": "COPQ 합계",
+    "costRecallReturn": "리콜/반환 (KRW)",
+    "costPenalty": "페널티 (KRW)",
+    "costOther": "기타 (KRW)",
+    "category": "분류",
+    "part": "부품",
+    "report": {
+      "title": "분석보고서",
+      "draft": "초안",
+      "final": "최종",
+      "create": "보고서 작성",
+      "createFromCapa": "CAPA에서 생성",
+      "importFromCapa": "CAPA에서 불러오기",
+      "tempSave": "임시저장",
+      "finalizeOnly": "보고서만 확정",
+      "finalizeAndClose": "확정 + 클레임 종결",
+      "finalize": "최종 확정",
+      "notEntered": "미입력",
+      "ntfBanner": "NTF 케이스입니다. 분석보고서 작성 후 보고서에서 직접 클레임을 종결할 수 있습니다.",
+      "faultBanner": "고객 귀책 케이스입니다. 분석보고서 작성 후 보고서에서 직접 클레임을 종결할 수 있습니다.",
+      "claimOverview": "클레임 개요 (자동)",
+      "judgment": "판정",
+      "createdMsg": "분석보고서를 생성했습니다.",
+      "createdFromCapaMsg": "CAPA 데이터를 불러와 보고서를 생성했습니다.",
+      "importedCapa": "CAPA 데이터를 불러왔습니다.",
+      "importConfirm": "현재 입력 내용을 CAPA 데이터로 덮어씁니다. 계속하시겠습니까?",
+      "deleteConfirm": "분석보고서를 삭제하시겠습니까?",
+      "closeSuccess": "보고서 확정 + 클레임 종결 처리됐습니다.",
+      "closeNtfSuccess": "보고서 확정 + 클레임 종결(NTF) 처리됐습니다.",
+      "closeFailedMsg": "보고서는 확정됐지만 클레임 종결에 실패했습니다.",
+      "downloadPpt": "PPT 파일을 다운로드합니다.",
+      "resolutionLabels": {
+        "ntf": "불량 미재현 (NTF)",
+        "customer_misuse": "고객 귀책",
+        "confirmed_nc": "실제 부적합",
+        "partial": "부분 인정"
+      },
+      "sections": {
+        "problemDescription": "문제 설명",
+        "immediateContainment": "즉각 봉쇄 조치",
+        "immediateContainmentNtf": "접수 대응 조치",
+        "rootCause": "원인 분석",
+        "rootCauseNtf": "불량 미재현 / 검증 결과",
+        "rootCauseFault": "귀책 분석",
+        "permanentActions": "영구 시정조치",
+        "permanentActionsNtf": "추가 조치 계획",
+        "prevention": "재발 방지 / 수평전개",
+        "preventionNtf": "고객 피드백 및 향후 대응",
+        "conclusion": "결론 및 종합"
+      }
+    },
+    "severities": {
+      "critical": "긴급",
+      "major": "주요",
+      "minor": "경미"
     },
     "emptyState": "해당 기간에 등록된 고객 클레임이 없습니다.",
     "registerFirst": "첫 번째 클레임 등록하기"
@@ -371,6 +460,7 @@
     "registeredAt": "등록일",
     "selectNc": "NC 선택",
     "selectComplaint": "클레임 선택",
+    "requiredFields": "제목, 출처 유형, 출처 ID는 필수입니다.",
     "emptyState": "해당 기간에 등록된 CAPA가 없습니다.",
     "registerFirst": "첫 번째 CAPA 등록하기"
   },
@@ -429,7 +519,16 @@
     "registerFirst": "첫 번째 레슨런 등록하기",
     "source": "소스",
     "keyLearningSummary": "핵심 레슨 (요약)",
-    "notWritten": "미작성"
+    "notWritten": "미작성",
+    "nextStatus": {
+      "draft": "검토 요청",
+      "review": "발행"
+    },
+    "sourceInternalNc": "내부 부적합",
+    "sourceComplaint": "고객 클레임",
+    "tagsHint": "쉼표로 구분",
+    "lastModified": "최종 수정",
+    "deleteConfirm": "이 레슨런을 삭제하시겠습니까?"
   },
   "periodFilter": {
     "year": "년도",
@@ -503,6 +602,38 @@
       "major": "주요",
       "minor": "경미"
     }
+  },
+  "attachments": {
+    "title": "첨부파일",
+    "addFile": "파일 추가",
+    "uploadFailed": "업로드 실패",
+    "uploadSuccess": "{count}개 파일 업로드 완료",
+    "deleteConfirm": "\"{filename}\"을 삭제하시겠습니까?",
+    "dropzoneDetail": "이미지, PDF, Excel 등 최대 20MB",
+    "images": "이미지",
+    "files": "파일",
+    "empty": "첨부된 파일이 없습니다."
+  },
+  "notifications": {
+    "title": "불량통보",
+    "send": "통보서 발송",
+    "recipientEmail": "수신자 이메일",
+    "subject": "제목",
+    "body": "내용",
+    "subjectPlaceholder": "[부적합통보] 부품명 — 불량 현상",
+    "bodyPlaceholder": "불량 내용을 입력하세요.",
+    "sending": "발송 중...",
+    "sendEmail": "이메일 발송",
+    "recipient": "수신",
+    "sender": "발송자",
+    "invalidEmail": "올바른 이메일 주소를 입력하세요.",
+    "duplicateEmail": "이미 추가된 이메일입니다.",
+    "requiredSubject": "제목을 입력하세요.",
+    "requiredBody": "내용을 입력하세요.",
+    "requiredRecipient": "수신자를 1명 이상 입력하세요.",
+    "sendFailed": "발송에 실패했습니다.",
+    "sendSuccess": "이메일을 발송했습니다.",
+    "empty": "발송된 통보서가 없습니다."
   },
   "guide": {
     "collapsed": "가이드",

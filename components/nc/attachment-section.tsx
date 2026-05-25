@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Paperclip, Upload, X, FileText, FileImage, Download, Loader2 } from "lucide-react";
+import { Paperclip, Upload, X, FileText, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Attachment {
@@ -35,6 +36,9 @@ function isImage(mimeType: string | null): boolean {
 }
 
 export function AttachmentSection({ entityType, entityId }: Props) {
+  const tc = useTranslations("common");
+  const ta = useTranslations("attachments");
+
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -66,22 +70,22 @@ export function AttachmentSection({ entityType, entityId }: Props) {
         successCount++;
       } else {
         const err = await res.json().catch(() => ({}));
-        toast.error(`${file.name}: ${err.error ?? "업로드 실패"}`);
+        toast.error(`${file.name}: ${err.error ?? ta("uploadFailed")}`);
       }
     }
 
     if (successCount > 0) {
-      toast.success(`${successCount}개 파일 업로드 완료`);
+      toast.success(ta("uploadSuccess", { count: successCount }));
       load();
     }
     setUploading(false);
   }
 
   async function handleDelete(id: string, filename: string) {
-    if (!confirm(`"${filename}"을 삭제하시겠습니까?`)) return;
+    if (!confirm(ta("deleteConfirm", { filename }))) return;
     const res = await fetch(`/api/nc/attachments/${id}`, { method: "DELETE" });
     if (res.ok) {
-      toast.success("삭제됐습니다.");
+      toast.success(tc("success"));
       setAttachments((prev) => prev.filter((a) => a.id !== id));
     }
   }
@@ -100,7 +104,7 @@ export function AttachmentSection({ entityType, entityId }: Props) {
       <div className="flex items-center justify-between">
         <h2 className="section-title flex items-center gap-2">
           <Paperclip className="h-4 w-4" />
-          첨부파일 ({attachments.length})
+          {ta("title")} ({attachments.length})
         </h2>
         <Button
           variant="outline"
@@ -109,7 +113,7 @@ export function AttachmentSection({ entityType, entityId }: Props) {
           disabled={uploading}
         >
           {uploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Upload className="h-4 w-4 mr-1" />}
-          {uploading ? "업로드 중..." : "파일 추가"}
+          {uploading ? tc("adding") : ta("addFile")}
         </Button>
         <input
           ref={inputRef}
@@ -120,7 +124,7 @@ export function AttachmentSection({ entityType, entityId }: Props) {
         />
       </div>
 
-      {/* 드래그 앤 드롭 존 */}
+      {/* Drag & drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
@@ -132,15 +136,15 @@ export function AttachmentSection({ entityType, entityId }: Props) {
       >
         <Upload className="h-5 w-5 mx-auto mb-1.5 text-gray-400" />
         <p className="text-muted-foreground">
-          파일을 끌어다 놓거나 클릭해서 선택
-          <span className="block text-xs mt-0.5">이미지, PDF, Excel 등 최대 20MB</span>
+          {tc("dropzoneHint")}
+          <span className="block text-xs mt-0.5">{ta("dropzoneDetail")}</span>
         </p>
       </div>
 
-      {/* 이미지 그리드 */}
+      {/* Image grid */}
       {images.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">이미지</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">{ta("images")}</p>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {images.map((img) => (
               <div key={img.id} className="relative group rounded-xl overflow-hidden border border-gray-200 aspect-square bg-gray-50">
@@ -165,10 +169,10 @@ export function AttachmentSection({ entityType, entityId }: Props) {
         </div>
       )}
 
-      {/* 파일 목록 */}
+      {/* File list */}
       {files.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-2">파일</p>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">{ta("files")}</p>
           <div className="space-y-1.5">
             {files.map((file) => (
               <div key={file.id} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 group">
@@ -199,10 +203,10 @@ export function AttachmentSection({ entityType, entityId }: Props) {
       )}
 
       {attachments.length === 0 && (
-        <p className="text-center text-xs text-muted-foreground py-2">첨부된 파일이 없습니다.</p>
+        <p className="text-center text-xs text-muted-foreground py-2">{ta("empty")}</p>
       )}
 
-      {/* 라이트박스 */}
+      {/* Lightbox */}
       {lightbox && (
         <div
           className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
@@ -213,7 +217,7 @@ export function AttachmentSection({ entityType, entityId }: Props) {
               onClick={() => setLightbox(null)}
               className="absolute -top-10 right-0 text-white hover:text-gray-300 flex items-center gap-1 text-sm"
             >
-              <X className="h-5 w-5" /> 닫기
+              <X className="h-5 w-5" /> {tc("close")}
             </button>
             <img
               src={lightbox}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Edit2, Save, X, Plus, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 import { Input } from "@/components/ui/input";

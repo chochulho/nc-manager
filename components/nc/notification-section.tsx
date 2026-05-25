@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Send, Mail, X, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,9 @@ interface Props {
 }
 
 export function NotificationSection({ entityType, entityId }: Props) {
+  const tc = useTranslations("common");
+  const tn = useTranslations("notifications");
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -40,11 +44,11 @@ export function NotificationSection({ entityType, entityId }: Props) {
     const trimmed = emailInput.trim();
     if (!trimmed) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      toast.error("올바른 이메일 주소를 입력하세요.");
+      toast.error(tn("invalidEmail"));
       return;
     }
     if (form.recipientEmails.includes(trimmed)) {
-      toast.error("이미 추가된 이메일입니다.");
+      toast.error(tn("duplicateEmail"));
       return;
     }
     setForm((prev) => ({ ...prev, recipientEmails: [...prev.recipientEmails, trimmed] }));
@@ -56,9 +60,9 @@ export function NotificationSection({ entityType, entityId }: Props) {
   }
 
   async function handleSend() {
-    if (!form.subject.trim()) { toast.error("제목을 입력하세요."); return; }
-    if (!form.body.trim()) { toast.error("내용을 입력하세요."); return; }
-    if (!form.recipientEmails.length) { toast.error("수신자를 1명 이상 입력하세요."); return; }
+    if (!form.subject.trim()) { toast.error(tn("requiredSubject")); return; }
+    if (!form.body.trim()) { toast.error(tn("requiredBody")); return; }
+    if (!form.recipientEmails.length) { toast.error(tn("requiredRecipient")); return; }
 
     setSending(true);
     try {
@@ -69,10 +73,10 @@ export function NotificationSection({ entityType, entityId }: Props) {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error ?? "발송에 실패했습니다.");
+        toast.error(err.error ?? tn("sendFailed"));
         return;
       }
-      toast.success("이메일을 발송했습니다.");
+      toast.success(tn("sendSuccess"));
       setOpen(false);
       setForm({ subject: "", body: "", recipientEmails: [] });
       setEmailInput("");
@@ -87,19 +91,19 @@ export function NotificationSection({ entityType, entityId }: Props) {
       <div className="flex items-center justify-between">
         <h2 className="section-title flex items-center gap-2">
           <Mail className="h-4 w-4 text-orange-500" />
-          불량통보 ({notifications.length})
+          {tn("title")} ({notifications.length})
         </h2>
         <Button variant="outline" size="sm" onClick={() => setOpen((v) => !v)}>
           <Send className="h-3.5 w-3.5 mr-1" />
-          통보서 발송
+          {tn("send")}
         </Button>
       </div>
 
-      {/* 발송 폼 */}
+      {/* Send form */}
       {open && (
         <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 space-y-3">
           <div>
-            <Label className="text-xs">수신자 이메일</Label>
+            <Label className="text-xs">{tn("recipientEmail")}</Label>
             <div className="flex gap-2 mt-1">
               <Input
                 value={emailInput}
@@ -127,37 +131,37 @@ export function NotificationSection({ entityType, entityId }: Props) {
           </div>
 
           <div>
-            <Label className="text-xs">제목</Label>
+            <Label className="text-xs">{tn("subject")}</Label>
             <Input
               value={form.subject}
               onChange={(e) => setForm((p) => ({ ...p, subject: e.target.value }))}
-              placeholder="[부적합통보] 부품명 — 불량 현상"
+              placeholder={tn("subjectPlaceholder")}
               className="mt-1 h-8 text-sm"
             />
           </div>
 
           <div>
-            <Label className="text-xs">내용</Label>
+            <Label className="text-xs">{tn("body")}</Label>
             <Textarea
               value={form.body}
               onChange={(e) => setForm((p) => ({ ...p, body: e.target.value }))}
               rows={6}
-              placeholder="불량 내용을 입력하세요."
+              placeholder={tn("bodyPlaceholder")}
               className="mt-1 text-sm"
             />
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>취소</Button>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>{tc("cancel")}</Button>
             <Button size="sm" onClick={handleSend} disabled={sending}>
               {sending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1" />}
-              {sending ? "발송 중..." : "이메일 발송"}
+              {sending ? tn("sending") : tn("sendEmail")}
             </Button>
           </div>
         </div>
       )}
 
-      {/* 발송 이력 */}
+      {/* Send history */}
       {notifications.length > 0 ? (
         <div className="space-y-2">
           {notifications.map((n) => (
@@ -165,20 +169,20 @@ export function NotificationSection({ entityType, entityId }: Props) {
               <div className="flex items-start justify-between gap-2">
                 <p className="text-sm font-medium leading-snug">{n.subject}</p>
                 <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                  {new Date(n.sentAt).toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  {new Date(n.sentAt).toLocaleString(undefined, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                수신: {n.recipientEmails.join(", ")}
+                {tn("recipient")}: {n.recipientEmails.join(", ")}
               </p>
               <p className="text-xs text-muted-foreground">
-                발송자: {n.sentByUser.name ?? n.sentByUser.email}
+                {tn("sender")}: {n.sentByUser.name ?? n.sentByUser.email}
               </p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-center text-xs text-muted-foreground py-2">발송된 통보서가 없습니다.</p>
+        <p className="text-center text-xs text-muted-foreground py-2">{tn("empty") ?? ""}</p>
       )}
     </div>
   );
