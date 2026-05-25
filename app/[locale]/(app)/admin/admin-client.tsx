@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Shield, Building2, ExternalLink, Database, RefreshCw } from "lucide-react";
+import { Shield, Building2, ExternalLink, Database, RefreshCw, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -35,6 +36,10 @@ interface Props {
 
 export default function AdminClient({ orgs, categoryCount, currentUser }: Props) {
   const [seeding, setSeeding] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagResult, setDiagResult] = useState<Record<string, unknown> | null>(null);
 
   async function handleSeedCategories() {
     setSeeding(true);
@@ -50,6 +55,47 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
       toast.error("요청 실패");
     } finally {
       setSeeding(false);
+    }
+  }
+
+  async function handleCreateOrg() {
+    if (!newOrgName.trim()) {
+      toast.error("조직 이름을 입력하세요");
+      return;
+    }
+    setCreatingOrg(true);
+    try {
+      const res = await fetch("/api/nc/admin/create-org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newOrgName.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message ?? "조직 생성 완료 — 페이지를 새로고침 하세요");
+        setNewOrgName("");
+        // Refresh the page to show updated org list and re-run auth
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        toast.error(data.error ?? "조직 생성 실패");
+      }
+    } catch {
+      toast.error("요청 실패");
+    } finally {
+      setCreatingOrg(false);
+    }
+  }
+
+  async function handleDiagnose() {
+    setDiagnosing(true);
+    try {
+      const res = await fetch("/api/debug/session");
+      const data = await res.json();
+      setDiagResult(data);
+    } catch (err) {
+      toast.error("진단 실패: " + String(err));
+    } finally {
+      setDiagnosing(false);
     }
   }
 
@@ -75,9 +121,53 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
           <span className="text-muted-foreground">이메일</span>
           <span>{currentUser.email}</span>
           <span className="text-muted-foreground">현재 조직</span>
-          <span>{currentUser.organizationName ?? "—"}</span>
+          <span>{currentUser.organizationName ?? <span className="text-red-500 font-semibold">없음 (페이지 접근 불가)</span>}</span>
           <span className="text-muted-foreground">조직 ID</span>
           <span className="font-mono text-xs truncate">{currentUser.organizationId ?? "—"}</span>
+        </CardContent>
+      </Card>
+
+      {/* 세션 진단 */}
+      <Card className={currentUser.organizationId ? "border-green-200" : "border-red-200"}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Search className="h-4 w-4" />
+            세션 진단
+          </CardTitle>
+          <CardDescription>
+            조직 ID가 없으면 내부NC·클레임·CAPA 등 모든 페이지가 대시보드로 리다이렉트됩니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDiagnose}
+            disabled={diagnosing}
+            className="gap-1"
+          >
+            <Search className={`h-3 w-3 ${diagnosing ? "animate-spin" : ""}`} />
+            세션 진단 실행
+          </Button>
+
+          {diagResult && (
+            <div className="rounded-lg bg-slate-50 border p-3 space-y-1 text-xs font-mono overflow-auto max-h-64">
+              {Object.entries(diagResult).map(([k, v]) => (
+                <div key={k} className="flex gap-2">
+                  <span className="text-slate-500 min-w-[160px]">{k}:</span>
+                  <span className={
+                    k === "diagnosis" && String(v).startsWith("OK")
+                      ? "text-green-700 font-bold"
+                      : k === "diagnosis"
+                      ? "text-red-700 font-bold"
+                      : "text-slate-800"
+                  }>
+                    {typeof v === "object" ? JSON.stringify(v) : String(v ?? "null")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -106,9 +196,11 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
             </a>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {orgs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">조직 없음</p>
+            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              ⚠ 조직 없음 — 아래에서 조직을 생성하면 모든 페이지를 사용할 수 있습니다.
+            </p>
           ) : (
             <div className="divide-y">
               {orgs.map((org) => (
@@ -125,6 +217,32 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
               ))}
             </div>
           )}
+
+          {/* 조직 생성 폼 */}
+          <div className="pt-2 border-t space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">새 조직 생성</p>
+            <div className="flex gap-2">
+              <Input
+                value={newOrgName}
+                onChange={(e) => setNewOrgName(e.target.value)}
+                placeholder="조직 이름 (예: 테스트 제조사)"
+                className="flex-1 text-sm"
+                onKeyDown={(e) => e.key === "Enter" && handleCreateOrg()}
+              />
+              <Button
+                size="sm"
+                onClick={handleCreateOrg}
+                disabled={creatingOrg || !newOrgName.trim()}
+                className="gap-1"
+              >
+                <Plus className={`h-3 w-3 ${creatingOrg ? "animate-spin" : ""}`} />
+                생성
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              생성 후 현재 계정이 해당 조직의 owner로 자동 등록됩니다.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
