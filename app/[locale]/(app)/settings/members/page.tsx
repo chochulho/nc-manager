@@ -8,6 +8,7 @@ import { MembersClient } from "./members-client";
 
 export default async function MembersPage() {
   const session = await auth();
+  console.log("[MembersPage] session:", session?.user?.email, "orgRole:", session?.user?.orgRole, "isAdmin:", session?.user?.isAdmin, "orgId:", session?.user?.organizationId);
   if (!session) redirect("/login");
   if (session.user.orgRole !== "ADMIN" && !session.user.isAdmin) redirect("/dashboard");
   if (!session.user.organizationId) redirect("/dashboard");
