@@ -77,7 +77,8 @@
     "lotNumber": "LOT Number",
     "safetyRelated": "Safety Related",
     "attachmentsHint": "Attachments (Upload on Registration)",
-    "dropzoneHint": "Click or drag & drop files here"
+    "dropzoneHint": "Click or drag & drop files here",
+    "printReport": "Print Report"
   },
   "language": {
     "ko": "한국어",
@@ -397,7 +398,165 @@
       "published": "Published"
     },
     "emptyState": "No lessons learned registered.",
-    "registerFirst": "Register the first lesson learned"
+    "emptySubtitle": "Record lessons from internal NCs and customer complaints.",
+    "registerFirst": "Register the first lesson learned",
+    "source": "Source",
+    "keyLearningSummary": "Key Learning (Summary)",
+    "notWritten": "Not filled"
+  },
+  "periodFilter": {
+    "year": "Year",
+    "period": "Period",
+    "allYears": "All",
+    "annual": "Annual",
+    "H1": "H1",
+    "H2": "H2",
+    "all": "All",
+    "labelAll": "All Periods",
+    "labelYear": "{year} Full Year",
+    "labelYearQ1": "{year} Q1 (Jan–Mar)",
+    "labelYearQ2": "{year} Q2 (Apr–Jun)",
+    "labelYearQ3": "{year} Q3 (Jul–Sep)",
+    "labelYearQ4": "{year} Q4 (Oct–Dec)",
+    "labelYearH1": "{year} H1 (Jan–Jun)",
+    "labelYearH2": "{year} H2 (Jul–Dec)"
+  },
+  "fieldAnalysis": {
+    "title": "Field Claim Analysis",
+    "loading": "Loading data...",
+    "loadError": "Failed to load data.",
+    "noData": "No field claim data for this period.",
+    "kpi": {
+      "total": "Total Field Claims",
+      "avgMileage": "Avg. Mileage",
+      "avgUsage": "Avg. Usage Period",
+      "withDtc": "With DTC Code"
+    },
+    "units": {
+      "cases": "cases",
+      "km": "km",
+      "months": "months"
+    },
+    "charts": {
+      "byVehicle": "By Vehicle Model",
+      "byRegion": "By Region",
+      "dtcFrequency": "DTC Code Frequency (Top 15)",
+      "mileageDist": "Mileage Distribution",
+      "monthlyTrend": "Monthly Trend",
+      "severityDist": "Severity Distribution",
+      "noData": "No data",
+      "noDtc": "No DTC data",
+      "claimCount": "Claims",
+      "frequency": "Frequency"
+    },
+    "table": {
+      "title": "Recent Field Claims",
+      "number": "Number",
+      "titleCol": "Title",
+      "customer": "Customer",
+      "vehicle": "Vehicle",
+      "region": "Region",
+      "mileage": "Mileage",
+      "severity": "Severity",
+      "status": "Status",
+      "receivedAt": "Received"
+    },
+    "statuses": {
+      "received": "Received",
+      "acknowledged": "Acknowledged",
+      "contained": "Contained",
+      "investigating": "Investigating",
+      "8d_in_progress": "8D In Progress",
+      "final_reported": "Final Reported",
+      "closed": "Closed",
+      "closed_ntf": "Closed (NTF)"
+    },
+    "severities": {
+      "critical": "Critical",
+      "major": "Major",
+      "minor": "Minor"
+    }
+  },
+  "guide": {
+    "collapsed": "Guide",
+    "close": "Close guide",
+    "open": "Open guide",
+    "titles": {
+      "internal_nc": "Internal NC Guide",
+      "complaint": "Customer Complaint Guide",
+      "capa": "CAPA Writing Guide",
+      "lessons_learned": "Lessons Learned Guide"
+    },
+    "tabs": {
+      "writing": "Writing Tips",
+      "escalation": "Escalation"
+    },
+    "nc": {
+      "w1_title": "① Title Format",
+      "w1_body": "Use [Part Name + Defect Type + Discovery Location]. e.g., Brake Pad Dimension Defect – Incoming Inspection",
+      "w2_title": "② Discovery Stage",
+      "w2_body": "Incoming → likely supplier responsibility. In-Process/Outgoing → internal process issue. Internal Audit → system/procedure issue.",
+      "w3_title": "③ Severity Classification",
+      "w3_body": "Critical: Safety/regulatory risk or 100% supply stoppage\nMajor: Functional defect, potential customer line impact\nMinor: Cosmetic/packaging, immediate swap possible",
+      "w4_title": "④ Containment Description",
+      "w4_body": "Clearly state: What / How many / Where / By when. Specify exact quarantine location and quantity.",
+      "w5_title": "⑤ Disposition Principles",
+      "w5_body": "Rework: Restorable within spec\nDeviation: Customer approval or no functional impact\nScrap: Unrestorable, safety/regulatory failure\nReturn: After confirmed supplier responsibility",
+      "e1_title": "🔴 Critical — Immediate",
+      "e1_body": "• Report verbally to Quality Manager & Plant Manager immediately\n• Evaluate immediate line stop or shipment hold\n• Management briefing within 1 hour",
+      "e2_title": "🟠 Major — Within 24 hours",
+      "e2_body": "• Written report to Quality Manager same day\n• Complete containment within 24 hours\n• Assess impact on customer delivery",
+      "e3_title": "🟡 Minor — Weekly Review",
+      "e3_body": "• Add to weekly quality meeting agenda\n• Analyze recurrence trend; decide if CAPA is needed",
+      "e4_title": "📋 Safety & Regulatory",
+      "e4_body": "If Safety or Regulatory is checked, immediately notify Quality Manager + Legal/Certification team regardless of severity."
+    },
+    "complaint": {
+      "w1_title": "① Received Date = SLA Start",
+      "w1_body": "The received date is the SLA baseline. Even if registered late, enter the actual date received. Deadlines are auto-calculated.",
+      "w2_title": "② Preserve Customer's Original Text",
+      "w2_body": "Enter the customer's original message verbatim. Interpretation and analysis should be added separately after investigation.",
+      "w3_title": "③ Quantity Verification",
+      "w3_body": "Distinguish claimed quantity from confirmed quantity. NTF (No Trouble Found) complaints should be registered with quantity 0.",
+      "w4_title": "④ Recall Risk Check",
+      "w4_body": "Recall Risk ON → Immediate executive report. Safety-related → Verify regulatory reporting obligation.",
+      "w5_title": "⑤ Status Flow",
+      "w5_body": "Received → Acknowledged (24h) → Contained → Investigating → 8D → Final Report → Closed\nDates are auto-recorded at each transition.",
+      "e1_title": "🚨 Recall Risk + Critical",
+      "e1_body": "• Immediately notify CEO, Sales Exec, Quality Exec simultaneously\n• Initiate containment and discuss customer line stoppage\n• Report to Legal team (product liability preparation)",
+      "e2_title": "🟠 Critical — Within 4 hours",
+      "e2_body": "• Written report to Quality Manager within 4 hours\n• Send initial response message/email to customer contact\n• Prepare formal reply within initial response SLA",
+      "e3_title": "⏰ SLA Approaching Warning",
+      "e3_body": "• Initial response D-1: Auto-notify assignee\n• Final report D-3: Notify team leader\n• Immediate escalation if SLA exceeded (customer penalty risk)",
+      "e4_title": "📋 8D Reporting Stage",
+      "e4_body": "Linking CAPA in 8D-in-progress status auto-syncs D4–D7. Check customer format requirements before final report."
+    },
+    "capa": {
+      "w1_title": "① Problem Description (D2)",
+      "w1_body": "Use 5W2H: What, When, Where, Who, Why + How much, How many.",
+      "w2_title": "② Interim Containment (D3)",
+      "w2_body": "Temporary actions to protect the customer before root cause is found. Record completion date and quantity.",
+      "w3_title": "③ 5-Why Root Cause (D4)",
+      "w3_body": "Why? → Why? → Why? → Why? → Why? The answer to the last Why should be the target of permanent corrective action.",
+      "w4_title": "④ Permanent Corrective Action (D5–D6)",
+      "w4_body": "Assign a responsible person and due date for every action. Attach actual completion evidence in the evidence column.",
+      "w5_title": "⑤ Prevention & Horizontal Deployment (D7)",
+      "w5_body": "Always evaluate whether the same actions apply to similar parts/processes. Includes FMEA revision and Control Plan update.",
+      "w6_title": "⑥ Effectiveness Review",
+      "w6_body": "Monitor for recurrence 3–6 months after action completion. Close CAPA if effective. If insufficient, re-analyze from D4."
+    },
+    "ll": {
+      "w1_title": "① Key Learning Formula",
+      "w1_body": "'By doing/checking [○○] next time, we can prevent [△△ problem].'",
+      "w2_title": "② Importance of Source Links",
+      "w2_body": "Linking to an Internal NC or Customer Complaint auto-fills the problem summary and root cause.",
+      "w3_title": "③ Specify Applicable Areas",
+      "w3_body": "Clearly state which process or department this lesson applies to. Used for search and horizontal deployment.",
+      "w4_title": "④ Use Tags Effectively",
+      "w4_body": "Enter part names, process names, defect types, and customer names as tags to make similar cases easier to find.",
+      "w5_title": "⑤ Status Management",
+      "w5_body": "Draft → Review → Published. Only Published lessons are shared organization-wide."
+    }
   },
   "masters": {
     "title": "Master Data",

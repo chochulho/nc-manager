@@ -1,29 +1,16 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter, usePathname } from "@/lib/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
 const CURRENT_YEAR = new Date().getFullYear();
-
-const YEARS = [
-  { value: 0, label: "전체" },
-  { value: CURRENT_YEAR - 1, label: String(CURRENT_YEAR - 1) },
-  { value: CURRENT_YEAR, label: String(CURRENT_YEAR) },
-  { value: CURRENT_YEAR + 1, label: String(CURRENT_YEAR + 1) },
-];
-
-const PERIODS = [
-  { value: "all", label: "전체" },
-  { value: "Q1", label: "Q1" },
-  { value: "Q2", label: "Q2" },
-  { value: "Q3", label: "Q3" },
-  { value: "Q4", label: "Q4" },
-  { value: "H1", label: "상반기" },
-  { value: "H2", label: "하반기" },
-];
+const YEAR_VALUES = [0, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
+const PERIOD_VALUES = ["all", "Q1", "Q2", "Q3", "Q4", "H1", "H2"] as const;
 
 export function PeriodFilter({ year, period }: { year: number; period: string }) {
+  const t = useTranslations("periodFilter");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,31 +31,38 @@ export function PeriodFilter({ year, period }: { year: number; period: string })
         : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
     }`;
 
+  function periodLabel(p: (typeof PERIOD_VALUES)[number]) {
+    if (p === "H1") return t("H1");
+    if (p === "H2") return t("H2");
+    if (p === "all") return t("all");
+    return p;
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-gray-50 rounded-xl border border-gray-100 print:hidden">
-      <span className="text-xs font-medium text-muted-foreground">년도</span>
-      {YEARS.map((y) => (
+      <span className="text-xs font-medium text-muted-foreground">{t("year")}</span>
+      {YEAR_VALUES.map((y) => (
         <button
-          key={y.value}
+          key={y}
           onClick={() =>
-            update({ year: String(y.value), ...(y.value === 0 ? { period: "all" } : {}) })
+            update({ year: String(y), ...(y === 0 ? { period: "all" } : {}) })
           }
-          className={btnClass(year === y.value)}
+          className={btnClass(year === y)}
         >
-          {y.label}
+          {y === 0 ? t("allYears") : String(y)}
         </button>
       ))}
       {year !== 0 && (
         <>
           <div className="w-px h-4 bg-gray-200 mx-1" />
-          <span className="text-xs font-medium text-muted-foreground">기간</span>
-          {PERIODS.map((p) => (
+          <span className="text-xs font-medium text-muted-foreground">{t("period")}</span>
+          {PERIOD_VALUES.map((p) => (
             <button
-              key={p.value}
-              onClick={() => update({ period: p.value })}
-              className={btnClass(period === p.value)}
+              key={p}
+              onClick={() => update({ period: p })}
+              className={btnClass(period === p)}
             >
-              {p.label}
+              {periodLabel(p)}
             </button>
           ))}
         </>

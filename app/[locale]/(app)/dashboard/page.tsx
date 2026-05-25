@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, MessageSquareWarning, CheckCircle2, ClipboardCheck } from "lucide-react";
 import { PeriodFilter } from "@/components/nc/period-filter";
 import { PrintButton } from "@/components/nc/print-button";
-import { parsePeriodParams, periodToDateRange, periodLabel } from "@/lib/period-utils";
+import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
 import { getTranslations } from "next-intl/server";
 
 function countBy<T>(arr: T[], key: (item: T) => string): Record<string, number> {
@@ -26,11 +26,13 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ year?: string; period?: string }>;
 }) {
-  const [session, t, tNc, tCc] = await Promise.all([
+  const [session, t, tNc, tCc, tc, tPeriod] = await Promise.all([
     auth(),
     getTranslations("dashboard"),
     getTranslations("nc"),
     getTranslations("complaint"),
+    getTranslations("common"),
+    getTranslations("periodFilter"),
   ]);
 
   const orgId = session?.user?.organizationId;
@@ -38,7 +40,13 @@ export default async function DashboardPage({
   const sp = await searchParams;
   const { year, period } = parsePeriodParams(sp.year, sp.period);
   const range = periodToDateRange(year, period);
-  const label = periodLabel(year, period);
+  function getPeriodLabel(): string {
+    if (year === 0) return tPeriod("labelAll");
+    if (period === "all") return tPeriod("labelYear", { year });
+    const key = `labelYear${period}` as Parameters<typeof tPeriod>[0];
+    return tPeriod(key, { year });
+  }
+  const label = getPeriodLabel();
 
   const ncConditions = orgId ? [eq(internalNCs.orgId, orgId)] : null;
   const ccConditions = orgId ? [eq(customerComplaints.orgId, orgId)] : null;
@@ -181,7 +189,7 @@ export default async function DashboardPage({
                   );
                 })}
                 <tr className="font-semibold">
-                  <td className="py-1.5 text-xs">{t("colCount") === "Count" ? "Total" : "합계"}</td>
+                  <td className="py-1.5 text-xs">{tc("total")}</td>
                   <td className="py-1.5 text-right">{ncTotal}</td>
                   <td className="py-1.5 text-right text-muted-foreground text-xs">100%</td>
                 </tr>
@@ -240,7 +248,7 @@ export default async function DashboardPage({
                   );
                 })}
                 <tr className="font-semibold">
-                  <td className="py-1.5 text-xs">{t("colCount") === "Count" ? "Total" : "합계"}</td>
+                  <td className="py-1.5 text-xs">{tc("total")}</td>
                   <td className="py-1.5 text-right">{ccTotal}</td>
                   <td className="py-1.5 text-right text-muted-foreground text-xs">100%</td>
                 </tr>

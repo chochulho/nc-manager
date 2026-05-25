@@ -1,16 +1,15 @@
 "use client";
 
-import { useRouter, usePathname } from "@/lib/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter, usePathname, Link } from "@/lib/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell, Legend,
+  LineChart, Line, PieChart, Pie, Cell,
 } from "recharts";
 import { MapPin, Car, Gauge, Calendar, AlertCircle, Radio, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { periodLabel } from "@/lib/period-utils";
 
 const PERIODS = ["all", "H1", "H2", "Q1", "Q2", "Q3", "Q4"] as const;
 const CURRENT_YEAR = new Date().getFullYear();
@@ -52,24 +51,9 @@ interface AnalysisData {
   }[];
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  received: "접수",
-  acknowledged: "확인",
-  contained: "봉쇄",
-  investigating: "조사 중",
-  "8d_in_progress": "8D 진행",
-  final_reported: "최종 보고",
-  closed: "종결",
-  closed_ntf: "종결(NTF)",
-};
-
-const SEVERITY_LABELS: Record<string, string> = {
-  critical: "치명",
-  major: "주요",
-  minor: "경미",
-};
-
 export function FieldAnalysisClient({ year, period }: { year: number; period: string }) {
+  const t = useTranslations("fieldAnalysis");
+  const tPeriod = useTranslations("periodFilter");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -94,7 +78,21 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
       .catch(() => setLoading(false));
   }, [year, period]);
 
-  const label = periodLabel(year, period);
+  function getPeriodLabel(): string {
+    if (year === 0) return tPeriod("labelAll");
+    if (period === "all") return tPeriod("labelYear", { year });
+    const key = `labelYear${period}` as Parameters<typeof tPeriod>[0];
+    return tPeriod(key, { year });
+  }
+
+  function getPeriodButtonLabel(p: string): string {
+    if (p === "all") return tPeriod("annual");
+    if (p === "H1") return tPeriod("H1");
+    if (p === "H2") return tPeriod("H2");
+    return p;
+  }
+
+  const label = getPeriodLabel();
 
   return (
     <div className="p-6 space-y-6">
@@ -103,7 +101,7 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <MapPin className="h-5 w-5 text-emerald-600" />
-            필드 클레임 분석
+            {t("title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">{label}</p>
         </div>
@@ -116,7 +114,7 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
             onChange={(e) => updateParams(Number(e.target.value), period)}
           >
             {YEARS.map((y) => (
-              <option key={y} value={y}>{y === 0 ? "전체 기간" : `${y}년`}</option>
+              <option key={y} value={y}>{y === 0 ? tPeriod("labelAll") : `${y}`}</option>
             ))}
           </select>
           {year !== 0 && (
@@ -132,7 +130,7 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
                       : "bg-white hover:bg-gray-50 border-gray-200"
                   )}
                 >
-                  {p === "all" ? "연간" : p}
+                  {getPeriodButtonLabel(p)}
                 </button>
               ))}
             </div>
@@ -142,11 +140,11 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
 
       {loading ? (
         <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-          데이터 로딩 중...
+          {t("loading")}
         </div>
       ) : !data ? (
         <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-          데이터를 불러올 수 없습니다.
+          {t("loadError")}
         </div>
       ) : (
         <>
@@ -154,119 +152,117 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard
               icon={<AlertCircle className="h-4 w-4 text-emerald-600" />}
-              label="총 필드 클레임"
+              label={t("kpi.total")}
               value={data.summary.total.toString()}
-              unit="건"
+              unit={t("units.cases")}
             />
             <KpiCard
               icon={<Gauge className="h-4 w-4 text-blue-600" />}
-              label="평균 주행거리"
+              label={t("kpi.avgMileage")}
               value={data.summary.avgMileage !== null ? data.summary.avgMileage.toLocaleString() : "-"}
-              unit="km"
+              unit={t("units.km")}
             />
             <KpiCard
               icon={<Calendar className="h-4 w-4 text-orange-500" />}
-              label="평균 사용기간"
+              label={t("kpi.avgUsage")}
               value={data.summary.avgUsageMonths !== null ? data.summary.avgUsageMonths.toString() : "-"}
-              unit="개월"
+              unit={t("units.months")}
             />
             <KpiCard
               icon={<Radio className="h-4 w-4 text-purple-600" />}
-              label="DTC 코드 있음"
+              label={t("kpi.withDtc")}
               value={data.summary.withDtc.toString()}
-              unit={`건 (${data.summary.total > 0 ? Math.round(data.summary.withDtc / data.summary.total * 100) : 0}%)`}
+              unit={`${t("units.cases")} (${data.summary.total > 0 ? Math.round(data.summary.withDtc / data.summary.total * 100) : 0}%)`}
             />
           </div>
 
           {data.summary.total === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-16 text-center text-muted-foreground text-sm">
-              해당 기간에 필드 클레임 데이터가 없습니다.
+              {t("noData")}
             </div>
           ) : (
             <>
-              {/* Charts Row 1: 차종별 + 지역별 */}
+              {/* Charts Row 1 */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <ChartCard title="차종별 발생 현황" icon={<Car className="h-4 w-4 text-blue-600" />}>
+                <ChartCard title={t("charts.byVehicle")} icon={<Car className="h-4 w-4 text-blue-600" />}>
                   {data.vehicleModelCounts.length > 0 ? (
                     <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={data.vehicleModelCounts} layout="vertical" margin={{ left: 8, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
                         <YAxis type="category" dataKey="model" tick={{ fontSize: 12 }} width={80} />
-                        <Tooltip formatter={(v) => [`${v}건`, "클레임 수"]} />
+                        <Tooltip formatter={(v) => [`${v} ${t("units.cases")}`, t("charts.claimCount")]} />
                         <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <EmptyChart />}
+                  ) : <EmptyChart label={t("charts.noData")} />}
                 </ChartCard>
 
-                <ChartCard title="지역별 발생 현황" icon={<MapPin className="h-4 w-4 text-emerald-600" />}>
+                <ChartCard title={t("charts.byRegion")} icon={<MapPin className="h-4 w-4 text-emerald-600" />}>
                   {data.regionCounts.length > 0 ? (
                     <ResponsiveContainer width="100%" height={260}>
                       <BarChart data={data.regionCounts} layout="vertical" margin={{ left: 8, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
                         <YAxis type="category" dataKey="region" tick={{ fontSize: 12 }} width={80} />
-                        <Tooltip formatter={(v) => [`${v}건`, "클레임 수"]} />
+                        <Tooltip formatter={(v) => [`${v} ${t("units.cases")}`, t("charts.claimCount")]} />
                         <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
-                  ) : <EmptyChart />}
+                  ) : <EmptyChart label={t("charts.noData")} />}
                 </ChartCard>
               </div>
 
-              {/* Charts Row 2: DTC 빈도 + 주행거리 분포 */}
+              {/* Charts Row 2 */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <ChartCard title="DTC 코드 빈도 (Top 15)" icon={<Radio className="h-4 w-4 text-purple-600" />}>
+                <ChartCard title={t("charts.dtcFrequency")} icon={<Radio className="h-4 w-4 text-purple-600" />}>
                   {data.dtcFrequency.length > 0 ? (
                     <ResponsiveContainer width="100%" height={280}>
                       <BarChart data={data.dtcFrequency} layout="vertical" margin={{ left: 8, right: 16 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
                         <YAxis type="category" dataKey="code" tick={{ fontSize: 11, fontFamily: "monospace" }} width={80} />
-                        <Tooltip formatter={(v) => [`${v}건`, "발생 횟수"]} />
+                        <Tooltip formatter={(v) => [`${v} ${t("units.cases")}`, t("charts.frequency")]} />
                         <Bar dataKey="count" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-                      DTC 코드 데이터 없음
-                    </div>
+                    <EmptyChart label={t("charts.noDtc")} />
                   )}
                 </ChartCard>
 
-                <ChartCard title="주행거리 분포" icon={<Gauge className="h-4 w-4 text-orange-500" />}>
+                <ChartCard title={t("charts.mileageDist")} icon={<Gauge className="h-4 w-4 text-orange-500" />}>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={data.mileageDistribution} margin={{ left: 4, right: 16 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="bucket" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                      <Tooltip formatter={(v) => [`${v}건`, "클레임 수"]} />
+                      <Tooltip formatter={(v) => [`${v} ${t("units.cases")}`, t("charts.claimCount")]} />
                       <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>
               </div>
 
-              {/* Charts Row 3: 월별 추이 + 심각도 */}
+              {/* Charts Row 3 */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2">
-                  <ChartCard title="월별 발생 추이" icon={<TrendingUp className="h-4 w-4 text-blue-600" />}>
+                  <ChartCard title={t("charts.monthlyTrend")} icon={<TrendingUp className="h-4 w-4 text-blue-600" />}>
                     {data.monthlyTrend.length > 0 ? (
                       <ResponsiveContainer width="100%" height={200}>
                         <LineChart data={data.monthlyTrend} margin={{ left: 4, right: 16 }}>
                           <CartesianGrid strokeDasharray="3 3" vertical={false} />
                           <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                           <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                          <Tooltip formatter={(v) => [`${v}건`, "클레임 수"]} />
+                          <Tooltip formatter={(v) => [`${v} ${t("units.cases")}`, t("charts.claimCount")]} />
                           <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
                         </LineChart>
                       </ResponsiveContainer>
-                    ) : <EmptyChart />}
+                    ) : <EmptyChart label={t("charts.noData")} />}
                   </ChartCard>
                 </div>
 
-                <ChartCard title="심각도 분포">
+                <ChartCard title={t("charts.severityDist")}>
                   {data.severityDistribution.length > 0 ? (
                     <div className="flex flex-col items-center justify-center h-[200px]">
                       <ResponsiveContainer width="100%" height={160}>
@@ -278,7 +274,9 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
                             cx="50%"
                             cy="50%"
                             outerRadius={65}
-                            label={({ name, percent }: { name?: string; percent?: number }) => `${name ? (SEVERITY_LABELS[name] ?? name) : ""} ${Math.round((percent ?? 0) * 100)}%`}
+                            label={({ name, percent }: { name?: string; percent?: number }) =>
+                              `${name ? (t(`severities.${name}` as Parameters<typeof t>[0]) ?? name) : ""} ${Math.round((percent ?? 0) * 100)}%`
+                            }
                             labelLine={false}
                             fontSize={11}
                           >
@@ -286,11 +284,11 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
                               <Cell key={entry.severity} fill={SEVERITY_COLORS[entry.severity] ?? CHART_COLORS[0]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(v, name) => [`${v}건`, SEVERITY_LABELS[name as string] ?? name]} />
+                          <Tooltip formatter={(v, name) => [`${v} ${t("units.cases")}`, t(`severities.${name}` as Parameters<typeof t>[0]) ?? name]} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                  ) : <EmptyChart />}
+                  ) : <EmptyChart label={t("charts.noData")} />}
                 </ChartCard>
               </div>
 
@@ -298,21 +296,21 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
               {data.recentClaims.length > 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
                   <div className="px-5 py-4 border-b">
-                    <h3 className="font-semibold text-sm">최근 필드 클레임 목록</h3>
+                    <h3 className="font-semibold text-sm">{t("table.title")}</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50 text-xs text-muted-foreground">
                         <tr>
-                          <th className="text-left px-4 py-2.5 font-medium">번호</th>
-                          <th className="text-left px-4 py-2.5 font-medium">제목</th>
-                          <th className="text-left px-4 py-2.5 font-medium">고객사</th>
-                          <th className="text-left px-4 py-2.5 font-medium">차종</th>
-                          <th className="text-left px-4 py-2.5 font-medium">지역</th>
-                          <th className="text-right px-4 py-2.5 font-medium">주행거리</th>
-                          <th className="text-left px-4 py-2.5 font-medium">심각도</th>
-                          <th className="text-left px-4 py-2.5 font-medium">상태</th>
-                          <th className="text-left px-4 py-2.5 font-medium">접수일</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.number")}</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.titleCol")}</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.customer")}</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.vehicle")}</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.region")}</th>
+                          <th className="text-right px-4 py-2.5 font-medium">{t("table.mileage")}</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.severity")}</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.status")}</th>
+                          <th className="text-left px-4 py-2.5 font-medium">{t("table.receivedAt")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -337,14 +335,14 @@ export function FieldAnalysisClient({ year, period }: { year: number; period: st
                                 c.severity === "major" && "bg-orange-100 text-orange-700",
                                 c.severity === "minor" && "bg-green-100 text-green-700",
                               )}>
-                                {SEVERITY_LABELS[c.severity] ?? c.severity}
+                                {t(`severities.${c.severity}` as Parameters<typeof t>[0]) ?? c.severity}
                               </span>
                             </td>
                             <td className="px-4 py-2.5 text-muted-foreground text-xs">
-                              {STATUS_LABELS[c.status] ?? c.status}
+                              {t(`statuses.${c.status}` as Parameters<typeof t>[0]) ?? c.status}
                             </td>
                             <td className="px-4 py-2.5 text-muted-foreground text-xs">
-                              {c.receivedAt ? new Date(c.receivedAt).toLocaleDateString("ko-KR") : "-"}
+                              {c.receivedAt ? new Date(c.receivedAt).toLocaleDateString() : "-"}
                             </td>
                           </tr>
                         ))}
@@ -388,10 +386,10 @@ function ChartCard({ title, icon, children }: { title: string; icon?: React.Reac
   );
 }
 
-function EmptyChart() {
+function EmptyChart({ label }: { label: string }) {
   return (
     <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">
-      데이터 없음
+      {label}
     </div>
   );
 }

@@ -77,7 +77,8 @@
     "lotNumber": "LOT 번호",
     "safetyRelated": "안전 관련 (Safety)",
     "attachmentsHint": "첨부파일 (등록 시 함께 업로드)",
-    "dropzoneHint": "클릭하거나 파일을 끌어다 놓으세요"
+    "dropzoneHint": "클릭하거나 파일을 끌어다 놓으세요",
+    "printReport": "보고서 출력"
   },
   "language": {
     "ko": "한국어",
@@ -424,7 +425,165 @@
       "published": "발행됨"
     },
     "emptyState": "등록된 레슨런이 없습니다.",
-    "registerFirst": "첫 번째 레슨런 등록하기"
+    "emptySubtitle": "내부 부적합이나 고객 클레임에서 배운 것을 기록해 보세요.",
+    "registerFirst": "첫 번째 레슨런 등록하기",
+    "source": "소스",
+    "keyLearningSummary": "핵심 레슨 (요약)",
+    "notWritten": "미작성"
+  },
+  "periodFilter": {
+    "year": "년도",
+    "period": "기간",
+    "allYears": "전체",
+    "annual": "연간",
+    "H1": "상반기",
+    "H2": "하반기",
+    "all": "전체",
+    "labelAll": "전체 기간",
+    "labelYear": "{year}년 전체",
+    "labelYearQ1": "{year}년 Q1 (1~3월)",
+    "labelYearQ2": "{year}년 Q2 (4~6월)",
+    "labelYearQ3": "{year}년 Q3 (7~9월)",
+    "labelYearQ4": "{year}년 Q4 (10~12월)",
+    "labelYearH1": "{year}년 상반기 (1~6월)",
+    "labelYearH2": "{year}년 하반기 (7~12월)"
+  },
+  "fieldAnalysis": {
+    "title": "필드 클레임 분석",
+    "loading": "데이터 로딩 중...",
+    "loadError": "데이터를 불러올 수 없습니다.",
+    "noData": "해당 기간에 필드 클레임 데이터가 없습니다.",
+    "kpi": {
+      "total": "총 필드 클레임",
+      "avgMileage": "평균 주행거리",
+      "avgUsage": "평균 사용기간",
+      "withDtc": "DTC 코드 있음"
+    },
+    "units": {
+      "cases": "건",
+      "km": "km",
+      "months": "개월"
+    },
+    "charts": {
+      "byVehicle": "차종별 발생 현황",
+      "byRegion": "지역별 발생 현황",
+      "dtcFrequency": "DTC 코드 빈도 (Top 15)",
+      "mileageDist": "주행거리 분포",
+      "monthlyTrend": "월별 발생 추이",
+      "severityDist": "심각도 분포",
+      "noData": "데이터 없음",
+      "noDtc": "DTC 코드 데이터 없음",
+      "claimCount": "클레임 수",
+      "frequency": "발생 횟수"
+    },
+    "table": {
+      "title": "최근 필드 클레임 목록",
+      "number": "번호",
+      "titleCol": "제목",
+      "customer": "고객사",
+      "vehicle": "차종",
+      "region": "지역",
+      "mileage": "주행거리",
+      "severity": "심각도",
+      "status": "상태",
+      "receivedAt": "접수일"
+    },
+    "statuses": {
+      "received": "접수",
+      "acknowledged": "확인",
+      "contained": "봉쇄",
+      "investigating": "조사 중",
+      "8d_in_progress": "8D 진행",
+      "final_reported": "최종 보고",
+      "closed": "종결",
+      "closed_ntf": "종결(NTF)"
+    },
+    "severities": {
+      "critical": "치명",
+      "major": "주요",
+      "minor": "경미"
+    }
+  },
+  "guide": {
+    "collapsed": "가이드",
+    "close": "가이드 닫기",
+    "open": "가이드 열기",
+    "titles": {
+      "internal_nc": "내부 부적합 가이드",
+      "complaint": "고객 클레임 가이드",
+      "capa": "CAPA 작성 가이드",
+      "lessons_learned": "레슨런 작성 가이드"
+    },
+    "tabs": {
+      "writing": "작성 요령",
+      "escalation": "에스컬레이션"
+    },
+    "nc": {
+      "w1_title": "① 제목 작성법",
+      "w1_body": "「부품명 + 불량 유형 + 발견 위치」 조합으로 작성. 예: 브레이크 패드 치수 불량 – 입고검사",
+      "w2_title": "② 발견 단계 선택",
+      "w2_body": "입고검사 → 협력사 귀책 가능성이 높음. 공정 중/출하 → 내부 공정 이슈. 내부감사 → 시스템/절차 문제.",
+      "w3_title": "③ 심각도 분류 기준",
+      "w3_body": "긴급(Critical): 안전·규제 또는 100% 공급 중단 위험\n주요(Major): 기능 불량, 고객 라인 영향 가능\n경미(Minor): 외관·포장, 즉각 교환 가능",
+      "w4_title": "④ 봉쇄조치 기술법",
+      "w4_body": "「무엇을 / 몇 개를 / 어디에서 / 언제까지」를 명확히. 격리 장소와 수량을 구체적으로 기재.",
+      "w5_title": "⑤ 처분 결정 원칙",
+      "w5_body": "재작업: 기준치 이내 복원 가능\n특채: 고객 승인 또는 기능 영향 없음\n폐기: 복원 불가, 안전·규제 불합격\n반품: 협력사 귀책 확인 후",
+      "e1_title": "🔴 긴급(Critical) — 즉시",
+      "e1_body": "• 발견 즉시 품질팀장·공장장에게 구두 보고\n• 해당 라인 즉시 중단 또는 출하 정지 검토\n• 1시간 내 경영층 보고",
+      "e2_title": "🟠 주요(Major) — 24시간 내",
+      "e2_body": "• 발견 당일 품질팀장 서면 보고\n• 봉쇄조치 24시간 내 완료\n• 관련 고객사 영향 검토 필수",
+      "e3_title": "🟡 경미(Minor) — 주간 보고",
+      "e3_body": "• 주간 품질 미팅 안건에 포함\n• 재발 경향 분석 후 CAPA 필요 여부 결정",
+      "e4_title": "📋 안전·규제 관련",
+      "e4_body": "안전(safetyRelated) 또는 규제(regulatoryRelated) 체크 시 심각도와 무관하게 즉시 품질팀장 + 법무/인증팀 동시 보고."
+    },
+    "complaint": {
+      "w1_title": "① 접수일 = SLA 기산점",
+      "w1_body": "접수일은 SLA 계산 기준. 늦게 등록해도 실제 접수일 기준으로 기재. 초기응답·최종보고 기한이 자동 계산됩니다.",
+      "w2_title": "② 고객 설명 원문 보존",
+      "w2_body": "고객 내용란에 고객이 보낸 내용을 그대로 기재. 해석·판단은 조사 후 별도 작성.",
+      "w3_title": "③ 수량 확인 절차",
+      "w3_body": "주장 수량과 확인 수량을 구분. NTF(No Trouble Found) 클레임도 수량 0으로 등록 후 처리.",
+      "w4_title": "④ 리콜 위험 체크",
+      "w4_body": "리콜위험 ON → 경영진 즉시 보고. 안전 관련 → 규제기관 보고 의무 확인 필수.",
+      "w5_title": "⑤ 상태 흐름",
+      "w5_body": "접수 → 인지(24h) → 봉쇄 → 조사 → 8D 진행 → 최종보고 → 종결\n각 단계 전환 시 날짜가 자동 기록됩니다.",
+      "e1_title": "🚨 리콜위험 + 긴급",
+      "e1_body": "• 접수 즉시 CEO·영업 임원·품질 임원 동시 보고\n• 즉각 봉쇄조치 및 고객 라인 중단 협의\n• 법무팀 보고 (제조물책임 대비)",
+      "e2_title": "🟠 긴급(Critical) — 4시간 내",
+      "e2_body": "• 품질팀장에게 4시간 내 서면 보고\n• 고객사 담당자에게 초기 대응 문자/이메일 발송\n• 초기응답 SLA 내 공식 회신 준비",
+      "e3_title": "⏰ SLA 임박 경고",
+      "e3_body": "• 초기응답 D-1: 담당자 자동 알림\n• 최종보고 D-3: 팀장 알림\n• SLA 초과 시 즉시 에스컬레이션 (고객사 페널티 위험)",
+      "e4_title": "📋 8D 보고 단계",
+      "e4_body": "8D 진행 상태에서 CAPA를 연결하면 D4~D7이 자동 연동. 최종보고 전 고객사 형식 요구 사항 확인 필수."
+    },
+    "capa": {
+      "w1_title": "① 문제 설명 (D2)",
+      "w1_body": "5W2H로 작성. What·When·Where·Who·Why + How much·How many.",
+      "w2_title": "② 즉각 봉쇄조치 (D3)",
+      "w2_body": "근본원인 파악 전 고객 보호를 위한 임시 조치. 봉쇄 완료 날짜와 수량을 기재.",
+      "w3_title": "③ 5Why 근본원인 (D4)",
+      "w3_body": "왜? → 왜? → 왜? → 왜? → 왜? 순서로 단계별 원인을 연결. 마지막 Why의 답이 영구 시정조치의 대상이 되어야 합니다.",
+      "w4_title": "④ 영구 시정조치 (D5~D6)",
+      "w4_body": "각 조치에 담당자와 기한을 필수 지정. 증거/근거 컬럼에는 실제 완료 증빙을 첨부.",
+      "w5_title": "⑤ 예방 및 수평전개 (D7)",
+      "w5_body": "유사 부품/공정에 동일 조치 적용 여부를 반드시 검토. FMEA 개정 및 관리계획서 업데이트 포함.",
+      "w6_title": "⑥ 유효성 평가",
+      "w6_body": "조치 완료 후 3~6개월 재발 여부 모니터링. 유효 판정 시 CAPA 종결. 미흡 시 D4부터 재분석."
+    },
+    "ll": {
+      "w1_title": "① 핵심 레슨 작성 공식",
+      "w1_body": "「다음번에 [○○을] 하면/확인하면 [△△ 문제]를 예방할 수 있다」",
+      "w2_title": "② 소스 연결의 중요성",
+      "w2_body": "내부 NC 또는 고객 클레임과 연결하면 문제 요약·근본원인이 자동으로 초안됩니다.",
+      "w3_title": "③ 적용 공정/부서 명시",
+      "w3_body": "레슨런이 어느 공정·부서에 해당하는지 명확히 기재. 검색 및 수평전개 시 활용됩니다.",
+      "w4_title": "④ 태그 활용",
+      "w4_body": "부품명·공정명·불량 유형·고객명 등을 태그로 입력하면 나중에 유사 사례 검색이 쉬워집니다.",
+      "w5_title": "⑤ 상태 관리",
+      "w5_body": "초안(Draft) → 팀 검토(Review) → 발행(Published) 순서로 진행. Published 상태만 전사 공유 대상."
+    }
   },
   "settings": {
     "membersTitle": "멤버 · 사업장 접근 관리",

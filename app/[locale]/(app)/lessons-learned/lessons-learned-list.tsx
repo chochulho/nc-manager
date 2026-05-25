@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/lib/i18n/navigation";
 import { Plus, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
@@ -21,24 +21,27 @@ interface LLItem {
   complaintNumber: string | null;
 }
 
-const statusConfig: Record<string, { label: string; cls: string }> = {
-  draft:     { label: "초안",    cls: "bg-gray-100 text-gray-600" },
-  review:    { label: "검토 중", cls: "bg-yellow-50 text-yellow-700" },
-  published: { label: "발행됨",  cls: "bg-green-50 text-green-700" },
-};
-
 export function LessonsLearnedList({ items }: { items: LLItem[] }) {
+  const t = useTranslations("ll");
+  const tc = useTranslations("common");
+
+  const statusConfig: Record<string, { label: string; cls: string }> = {
+    draft:     { label: t("statuses.draft"),     cls: "bg-gray-100 text-gray-600" },
+    review:    { label: t("statuses.review"),    cls: "bg-yellow-50 text-yellow-700" },
+    published: { label: t("statuses.published"), cls: "bg-green-50 text-green-700" },
+  };
+
   return (
     <div>
       <div className="page-header">
         <h1 className="page-title flex items-center gap-2">
           <Lightbulb className="h-6 w-6" style={{ color: "#F26B3A" }} />
-          레슨런
+          {t("title")}
         </h1>
         <Link href="/lessons-learned/new">
           <Button style={{ background: "#2B4B8C" }} className="hover:opacity-90">
             <Plus className="h-4 w-4 mr-1" />
-            레슨런 등록
+            {t("new")}
           </Button>
         </Link>
       </div>
@@ -46,12 +49,12 @@ export function LessonsLearnedList({ items }: { items: LLItem[] }) {
       {items.length === 0 ? (
         <div className="text-center py-24 text-muted-foreground">
           <Lightbulb className="h-12 w-12 mx-auto mb-4 opacity-20" style={{ color: "#2B4B8C" }} />
-          <p className="text-lg font-medium mb-1">등록된 레슨런이 없습니다</p>
-          <p className="text-sm mb-6">내부 부적합이나 고객 클레임에서 배운 것을 기록해 보세요.</p>
+          <p className="text-lg font-medium mb-1">{t("emptyState")}</p>
+          <p className="text-sm mb-6">{t("emptySubtitle")}</p>
           <Link href="/lessons-learned/new">
             <Button variant="outline">
               <Plus className="h-4 w-4 mr-1" />
-              첫 번째 레슨런 등록하기
+              {t("registerFirst")}
             </Button>
           </Link>
         </div>
@@ -60,12 +63,12 @@ export function LessonsLearnedList({ items }: { items: LLItem[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">LL 번호</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">제목</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">소스</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">핵심 레슨 (요약)</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">상태</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">등록일</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-32">{t("llNumber")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{tc("title")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-36">{t("source")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("keyLearningSummary")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">{tc("status")}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-28">{tc("registeredAt")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -139,7 +142,7 @@ export function LessonsLearnedList({ items }: { items: LLItem[] }) {
                       {item.keyLearning ? (
                         <p className="text-xs text-gray-700 line-clamp-2">{item.keyLearning}</p>
                       ) : (
-                        <span className="text-xs text-gray-400 italic">미작성</span>
+                        <span className="text-xs text-gray-400 italic">{t("notWritten")}</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
