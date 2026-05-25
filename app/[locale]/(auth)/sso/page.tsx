@@ -5,10 +5,10 @@
  *
  * quality-hub → NC Manager 이동 시 Supabase 매직 링크가
  * 이 URL로 리다이렉트됩니다:
- *   https://nc-manager-chi.vercel.app/ko/sso#access_token=...
+ *   https://nc-manager-chi.vercel.app/ko/sso#access_token=...&refresh_token=...
  *
- * 브라우저 Supabase 클라이언트가 URL 해시를 감지해 자동으로
- * 세션 쿠키를 설정하고, 대시보드로 이동합니다.
+ * @supabase/ssr의 브라우저 클라이언트는 해시를 자동 파싱하지 않으므로
+ * 직접 파싱 후 setSession()을 호출합니다.
  */
 
 import { useEffect, useState } from 'react'
@@ -24,31 +24,48 @@ export default function SsoPage() {
   useEffect(() => {
     const supabase = createSupabaseBrowserClient()
 
-    // onAuthStateChange가 URL 해시의 access_token을 자동 감지함
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          router.replace(`/${locale}`)
-        } else if (event === 'TOKEN_REFRESHED') {
-          router.replace(`/${locale}`)
+    async function handleSso() {
+      try {
+        // URL 해시에서 토큰 직접 파싱
+        const hash = window.location.hash.substring(1) // '#' 제거
+        const params = new URLSearchParams(hash)
+        const accessToken = params.get('access_token')
+        const refreshToken = params.get('refresh_token')
+
+        if (accessToken && refreshToken) {
+          // 해시 토큰으로 세션 설정
+          const { data: { session }, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+
+          if (error) {
+            console.error('[SSO] setSession 오류:', error.message)
+            setStatus('error')
+            return
+          }
+
+          if (session) {
+            // 해시 제거 후 대시보드 이동
+            router.replace(`/${locale}`)
+            return
+          }
         }
+
+        // 해시 토큰 없으면 기존 세션 확인
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          router.replace(`/${locale}`)
+        } else {
+          setStatus('error')
+        }
+      } catch (err) {
+        console.error('[SSO] 오류:', err)
+        setStatus('error')
       }
-    )
-
-    // 이미 세션이 있으면 바로 이동
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.replace(`/${locale}`)
-      }
-    })
-
-    // 5초 후에도 처리 안 되면 에러 표시
-    const timer = setTimeout(() => setStatus('error'), 5000)
-
-    return () => {
-      subscription.unsubscribe()
-      clearTimeout(timer)
     }
+
+    handleSso()
   }, [router, locale])
 
   if (status === 'error') {
