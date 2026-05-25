@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export interface AppSession {
   user: {
@@ -19,11 +20,12 @@ function mapRole(role: string | null): "ADMIN" | "MEMBER" {
   return "MEMBER";
 }
 
-// Check if email is in ADMIN_EMAILS env var
+// ADMIN_EMAILS 환경변수에 이메일이 포함되어 있는지 확인
 function checkIsAdmin(email: string): boolean {
   const adminEmails = (process.env.ADMIN_EMAILS || "")
     .split(",")
-    .map((e) => e.trim().toLowerCase());
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
   return adminEmails.includes(email.toLowerCase());
 }
 
@@ -54,6 +56,27 @@ export async function auth(): Promise<AppSession | null> {
   const isAdmin =
     checkIsAdmin(user.email) || membership?.role === "owner";
 
+  // ── 슈퍼어드민이지만 org가 없는 경우 ─────────────────────────────────
+  // quality-hub 슈퍼어드민은 org_members에 없을 수 있음.
+  // 이 경우 Supabase organizations 테이블에서 첫 번째 조직을 할당.
+  let resolvedOrgId = orgId;
+  let resolvedOrgName = orgName;
+
+  if (isAdmin && !orgId) {
+    const adminClient = createSupabaseAdminClient();
+    const { data: firstOrg } = await adminClient
+      .from("organizations")
+      .select("id, name")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (firstOrg) {
+      resolvedOrgId = firstOrg.id;
+      resolvedOrgName = firstOrg.name;
+    }
+  }
+
   return {
     user: {
       id: user.id,
@@ -61,9 +84,9 @@ export async function auth(): Promise<AppSession | null> {
       name: user.user_metadata?.full_name ?? user.email.split("@")[0],
       image: user.user_metadata?.avatar_url ?? null,
       isAdmin,
-      organizationId: orgId,
+      organizationId: resolvedOrgId,
       orgRole: isAdmin ? "ADMIN" : orgRole,
-      organizationName: orgName,
+      organizationName: resolvedOrgName,
     },
   };
 }
