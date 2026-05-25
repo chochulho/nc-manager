@@ -12,6 +12,7 @@ import { ArrowLeft, Save, Edit2, X, ClipboardCheck, Plus } from "lucide-react";
 import Link from "next/link";
 import { AttachmentSection } from "@/components/nc/attachment-section";
 import { NotificationSection } from "@/components/nc/notification-section";
+import { WriteGuidePanel } from "@/components/write-guide-panel";
 
 interface Option { id: string; name: string; code?: string; number?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -120,7 +121,8 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
   const catMap = Object.fromEntries(categoriesL2.map(c => [c.id, `[${c.code}] ${c.nameKo}`]));
 
   return (
-    <div>
+    <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <div className="page-header">
         <div className="flex items-center gap-3">
           <Link href="/internal-nc"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
@@ -409,6 +411,8 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
           </div>
         </div>
       </div>
+      </div>
+      <WriteGuidePanel type="internal_nc" className="mt-[4.5rem]" />
     </div>
   );
 }

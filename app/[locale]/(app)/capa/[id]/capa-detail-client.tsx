@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Edit2, Save, X, Plus, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { WriteGuidePanel } from "@/components/write-guide-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -237,7 +238,8 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
   const whyRows = form.d4RootCause as Array<{ why: string; because: string }>;
 
   return (
-    <div>
+    <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <div className="page-header print:hidden">
         <div className="flex items-center gap-3">
           <Link href="/capa"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
@@ -822,6 +824,8 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
           </div>
         </div>
       </div>
+      </div>
+      <WriteGuidePanel type="capa" className="mt-[4.5rem]" />
     </div>
   );
 }

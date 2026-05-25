@@ -7,7 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard, AlertTriangle, MessageSquareWarning, ClipboardCheck,
   Database, Users, Shield, LogOut, ChevronDown,
-  PanelLeftClose, PanelLeftOpen, MapPin,
+  PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -63,6 +63,7 @@ export function AppSidebar({ session }: AppSidebarProps) {
     { href: "/complaints", label: t("complaints"), icon: MessageSquareWarning },
     { href: "/field-analysis", label: t("fieldAnalysis"), icon: MapPin },
     { href: "/capa", label: t("capa"), icon: ClipboardCheck },
+    { href: "/lessons-learned", label: t("lessonsLearned"), icon: Lightbulb },
     { href: "/masters", label: t("masters"), icon: Database },
     ...(isOrgAdmin ? [{ href: "/settings/members", label: t("orgMembers"), icon: Users }] : []),
     ...(isAdmin ? [{ href: "/admin", label: t("admin"), icon: Shield }] : []),

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { WriteGuidePanel } from "@/components/write-guide-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,7 +77,8 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
   }
 
   return (
-    <div>
+    <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <div className="page-header">
         <div className="flex items-center gap-3">
           <Link href="/capa"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
@@ -182,6 +184,8 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
           </div>
         </div>
       </form>
+      </div>
+      <WriteGuidePanel type="capa" className="mt-[4.5rem]" />
     </div>
   );
 }

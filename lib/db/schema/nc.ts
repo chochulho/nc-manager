@@ -246,7 +246,7 @@ export const approvalActions = pgTable("nc_approval_actions", {
 export const ncAttachments = pgTable("nc_attachments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned"] }).notNull(),
   entityId: text("entity_id").notNull(),
   uploadedById: text("uploaded_by_id").notNull(),
   filename: text("filename").notNull(),
@@ -259,7 +259,7 @@ export const ncAttachments = pgTable("nc_attachments", {
 export const ncActivities = pgTable("nc_activities", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned"] }).notNull(),
   entityId: text("entity_id").notNull(),
   userId: text("user_id"),
   action: text("action").notNull(),
@@ -338,12 +338,44 @@ export const ncSlaReminderLogs = pgTable("nc_sla_reminder_logs", {
 
 export const ncSequences = pgTable("nc_sequences", {
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned"] }).notNull(),
   year: integer("year").notNull(),
   lastSeq: integer("last_seq").default(0).notNull(),
 }, (t) => [
   primaryKey({ columns: [t.orgId, t.entityType, t.year] }),
 ]);
+
+// ── Lessons Learned ───────────────────────────────────────────────────────────
+
+export const lessonsLearned = pgTable("nc_lessons_learned", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull(),
+  llNumber: text("ll_number").notNull(),
+
+  title: text("title").notNull(),
+
+  // 소스 연결 (옵션)
+  sourceInternalNcId: text("source_internal_nc_id").references(() => internalNCs.id, { onDelete: "set null" }),
+  sourceComplaintId: text("source_complaint_id").references(() => customerComplaints.id, { onDelete: "set null" }),
+
+  // 본문 섹션
+  problemSummary: text("problem_summary"),       // 문제 요약
+  rootCause: text("root_cause"),                 // 근본 원인
+  actionsTaken: text("actions_taken"),           // 취해진 조치
+  keyLearning: text("key_learning"),             // 핵심 레슨 (필수 작성 권장)
+  preventionMeasures: text("prevention_measures"), // 예방 조치
+  applicableAreas: text("applicable_areas"),     // 적용 공정/부서
+
+  // 분류
+  tags: text("tags").array(),
+
+  // 상태
+  status: text("status", { enum: ["draft", "review", "published"] }).default("draft").notNull(),
+
+  createdByUserId: text("created_by_user_id").notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
 
 // ── Relations ─────────────────────────────────────────────────────────────────
 
@@ -359,4 +391,9 @@ export const customerComplaintsRelations = relations(customerComplaints, ({ one 
 export const capaRelations = relations(capas, ({ many }) => ({
   actions: many(capaActions),
   horizontalDeployments: many(horizontalDeployments),
+}));
+
+export const lessonsLearnedRelations = relations(lessonsLearned, ({ one }) => ({
+  sourceInternalNc: one(internalNCs, { fields: [lessonsLearned.sourceInternalNcId], references: [internalNCs.id] }),
+  sourceComplaint: one(customerComplaints, { fields: [lessonsLearned.sourceComplaintId], references: [customerComplaints.id] }),
 }));

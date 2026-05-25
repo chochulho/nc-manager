@@ -4,6 +4,7 @@
     "internalNc": "내부 부적합",
     "complaints": "고객 클레임",
     "capa": "CAPA",
+    "lessonsLearned": "레슨런",
     "masters": "마스터 관리",
     "fieldAnalysis": "필드 클레임 분석",
     "orgMembers": "조직 멤버",
@@ -352,6 +353,26 @@
       "label": "분류체계",
       "desc": "NC 분류 코드 관리"
     }
+  },
+  "ll": {
+    "title": "레슨런",
+    "new": "레슨런 등록",
+    "llNumber": "LL 번호",
+    "keyLearning": "핵심 레슨",
+    "problemSummary": "문제 요약",
+    "rootCause": "근본 원인",
+    "actionsTaken": "취해진 조치",
+    "preventionMeasures": "예방 조치",
+    "applicableAreas": "적용 공정/부서",
+    "sourceSection": "소스 연결",
+    "autoDraft": "자동 초안 생성",
+    "statuses": {
+      "draft": "초안",
+      "review": "검토 중",
+      "published": "발행됨"
+    },
+    "emptyState": "등록된 레슨런이 없습니다.",
+    "registerFirst": "첫 번째 레슨런 등록하기"
   },
   "settings": {
     "membersTitle": "멤버 · 사업장 접근 관리",

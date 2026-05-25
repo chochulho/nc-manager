@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Paperclip, X } from "lucide-react";
 import Link from "next/link";
+import { WriteGuidePanel } from "@/components/write-guide-panel";
 
 interface Option { id: string; name: string; code?: string; number?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -106,7 +107,8 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
   }
 
   return (
-    <div>
+    <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <div className="page-header">
         <div className="flex items-center gap-3">
           <Link href="/internal-nc">
@@ -382,6 +384,8 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
           </div>
         </div>
       </form>
+      </div>
+      <WriteGuidePanel type="internal_nc" className="mt-[4.5rem]" />
     </div>
   );
 }

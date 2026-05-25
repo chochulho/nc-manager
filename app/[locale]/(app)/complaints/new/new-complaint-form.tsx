@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save, Paperclip, X, Plus, MapPin } from "lucide-react";
 import Link from "next/link";
+import { WriteGuidePanel } from "@/components/write-guide-panel";
 
 interface Option { id: string; name: string; code?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -130,7 +131,8 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
   }
 
   return (
-    <div>
+    <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <div className="page-header">
         <div className="flex items-center gap-3">
           <Link href="/complaints"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
@@ -369,6 +371,8 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
           </div>
         </div>
       </form>
+      </div>
+      <WriteGuidePanel type="complaint" className="mt-[4.5rem]" />
     </div>
   );
 }

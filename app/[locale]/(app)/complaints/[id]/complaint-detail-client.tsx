@@ -13,6 +13,7 @@ import Link from "next/link";
 import { AttachmentSection } from "@/components/nc/attachment-section";
 import { NotificationSection } from "@/components/nc/notification-section";
 import { AnalysisReportSection } from "@/components/nc/analysis-report-section";
+import { WriteGuidePanel } from "@/components/write-guide-panel";
 import { FieldClaimDetailSection } from "@/components/nc/field-claim-detail-section";
 
 interface Option { id: string; name: string; code?: string }
@@ -142,7 +143,8 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
   const catMap = Object.fromEntries(categoriesL2.map(c => [c.id, `[${c.code}] ${c.nameKo}`]));
 
   return (
-    <div>
+    <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <div className="page-header">
         <div className="flex items-center gap-3">
           <Link href="/complaints"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
@@ -363,6 +365,8 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
           </div>
         </div>
       </div>
+      </div>
+      <WriteGuidePanel type="complaint" className="mt-[4.5rem]" />
     </div>
   );
 }

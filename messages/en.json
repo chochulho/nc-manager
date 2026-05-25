@@ -4,6 +4,7 @@
     "internalNc": "Internal NC",
     "complaints": "Customer Complaints",
     "capa": "CAPA",
+    "lessonsLearned": "Lessons Learned",
     "masters": "Masters",
     "fieldAnalysis": "Field Claim Analysis",
     "orgMembers": "Organization Members",
@@ -325,6 +326,26 @@
     "selectComplaint": "Select Complaint",
     "emptyState": "No CAPAs found for the selected period.",
     "registerFirst": "Register your first CAPA"
+  },
+  "ll": {
+    "title": "Lessons Learned",
+    "new": "New Lesson Learned",
+    "llNumber": "LL Number",
+    "keyLearning": "Key Learning",
+    "problemSummary": "Problem Summary",
+    "rootCause": "Root Cause",
+    "actionsTaken": "Actions Taken",
+    "preventionMeasures": "Prevention Measures",
+    "applicableAreas": "Applicable Areas",
+    "sourceSection": "Source Links",
+    "autoDraft": "Auto-Generate Draft",
+    "statuses": {
+      "draft": "Draft",
+      "review": "Under Review",
+      "published": "Published"
+    },
+    "emptyState": "No lessons learned registered.",
+    "registerFirst": "Register the first lesson learned"
   },
   "masters": {
     "title": "Master Data",
