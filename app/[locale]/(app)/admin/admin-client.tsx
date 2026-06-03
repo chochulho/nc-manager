@@ -187,7 +187,7 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
               </CardDescription>
             </div>
             <a
-              href="https://quality-hub-pi.vercel.app/dashboard"
+              href="https://qmintel.com/dashboard"
               target="_blank"
               rel="noopener noreferrer"
             >

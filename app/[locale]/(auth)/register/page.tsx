@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ExternalLink } from "lucide-react";
 
 export default function RegisterPage() {
-  const qualityHubUrl = process.env.NEXT_PUBLIC_QUALITY_HUB_URL ?? "https://quality-hub.vercel.app";
+  const qualityHubUrl = process.env.NEXT_PUBLIC_QUALITY_HUB_URL ?? "https://qmintel.com";
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm text-center">
