@@ -226,6 +226,95 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     toast.success(tc("success"));
   }
 
+  async function handleDownloadPdf() {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    const MARGIN = 18;
+    const PAGE_W = 210;
+    const CONTENT_W = PAGE_W - MARGIN * 2;
+    let y = MARGIN;
+
+    const addPage = () => { doc.addPage(); y = MARGIN; };
+    const checkY = (needed: number) => { if (y + needed > 280) addPage(); };
+
+    // Header bar
+    doc.setFillColor(30, 64, 175);
+    doc.rect(0, 0, PAGE_W, 12, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.text("NC Manager  |  분석보고서", MARGIN, 8);
+    y = 22;
+
+    // Title
+    doc.setTextColor(17, 24, 39);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text(complaintInfo.title, MARGIN, y);
+    y += 8;
+
+    // Meta info
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(107, 114, 128);
+    const meta = [
+      `${complaintInfo.complaintNumber}`,
+      `고객사: ${complaintInfo.customerName}`,
+      `부품: ${complaintInfo.partName}`,
+      `접수일: ${new Date(complaintInfo.receivedAt).toLocaleDateString()}`,
+      resolutionType ? `판정: ${resolutionLabels[resolutionType] ?? resolutionType}` : "",
+    ].filter(Boolean).join("   |   ");
+    doc.text(meta, MARGIN, y, { maxWidth: CONTENT_W });
+    y += 8;
+
+    // Divider
+    doc.setDrawColor(229, 231, 235);
+    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+    y += 8;
+
+    // Sections
+    for (const def of sectionDefs) {
+      const content = sections[def.key];
+      if (!content?.trim()) continue;
+
+      checkY(20);
+
+      // Section label
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(MARGIN, y, CONTENT_W, 8, 2, 2, "F");
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 64, 175);
+      const label = def.d ? `${def.d}  ${def.label}` : def.label;
+      doc.text(label, MARGIN + 3, y + 5.5);
+      y += 12;
+
+      // Section content
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(31, 41, 55);
+      const lines = doc.splitTextToSize(content, CONTENT_W);
+      for (const line of lines) {
+        checkY(6);
+        doc.text(line, MARGIN, y);
+        y += 5.5;
+      }
+      y += 6;
+    }
+
+    // Footer on all pages
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(156, 163, 175);
+      doc.text(`${new Date().toLocaleDateString()}`, MARGIN, 290);
+      doc.text(`${i} / ${totalPages}`, PAGE_W - MARGIN, 290, { align: "right" });
+    }
+
+    doc.save(`report_${complaintInfo.complaintNumber}.pdf`);
+  }
+
   async function handleDownloadPptx() {
     const PptxGenJS = (await import("pptxgenjs")).default;
     const prs = new PptxGenJS();
@@ -317,10 +406,13 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
                 {importingCapa ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={() => window.print()}>
+            <Button variant="ghost" size="sm" onClick={() => window.print()} title="인쇄">
               <Printer className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleDownloadPptx}>
+            <Button variant="ghost" size="sm" onClick={handleDownloadPdf} title="PDF 다운로드">
+              <span className="text-[10px] font-bold text-red-600">PDF</span>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDownloadPptx} title="PPT 다운로드">
               <Download className="h-3.5 w-3.5" />
             </Button>
             {!editing && report.status !== "final" && (

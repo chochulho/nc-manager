@@ -8,6 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface ExtraData {
+  soldAt?: string | null;
+  repairedAt?: string | null;
+  incidentLocationType?: string | null;
+}
 
 interface FieldDetail {
   id: string;
@@ -20,6 +27,7 @@ interface FieldDetail {
   usageMonths: number | null;
   dtcCodes: string[] | null;
   symptomDescription: string | null;
+  extraData: ExtraData | null;
 }
 
 interface Props {
@@ -39,6 +47,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
   const [dtcInput, setDtcInput] = useState("");
   const [form, setForm] = useState({
     vehicleModel: "", vehicleVin: "", manufacturedAt: "",
+    soldAt: "", repairedAt: "", incidentLocationType: "",
     region: "", dealerName: "", mileageKm: "",
     usageMonths: "", symptomDescription: "", dtcCodes: [] as string[],
   });
@@ -58,6 +67,9 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
       vehicleModel: d.vehicleModel ?? "",
       vehicleVin: d.vehicleVin ?? "",
       manufacturedAt: d.manufacturedAt ? new Date(d.manufacturedAt).toISOString().slice(0, 7) : "",
+      soldAt: d.extraData?.soldAt ?? "",
+      repairedAt: d.extraData?.repairedAt ?? "",
+      incidentLocationType: d.extraData?.incidentLocationType ?? "",
       region: d.region ?? "",
       dealerName: d.dealerName ?? "",
       mileageKm: d.mileageKm ?? "",
@@ -99,6 +111,11 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
           ...form,
           usageMonths: form.usageMonths !== "" ? parseInt(form.usageMonths) : null,
           manufacturedAt: form.manufacturedAt ? `${form.manufacturedAt}-01` : null,
+          extraData: {
+            soldAt: form.soldAt || null,
+            repairedAt: form.repairedAt || null,
+            incidentLocationType: form.incidentLocationType || null,
+          },
         }),
       });
       if (!res.ok) { toast.error(tc("error")); return; }
@@ -170,7 +187,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
         <div className="space-y-4">
           {editing ? (
             <>
-              {/* Vehicle info */}
+              {/* 차량 기본 정보 */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">{t("vehicleModel")}</Label>
@@ -192,10 +209,37 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
                   <Input type="number" value={form.usageMonths} onChange={(e) => setForm((p) => ({ ...p, usageMonths: e.target.value }))}
                     placeholder="24" className="mt-1 h-8 text-sm" />
                 </div>
+                <div>
+                  <Label className="text-xs">{t("soldAt")}</Label>
+                  <Input type="date" value={form.soldAt} onChange={(e) => setForm((p) => ({ ...p, soldAt: e.target.value }))}
+                    className="mt-1 h-8 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">{t("repairedAt")}</Label>
+                  <Input type="date" value={form.repairedAt} onChange={(e) => setForm((p) => ({ ...p, repairedAt: e.target.value }))}
+                    className="mt-1 h-8 text-sm" />
+                </div>
+                <div>
+                  <Label className="text-xs">{t("mileageKm")}</Label>
+                  <Input type="number" value={form.mileageKm} onChange={(e) => setForm((p) => ({ ...p, mileageKm: e.target.value }))}
+                    placeholder="35000" className="mt-1 h-8 text-sm" />
+                </div>
               </div>
 
-              {/* Location */}
+              {/* 발생장소 */}
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">{t("incidentLocationType")}</Label>
+                  <Select value={form.incidentLocationType} onValueChange={(v) => setForm((p) => ({ ...p, incidentLocationType: v }))}>
+                    <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="dealer">{t("incidentLocationTypes.dealer")}</SelectItem>
+                      <SelectItem value="customer_factory">{t("incidentLocationTypes.customer_factory")}</SelectItem>
+                      <SelectItem value="field">{t("incidentLocationTypes.field")}</SelectItem>
+                      <SelectItem value="other">{t("incidentLocationTypes.other")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label className="text-xs">{t("region")}</Label>
                   <Input value={form.region} onChange={(e) => setForm((p) => ({ ...p, region: e.target.value }))}
@@ -206,13 +250,6 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
                   <Input value={form.dealerName} onChange={(e) => setForm((p) => ({ ...p, dealerName: e.target.value }))}
                     className="mt-1 h-8 text-sm" />
                 </div>
-              </div>
-
-              {/* Mileage */}
-              <div>
-                <Label className="text-xs">{t("mileageKm")}</Label>
-                <Input type="number" value={form.mileageKm} onChange={(e) => setForm((p) => ({ ...p, mileageKm: e.target.value }))}
-                  placeholder="35000" className="mt-1 h-8 text-sm w-1/2" />
               </div>
 
               {/* DTC codes */}
@@ -265,10 +302,13 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
               {detail.vehicleModel && <><dt className="text-muted-foreground">{t("vehicleModel")}</dt><dd className="font-medium">{detail.vehicleModel}</dd></>}
               {detail.manufacturedAt && <><dt className="text-muted-foreground">{t("manufacturedAt")}</dt><dd className="font-medium">{new Date(detail.manufacturedAt).toLocaleDateString(undefined, { year: "numeric", month: "2-digit" })}</dd></>}
               {detail.vehicleVin && <><dt className="text-muted-foreground">VIN</dt><dd className="font-medium font-mono text-xs">{detail.vehicleVin}</dd></>}
-              {detail.usageMonths != null && <><dt className="text-muted-foreground">{t("usageMonths")}</dt><dd className="font-medium">{detail.usageMonths}</dd></>}
+              {detail.usageMonths != null && <><dt className="text-muted-foreground">{t("usageMonths")}</dt><dd className="font-medium">{detail.usageMonths}개월</dd></>}
+              {detail.extraData?.soldAt && <><dt className="text-muted-foreground">{t("soldAt")}</dt><dd className="font-medium">{new Date(detail.extraData.soldAt).toLocaleDateString()}</dd></>}
+              {detail.extraData?.repairedAt && <><dt className="text-muted-foreground">{t("repairedAt")}</dt><dd className="font-medium">{new Date(detail.extraData.repairedAt).toLocaleDateString()}</dd></>}
+              {detail.mileageKm && <><dt className="text-muted-foreground">{t("mileageKm")}</dt><dd className="font-medium">{Number(detail.mileageKm).toLocaleString()} km</dd></>}
+              {detail.extraData?.incidentLocationType && <><dt className="text-muted-foreground">{t("incidentLocationType")}</dt><dd className="font-medium">{t(`incidentLocationTypes.${detail.extraData.incidentLocationType}` as Parameters<typeof t>[0])}</dd></>}
               {detail.region && <><dt className="text-muted-foreground">{t("region")}</dt><dd className="font-medium">{detail.region}</dd></>}
               {detail.dealerName && <><dt className="text-muted-foreground">{t("dealer")}</dt><dd className="font-medium">{detail.dealerName}</dd></>}
-              {detail.mileageKm && <><dt className="text-muted-foreground">{t("mileageKm")}</dt><dd className="font-medium">{Number(detail.mileageKm).toLocaleString()} km</dd></>}
               {detail.dtcCodes && detail.dtcCodes.length > 0 && (
                 <>
                   <dt className="text-muted-foreground">{t("dtcCodes")}</dt>

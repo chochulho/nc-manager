@@ -32,6 +32,8 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
   const [dtcInput, setDtcInput] = useState("");
   const [fieldClaim, setFieldClaim] = useState({
     vehicleModel: "", vehicleVin: "", manufacturedAt: "",
+    soldAt: "", repairedAt: "",
+    incidentLocationType: "",
     region: "", dealerName: "", mileageKm: "",
     usageMonths: "", symptomDescription: "", dtcCodes: [] as string[],
   });
@@ -81,7 +83,19 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
     setLoading(true);
     try {
       const payload = isFieldClaim
-        ? { ...form, fieldClaim: { ...fieldClaim, usageMonths: fieldClaim.usageMonths !== "" ? parseInt(fieldClaim.usageMonths) : null, manufacturedAt: fieldClaim.manufacturedAt ? `${fieldClaim.manufacturedAt}-01` : null } }
+        ? {
+            ...form,
+            fieldClaim: {
+              ...fieldClaim,
+              usageMonths: fieldClaim.usageMonths !== "" ? parseInt(fieldClaim.usageMonths) : null,
+              manufacturedAt: fieldClaim.manufacturedAt ? `${fieldClaim.manufacturedAt}-01` : null,
+              extraData: {
+                soldAt: fieldClaim.soldAt || null,
+                repairedAt: fieldClaim.repairedAt || null,
+                incidentLocationType: fieldClaim.incidentLocationType || null,
+              },
+            },
+          }
         : form;
 
       const res = await fetch("/api/nc/complaints", {
@@ -243,6 +257,26 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                   <div>
                     <Label>{t("usageMonths")}</Label>
                     <Input type="number" value={fieldClaim.usageMonths} onChange={(e) => setFc("usageMonths", e.target.value)} placeholder={`${tc("eg")} 24`} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>{t("soldAt")}</Label>
+                    <Input type="date" value={fieldClaim.soldAt} onChange={(e) => setFc("soldAt", e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>{t("repairedAt")}</Label>
+                    <Input type="date" value={fieldClaim.repairedAt} onChange={(e) => setFc("repairedAt", e.target.value)} className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>{t("incidentLocationType")}</Label>
+                    <Select value={fieldClaim.incidentLocationType} onValueChange={(v) => setFc("incidentLocationType", v)}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="dealer">{t("incidentLocationTypes.dealer")}</SelectItem>
+                        <SelectItem value="customer_factory">{t("incidentLocationTypes.customer_factory")}</SelectItem>
+                        <SelectItem value="field">{t("incidentLocationTypes.field")}</SelectItem>
+                        <SelectItem value="other">{t("incidentLocationTypes.other")}</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <Label>{t("region")}</Label>

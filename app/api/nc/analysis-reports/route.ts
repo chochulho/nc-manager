@@ -4,6 +4,34 @@ import { db } from "@/lib/db";
 import { ncAnalysisReports, customerComplaints, capas } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
+function extractRootCause(d4: unknown): string {
+  if (!d4) return "";
+  if (typeof d4 === "string") return d4;
+  if (Array.isArray(d4)) {
+    return (d4 as Array<{ why?: string; because?: string }>)
+      .filter((row) => row.why || row.because)
+      .map((row, i) => `Q${i + 1}: ${row.why ?? ""}\nA: ${row.because ?? ""}`)
+      .join("\n");
+  }
+  return "";
+}
+
+function extractActions(d5: unknown): string {
+  if (!d5 || !Array.isArray(d5)) return "";
+  return (d5 as Array<{ description?: string; responsible?: string }>)
+    .filter((a) => a.description)
+    .map((a) => `• ${a.description}${a.responsible ? ` (담당: ${a.responsible})` : ""}`)
+    .join("\n");
+}
+
+function extractImplementation(d6: unknown): string {
+  if (!d6 || !Array.isArray(d6)) return "";
+  return (d6 as Array<{ description?: string; evidence?: string }>)
+    .filter((a) => a.description)
+    .map((a) => `• ${a.description}${a.evidence ? ` — 근거: ${a.evidence}` : ""}`)
+    .join("\n");
+}
+
 const EMPTY_SECTIONS = {
   problemDescription: "",
   immediateContainment: "",
@@ -66,18 +94,16 @@ export async function POST(req: NextRequest) {
     const [capa] = await db.select().from(capas).where(eq(capas.id, complaint.capaId));
     if (capa) {
       sections = {
-        problemDescription: capa.d2Description ?? "",
+        problemDescription: capa.d2Description ?? complaint.customerDescription ?? "",
         immediateContainment: capa.d3InterimContainment ?? "",
-        rootCause: typeof capa.d4RootCause === "object" && capa.d4RootCause
-          ? JSON.stringify(capa.d4RootCause, null, 2)
-          : String(capa.d4RootCause ?? ""),
+        rootCause: extractRootCause(capa.d4RootCause),
         permanentActions: [
-          capa.d5PermanentActions ? JSON.stringify(capa.d5PermanentActions) : "",
-          capa.d6Implementation ? JSON.stringify(capa.d6Implementation) : "",
-        ].filter(Boolean).join("\n"),
-        prevention: typeof capa.d7Prevention === "object" && capa.d7Prevention
-          ? JSON.stringify(capa.d7Prevention, null, 2)
-          : String(capa.d7Prevention ?? ""),
+          extractActions(capa.d5PermanentActions),
+          extractImplementation(capa.d6Implementation),
+        ].filter(Boolean).join("\n\n"),
+        prevention: typeof capa.d7Prevention === "string"
+          ? capa.d7Prevention
+          : (capa.d7Prevention ? JSON.stringify(capa.d7Prevention) : ""),
         conclusion: "",
       };
     }

@@ -289,9 +289,9 @@
     "copqSection": "Cost (COPQ)",
     "copqTotal": "COPQ Total",
     "copqUnit": "₩",
-    "costRecallReturn": "Recall/Return Cost (KRW)",
-    "costPenalty": "Penalty (KRW)",
-    "costOther": "Other Cost (KRW)",
+    "costRecallReturn": "Scrap/Return Cost (KRW)",
+    "costPenalty": "Penalty/Compensation (KRW)",
+    "costOther": "Est. Action Cost (KRW)",
     "category": "Category",
     "part": "Part",
     "report": {
@@ -350,6 +350,16 @@
     "dealerPlaceholder": "e.g. Service Center Name",
     "dtcPlaceholder": "e.g. P0171, C1234",
     "symptomPlaceholder": "Describe the symptom as reported by the customer.",
+    "defectPhotos": "Defect Photos",
+    "soldAt": "Sale Date",
+    "repairedAt": "Repair Date",
+    "incidentLocationType": "Incident Location",
+    "incidentLocationTypes": {
+      "dealer": "Dealer/Service Center",
+      "customer_factory": "Customer Factory",
+      "field": "Field/Market",
+      "other": "Other"
+    },
     "customerSitePlaceholder": "e.g. Hwaseong Plant",
     "customerRefPlaceholder": "Customer internal reference number",
     "emptyState": "No customer complaints found for the selected period.",
@@ -427,6 +437,10 @@
     "d7FmeaPlaceholder": "e.g. APQP / PFMEA-001 / Process 5 failure mode",
     "d7ChangePlaceholder": "e.g. CR-2025-0003",
     "d8Placeholder": "Team recognition, lessons learned",
+    "scContainment": "Containment",
+    "scRootCause": "Root Cause",
+    "scPrevention": "Prevention & Links",
+    "scRootCausePlaceholder": "Briefly describe the root cause of the problem",
     "actionTypes": {
       "correction": "Correction",
       "corrective": "Corrective Action",
@@ -672,6 +686,18 @@
       "e3_body": "• Initial response D-1: Auto-notify assignee\n• Final report D-3: Notify team leader\n• Immediate escalation if SLA exceeded (customer penalty risk)",
       "e4_title": "📋 8D Reporting Stage",
       "e4_body": "Linking CAPA in 8D-in-progress status auto-syncs D4–D7. Check customer format requirements before final report."
+    },
+    "capa_simple": {
+      "w1_title": "① Containment",
+      "w1_body": "Temporary actions to protect the customer before root cause is found. Record completion date and quantity.",
+      "w2_title": "② Root Cause",
+      "w2_body": "Describe the core reason why the problem occurred. Use Is/Is Not analysis or a brief 5-Why.",
+      "w3_title": "③ Corrective Actions",
+      "w3_body": "Add action items with responsible person and due date. Attach completion evidence (photos, documents) as attachments.",
+      "w4_title": "④ Prevention & Horizontal Deployment",
+      "w4_body": "Evaluate whether the same actions apply to similar parts/processes. Enter FMEA reference if revision is needed.",
+      "w5_title": "⑤ Effectiveness Review",
+      "w5_body": "Monitor for recurrence 3–6 months after action completion. Close CAPA if effective."
     },
     "capa": {
       "w1_title": "① Problem Description (D2)",

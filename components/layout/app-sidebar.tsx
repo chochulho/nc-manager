@@ -6,7 +6,7 @@ import { Link, useRouter, usePathname } from "@/lib/i18n/navigation";
 import {
   LayoutDashboard, AlertTriangle, MessageSquareWarning, ClipboardCheck,
   Database, Users, Shield, LogOut, ChevronDown,
-  PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb,
+  PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -133,6 +133,35 @@ export function AppSidebar({ session }: AppSidebarProps) {
             ) : item;
           })}
         </nav>
+
+        {/* QMintel 홈 링크 */}
+        <div className={cn("border-t py-2", isCollapsed ? "px-1.5" : "px-3")}>
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a
+                  href="https://qmintel.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex justify-center h-9 w-9 mx-auto items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">QMintel 홈으로</TooltipContent>
+            </Tooltip>
+          ) : (
+            <a
+              href="https://qmintel.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors"
+            >
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              <span>QMintel 홈으로</span>
+            </a>
+          )}
+        </div>
 
         {/* Language Switcher */}
         <div className={cn("border-t py-2", isCollapsed ? "px-1.5" : "px-3")}>

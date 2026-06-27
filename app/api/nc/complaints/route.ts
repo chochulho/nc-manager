@@ -120,6 +120,7 @@ export async function POST(req: NextRequest) {
       usageMonths: fieldClaim.usageMonths ?? null,
       dtcCodes: fieldClaim.dtcCodes?.length ? fieldClaim.dtcCodes : null,
       symptomDescription: fieldClaim.symptomDescription || null,
+      extraData: fieldClaim.extraData ?? null,
     });
   }
 

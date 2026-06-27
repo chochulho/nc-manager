@@ -36,38 +36,66 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return NextResponse.json({ error: "파일 스토리지가 설정되지 않았습니다. BLOB_READ_WRITE_TOKEN을 .env에 추가하세요." }, { status: 503 });
-  }
+  const contentType = req.headers.get("content-type") ?? "";
 
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-  const entityType = formData.get("entityType") as string;
-  const entityId = formData.get("entityId") as string;
+  let filename: string;
+  let storageKey: string;
+  let mimeType: string;
+  let sizeBytes: number;
+  let entityType: string;
+  let entityId: string;
 
-  if (!file || !entityType || !entityId) {
-    return NextResponse.json({ error: "파일, entityType, entityId가 필요합니다." }, { status: 400 });
-  }
+  if (contentType.includes("application/json")) {
+    // 클라이언트 사이드 업로드 완료 후 메타데이터 등록
+    const json = await req.json();
+    filename = json.filename;
+    storageKey = json.storageKey;
+    mimeType = json.mimeType ?? "";
+    sizeBytes = json.sizeBytes ?? 0;
+    entityType = json.entityType;
+    entityId = json.entityId;
 
-  const MAX_SIZE = 20 * 1024 * 1024; // 20MB
-  if (file.size > MAX_SIZE) {
-    return NextResponse.json({ error: "파일 크기는 20MB 이하여야 합니다." }, { status: 400 });
-  }
+    if (!filename || !storageKey || !entityType || !entityId) {
+      return NextResponse.json({ error: "필수 필드가 누락되었습니다." }, { status: 400 });
+    }
+  } else {
+    // 서버 경유 업로드 (소용량 파일 레거시 경로)
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      return NextResponse.json({ error: "파일 스토리지가 설정되지 않았습니다. BLOB_READ_WRITE_TOKEN을 .env에 추가하세요." }, { status: 503 });
+    }
 
-  const ext = file.name.split(".").pop() ?? "";
-  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const path = `nc/${session.user.organizationId}/${entityType}/${entityId}/${safeName}`;
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
+    entityType = formData.get("entityType") as string;
+    entityId = formData.get("entityId") as string;
 
-  let blob: Awaited<ReturnType<typeof put>>;
-  try {
-    blob = await put(path, file, {
-      access: "public",
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[attachment upload error]", msg);
-    return NextResponse.json({ error: `스토리지 업로드 실패: ${msg}` }, { status: 500 });
+    if (!file || !entityType || !entityId) {
+      return NextResponse.json({ error: "파일, entityType, entityId가 필요합니다." }, { status: 400 });
+    }
+
+    const MAX_SIZE = 20 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: "파일 크기는 20MB 이하여야 합니다." }, { status: 400 });
+    }
+
+    const ext = file.name.split(".").pop() ?? "";
+    const safeName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `nc/${session.user.organizationId}/${entityType}/${entityId}/${safeName}`;
+
+    try {
+      const blob = await put(path, file, {
+        access: "public",
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      filename = file.name;
+      storageKey = blob.url;
+      mimeType = file.type;
+      sizeBytes = file.size;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[attachment upload error]", msg);
+      return NextResponse.json({ error: `스토리지 업로드 실패: ${msg}` }, { status: 500 });
+    }
   }
 
   const [attachment] = await db
@@ -77,10 +105,10 @@ export async function POST(req: NextRequest) {
       entityType: entityType as "internal_nc" | "customer_complaint" | "capa",
       entityId,
       uploadedById: session.user.id,
-      filename: file.name,
-      storageKey: blob.url,
-      mimeType: file.type,
-      sizeBytes: file.size,
+      filename,
+      storageKey,
+      mimeType,
+      sizeBytes,
     })
     .returning();
 

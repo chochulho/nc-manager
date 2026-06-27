@@ -21,19 +21,21 @@ interface Props {
   sourceId: string;
   sourceLabel: string;
   sourceNumber: string;
+  initialTitle?: string;
+  initialProblemStatement?: string;
   ncList: NcItem[];
   complaintList: ComplaintItem[];
 }
 
-export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, ncList, complaintList }: Props) {
+export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, initialTitle, initialProblemStatement, ncList, complaintList }: Props) {
   const t = useTranslations("capa");
   const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    title: "",
+    title: initialTitle ?? "",
     methodology: "8d",
-    problemStatement: "",
+    problemStatement: initialProblemStatement ?? "",
     sourceType: initSourceType || "other",
     sourceId: initSourceId || "",
   });
@@ -97,7 +99,6 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
                     <SelectContent>
                       <SelectItem value="8d">{t("methodologies.8d")}</SelectItem>
                       <SelectItem value="simple_capa">{t("methodologies.simple_capa")}</SelectItem>
-                      <SelectItem value="a3">{t("methodologies.a3")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

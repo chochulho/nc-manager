@@ -19,6 +19,8 @@ export default async function NewCAPAPage({
 
   let sourceLabel = "";
   let sourceNumber = "";
+  let sourceTitle = "";
+  let sourceDescription = "";
 
   if (sourceType === "internal_nc" && sourceId) {
     const [nc] = await db
@@ -31,12 +33,18 @@ export default async function NewCAPAPage({
     }
   } else if (sourceType === "customer_complaint" && sourceId) {
     const [cc] = await db
-      .select({ complaintNumber: customerComplaints.complaintNumber, title: customerComplaints.title })
+      .select({
+        complaintNumber: customerComplaints.complaintNumber,
+        title: customerComplaints.title,
+        customerDescription: customerComplaints.customerDescription,
+      })
       .from(customerComplaints)
       .where(and(eq(customerComplaints.id, sourceId), eq(customerComplaints.orgId, orgId)));
     if (cc) {
       sourceNumber = cc.complaintNumber;
       sourceLabel = `[${cc.complaintNumber}] ${cc.title}`;
+      sourceTitle = cc.title;
+      sourceDescription = cc.customerDescription ?? "";
     }
   }
 
@@ -57,6 +65,8 @@ export default async function NewCAPAPage({
       sourceId={sourceId ?? ""}
       sourceLabel={sourceLabel}
       sourceNumber={sourceNumber}
+      initialTitle={sourceTitle}
+      initialProblemStatement={sourceDescription}
       ncList={ncList}
       complaintList={complaintList}
     />

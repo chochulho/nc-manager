@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Edit2, Save, X, Plus, CheckCircle2, AlertTriangle, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit2, Save, X, Plus, CheckCircle2, AlertTriangle, Trash2, FileSpreadsheet, FileText } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
@@ -104,6 +104,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     d4RootCause: typeof capa.d4RootCause === "object" && capa.d4RootCause
       ? (capa.d4RootCause as Array<{why: string; because: string}>)
       : Array.from({ length: 5 }, () => ({ why: "", because: "" })),
+    simpleRootCause: typeof capa.d4RootCause === "string" ? capa.d4RootCause : "",
     d5PermanentActions: Array.isArray(capa.d5PermanentActions) && (capa.d5PermanentActions as unknown[]).length > 0
       ? (capa.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>)
       : [{ description: "", responsible: "", dueDate: "" }],
@@ -137,13 +138,13 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
       const body: Record<string, unknown> = {
         title: form.title,
         problemStatement: form.problemStatement || null,
-        d1Team: form.d1Team || null,
+        d1Team: isSimpleCapa ? null : (form.d1Team || null),
         d2Description: form.d2Description || null,
         d3InterimContainment: form.d3InterimContainment || null,
-        d4RootCause: form.d4RootCause,
-        d5PermanentActions: form.d5PermanentActions,
-        d6Implementation: form.d6Implementation,
-        d8Recognition: form.d8Recognition || null,
+        d4RootCause: isSimpleCapa ? (form.simpleRootCause || null) : form.d4RootCause,
+        d5PermanentActions: isSimpleCapa ? null : form.d5PermanentActions,
+        d6Implementation: isSimpleCapa ? null : form.d6Implementation,
+        d8Recognition: isSimpleCapa ? null : (form.d8Recognition || null),
         fmeaRef: form.fmeaRef || null,
         changeRef: form.changeRef || null,
         effectivenessReviewDueAt: form.effectivenessReviewDueAt ? new Date(form.effectivenessReviewDueAt) : null,
@@ -166,6 +167,179 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     } finally {
       setSaving(false);
     }
+  }
+
+  function extractText(val: unknown): string {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (Array.isArray(val)) {
+      return (val as Array<Record<string, unknown>>)
+        .map((row) => Object.values(row).filter(Boolean).join(" | "))
+        .join("\n");
+    }
+    return "";
+  }
+
+  async function handleDownloadExcel() {
+    const XLSX = await import("xlsx");
+
+    // ── Sheet 1: CAPA 기본 정보 ──
+    const info = [
+      ["항목", "내용"],
+      ["CAPA 번호", capa.capaNumber],
+      ["제목", capa.title],
+      ["방법론", capa.methodology === "8d" ? "8D" : "Simple CAPA"],
+      ["상태", capa.status],
+      ["출처", `${sourceNumber} — ${sourceTitle}`],
+      ["생성일", new Date(capa.createdAt).toLocaleDateString()],
+      [],
+      ["문제점 (Problem Statement)", capa.problemStatement ?? ""],
+      [],
+      ["D2. 문제 기술", capa.d2Description ?? ""],
+      ["D3. 봉쇄조치", capa.d3InterimContainment ?? ""],
+      ["D4. 근본원인", extractText(capa.d4RootCause)],
+      ["D7. 예방조치", extractText(capa.d7Prevention)],
+      ["D8. 팀 인정/종결", extractText(capa.d8Recognition)],
+      [],
+      ["FMEA 참조", capa.fmeaRef ?? ""],
+      ["변경점 참조", capa.changeRef ?? ""],
+    ];
+
+    // ── Sheet 2: 조치 항목 ──
+    const actionRows = [
+      ["유형", "내용", "담당자 ID", "기한", "완료일", "상태", "근거"],
+      ...actions.map((a) => [
+        a.actionType === "correction" ? "시정" : a.actionType === "corrective" ? "시정조치" : "예방조치",
+        a.description,
+        a.responsibleUserId ?? "",
+        a.dueAt ? new Date(a.dueAt).toLocaleDateString() : "",
+        a.completedAt ? new Date(a.completedAt).toLocaleDateString() : "",
+        a.status,
+        a.evidence ?? "",
+      ]),
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.aoa_to_sheet(info);
+    const ws2 = XLSX.utils.aoa_to_sheet(actionRows);
+
+    ws1["!cols"] = [{ wch: 28 }, { wch: 60 }];
+    ws2["!cols"] = [{ wch: 12 }, { wch: 50 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 }];
+
+    XLSX.utils.book_append_sheet(wb, ws1, "CAPA 기본정보");
+    XLSX.utils.book_append_sheet(wb, ws2, "조치항목");
+    XLSX.writeFile(wb, `CAPA_${capa.capaNumber}.xlsx`);
+  }
+
+  async function handleDownloadPdf() {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+    const M = 18;
+    const W = 210 - M * 2;
+    let y = M;
+    const checkY = (n: number) => { if (y + n > 282) { doc.addPage(); y = M; } };
+
+    doc.setFillColor(30, 64, 175);
+    doc.rect(0, 0, 210, 12, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.text("NC Manager  |  CAPA", M, 8);
+    y = 22;
+
+    doc.setTextColor(17, 24, 39);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${capa.capaNumber}  ${capa.title}`, M, y, { maxWidth: W });
+    y += 9;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(107, 114, 128);
+    doc.text(`방법론: ${capa.methodology === "8d" ? "8D" : "Simple CAPA"}   |   상태: ${capa.status}   |   출처: ${sourceNumber}`, M, y);
+    y += 8;
+
+    doc.setDrawColor(229, 231, 235);
+    doc.line(M, y, 210 - M, y);
+    y += 8;
+
+    const sections: Array<[string, string]> = [
+      ["문제점", capa.problemStatement ?? ""],
+      ["D2. 문제 기술", capa.d2Description ?? ""],
+      ["D3. 봉쇄조치", capa.d3InterimContainment ?? ""],
+      ["D4. 근본원인", extractText(capa.d4RootCause)],
+      ["D7. 예방조치", extractText(capa.d7Prevention)],
+      ["D8. 종결", extractText(capa.d8Recognition)],
+    ];
+
+    for (const [label, content] of sections) {
+      if (!content.trim()) continue;
+      checkY(16);
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(M, y, W, 7, 2, 2, "F");
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 64, 175);
+      doc.text(label, M + 3, y + 5);
+      y += 11;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(31, 41, 55);
+      const lines = doc.splitTextToSize(content, W);
+      for (const line of lines) {
+        checkY(5.5);
+        doc.text(line, M, y);
+        y += 5;
+      }
+      y += 5;
+    }
+
+    // 조치 항목 테이블
+    if (actions.length > 0) {
+      checkY(20);
+      doc.setFillColor(243, 244, 246);
+      doc.roundedRect(M, y, W, 7, 2, 2, "F");
+      doc.setFontSize(9.5);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(30, 64, 175);
+      doc.text("조치 항목", M + 3, y + 5);
+      y += 11;
+
+      for (const action of actions) {
+        const typeLabel = action.actionType === "correction" ? "[시정]" : action.actionType === "corrective" ? "[시정조치]" : "[예방조치]";
+        checkY(10);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(31, 41, 55);
+        doc.text(`${typeLabel} ${action.description}`, M, y, { maxWidth: W - 30 });
+        if (action.dueAt) {
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(107, 114, 128);
+          doc.text(`기한: ${new Date(action.dueAt).toLocaleDateString()}`, 210 - M, y, { align: "right" });
+        }
+        y += 5;
+        if (action.evidence) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8.5);
+          doc.setTextColor(107, 114, 128);
+          doc.text(`근거: ${action.evidence}`, M + 3, y, { maxWidth: W - 6 });
+          y += 4.5;
+        }
+        y += 2;
+      }
+    }
+
+    const total = doc.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(156, 163, 175);
+      doc.text(new Date().toLocaleDateString(), M, 291);
+      doc.text(`${i} / ${total}`, 210 - M, 291, { align: "right" });
+    }
+
+    doc.save(`CAPA_${capa.capaNumber}.pdf`);
   }
 
   async function advanceStatus() {
@@ -234,6 +408,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     ? `/complaints/${capa.sourceId}`
     : null;
 
+  const isSimpleCapa = capa.methodology === "simple_capa";
   const isEffectivenessPhase = capa.status === "effectiveness_monitoring";
   const whyRows = form.d4RootCause as Array<{ why: string; because: string }>;
 
@@ -249,6 +424,16 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {!editing && (
+            <>
+              <Button variant="ghost" size="sm" onClick={handleDownloadExcel} title="Excel 다운로드">
+                <FileSpreadsheet className="h-4 w-4 text-green-600" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={handleDownloadPdf} title="PDF 다운로드">
+                <span className="text-[10px] font-bold text-red-600">PDF</span>
+              </Button>
+            </>
+          )}
           {editing ? (
             <>
               <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={saving}>
@@ -291,276 +476,325 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
             )}
           </div>
 
-          {/* 8D 분석 */}
+          {/* 분석 섹션 */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
             <h2 className="section-title">
               {capa.methodology === "8d" ? t("analysis") : t("analysisGeneral")}
             </h2>
 
-            {/* D1 Team */}
-            <div className="border-l-2 border-blue-400 pl-3">
-              <p className="text-xs font-bold text-blue-600 mb-1">{t("d1")}</p>
-              {editing ? (
-                <Textarea value={form.d1Team} onChange={(e) => setF("d1Team", e.target.value)} rows={2} placeholder={t("d1Placeholder")} className="text-sm" />
-              ) : (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d1Team || "—"}</p>
-              )}
-            </div>
-
-            {/* D2 Problem */}
-            <div className="border-l-2 border-blue-400 pl-3">
-              <p className="text-xs font-bold text-blue-600 mb-1">{t("d2")}</p>
-              {editing ? (
-                <Textarea value={form.d2Description} onChange={(e) => setF("d2Description", e.target.value)} rows={3} placeholder={t("d2Placeholder")} className="text-sm" />
-              ) : (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d2Description || "—"}</p>
-              )}
-            </div>
-
-            {/* D3 Containment */}
-            <div className="border-l-2 border-yellow-400 pl-3">
-              <p className="text-xs font-bold text-yellow-600 mb-1">{t("d3")}</p>
-              {editing ? (
-                <Textarea value={form.d3InterimContainment} onChange={(e) => setF("d3InterimContainment", e.target.value)} rows={2} placeholder={t("d3Placeholder")} className="text-sm" />
-              ) : (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d3InterimContainment || "—"}</p>
-              )}
-            </div>
-
-            {/* D4 Root Cause - 5Why */}
-            <div className="border-l-2 border-orange-400 pl-3">
-              <p className="text-xs font-bold text-orange-600 mb-2">{t("d4")}</p>
-              {editing ? (
-                <div className="space-y-2">
-                  {whyRows.map((row, i) => (
-                    <div key={i} className="grid grid-cols-2 gap-2">
-                      <Input
-                        value={row.why}
-                        onChange={(e) => {
-                          const updated = [...whyRows];
-                          updated[i] = { ...updated[i], why: e.target.value };
-                          setF("d4RootCause", updated);
-                        }}
-                        placeholder={`Why ${i + 1}`}
-                        className="text-sm"
-                      />
-                      <Input
-                        value={row.because}
-                        onChange={(e) => {
-                          const updated = [...whyRows];
-                          updated[i] = { ...updated[i], because: e.target.value };
-                          setF("d4RootCause", updated);
-                        }}
-                        placeholder="Because..."
-                        className="text-sm"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {whyRows.filter((r) => r.why || r.because).map((row, i) => (
-                    <div key={i} className="text-sm">
-                      <span className="font-medium text-orange-700">Why {i + 1}:</span>{" "}
-                      <span className="text-muted-foreground">{row.why || "—"}</span>
-                      {row.because && <span className="text-gray-500"> → {row.because}</span>}
-                    </div>
-                  ))}
-                  {whyRows.every((r) => !r.why && !r.because) && (
-                    <p className="text-sm text-muted-foreground">—</p>
+            {isSimpleCapa ? (
+              <>
+                {/* Simple CAPA: 봉쇄조치 */}
+                <div className="border-l-2 border-yellow-400 pl-3">
+                  <p className="text-xs font-bold text-yellow-600 mb-1">{t("scContainment")}</p>
+                  {editing ? (
+                    <Textarea value={form.d3InterimContainment} onChange={(e) => setF("d3InterimContainment", e.target.value)} rows={2} placeholder={t("d3Placeholder")} className="text-sm" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d3InterimContainment || "—"}</p>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* D5 Permanent Actions */}
-            <div className="border-l-2 border-red-400 pl-3">
-              <p className="text-xs font-bold text-red-600 mb-2">{t("d5")}</p>
-              {editing ? (
-                <div className="space-y-2">
-                  {(form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>).map((row, i) => (
-                    <div key={i} className="grid grid-cols-3 gap-2 items-center">
-                      <Input
-                        value={row.description}
-                        onChange={(e) => {
-                          const updated = [...form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>];
-                          updated[i] = { ...updated[i], description: e.target.value };
-                          setF("d5PermanentActions", updated);
-                        }}
-                        placeholder={t("d5ColAction")}
-                        className="text-sm col-span-1"
-                      />
-                      <Input
-                        value={row.responsible}
-                        onChange={(e) => {
-                          const updated = [...form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>];
-                          updated[i] = { ...updated[i], responsible: e.target.value };
-                          setF("d5PermanentActions", updated);
-                        }}
-                        placeholder={t("d5ColResponsible")}
-                        className="text-sm"
-                      />
-                      <div className="flex gap-1 items-center">
-                        <Input
-                          type="date"
-                          value={row.dueDate}
-                          onChange={(e) => {
-                            const updated = [...form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>];
-                            updated[i] = { ...updated[i], dueDate: e.target.value };
-                            setF("d5PermanentActions", updated);
-                          }}
-                          className="text-sm flex-1"
-                        />
-                        {(form.d5PermanentActions as Array<unknown>).length > 1 && (
-                          <Button
-                            type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 shrink-0"
-                            onClick={() => {
-                              const updated = (form.d5PermanentActions as Array<unknown>).filter((_, idx) => idx !== i);
+                {/* Simple CAPA: 근본 원인 */}
+                <div className="border-l-2 border-orange-400 pl-3">
+                  <p className="text-xs font-bold text-orange-600 mb-1">{t("scRootCause")}</p>
+                  {editing ? (
+                    <Textarea value={form.simpleRootCause} onChange={(e) => setF("simpleRootCause", e.target.value)} rows={3} placeholder={t("scRootCausePlaceholder")} className="text-sm" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.simpleRootCause || "—"}</p>
+                  )}
+                </div>
+
+                {/* Simple CAPA: 예방 및 연계 */}
+                <div className="border-l-2 border-purple-400 pl-3">
+                  <p className="text-xs font-bold text-purple-600 mb-2">{t("scPrevention")}</p>
+                  <div className="space-y-2">
+                    <div>
+                      <Label className="text-xs">{t("d7FmeaRef")}</Label>
+                      {editing ? (
+                        <Input value={form.fmeaRef} onChange={(e) => setF("fmeaRef", e.target.value)} placeholder={t("d7FmeaPlaceholder")} className="mt-1 text-sm" />
+                      ) : (
+                        <p className="mt-1 text-sm text-muted-foreground">{capa.fmeaRef || "—"}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs">{t("d7ChangeRef")}</Label>
+                      {editing ? (
+                        <Input value={form.changeRef} onChange={(e) => setF("changeRef", e.target.value)} placeholder={t("d7ChangePlaceholder")} className="mt-1 text-sm" />
+                      ) : (
+                        <p className="mt-1 text-sm text-muted-foreground">{capa.changeRef || "—"}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* D1 Team */}
+                <div className="border-l-2 border-blue-400 pl-3">
+                  <p className="text-xs font-bold text-blue-600 mb-1">{t("d1")}</p>
+                  {editing ? (
+                    <Textarea value={form.d1Team} onChange={(e) => setF("d1Team", e.target.value)} rows={2} placeholder={t("d1Placeholder")} className="text-sm" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d1Team || "—"}</p>
+                  )}
+                </div>
+
+                {/* D2 Problem */}
+                <div className="border-l-2 border-blue-400 pl-3">
+                  <p className="text-xs font-bold text-blue-600 mb-1">{t("d2")}</p>
+                  {editing ? (
+                    <Textarea value={form.d2Description} onChange={(e) => setF("d2Description", e.target.value)} rows={3} placeholder={t("d2Placeholder")} className="text-sm" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d2Description || "—"}</p>
+                  )}
+                </div>
+
+                {/* D3 Containment */}
+                <div className="border-l-2 border-yellow-400 pl-3">
+                  <p className="text-xs font-bold text-yellow-600 mb-1">{t("d3")}</p>
+                  {editing ? (
+                    <Textarea value={form.d3InterimContainment} onChange={(e) => setF("d3InterimContainment", e.target.value)} rows={2} placeholder={t("d3Placeholder")} className="text-sm" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d3InterimContainment || "—"}</p>
+                  )}
+                </div>
+
+                {/* D4 Root Cause - 5Why */}
+                <div className="border-l-2 border-orange-400 pl-3">
+                  <p className="text-xs font-bold text-orange-600 mb-2">{t("d4")}</p>
+                  {editing ? (
+                    <div className="space-y-2">
+                      {whyRows.map((row, i) => (
+                        <div key={i} className="grid grid-cols-2 gap-2">
+                          <Input
+                            value={row.why}
+                            onChange={(e) => {
+                              const updated = [...whyRows];
+                              updated[i] = { ...updated[i], why: e.target.value };
+                              setF("d4RootCause", updated);
+                            }}
+                            placeholder={`Why ${i + 1}`}
+                            className="text-sm"
+                          />
+                          <Input
+                            value={row.because}
+                            onChange={(e) => {
+                              const updated = [...whyRows];
+                              updated[i] = { ...updated[i], because: e.target.value };
+                              setF("d4RootCause", updated);
+                            }}
+                            placeholder="Because..."
+                            className="text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {whyRows.filter((r) => r.why || r.because).map((row, i) => (
+                        <div key={i} className="text-sm">
+                          <span className="font-medium text-orange-700">Why {i + 1}:</span>{" "}
+                          <span className="text-muted-foreground">{row.why || "—"}</span>
+                          {row.because && <span className="text-gray-500"> → {row.because}</span>}
+                        </div>
+                      ))}
+                      {whyRows.every((r) => !r.why && !r.because) && (
+                        <p className="text-sm text-muted-foreground">—</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* D5 Permanent Actions */}
+                <div className="border-l-2 border-red-400 pl-3">
+                  <p className="text-xs font-bold text-red-600 mb-2">{t("d5")}</p>
+                  {editing ? (
+                    <div className="space-y-2">
+                      {(form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>).map((row, i) => (
+                        <div key={i} className="grid grid-cols-3 gap-2 items-center">
+                          <Input
+                            value={row.description}
+                            onChange={(e) => {
+                              const updated = [...form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>];
+                              updated[i] = { ...updated[i], description: e.target.value };
                               setF("d5PermanentActions", updated);
                             }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
+                            placeholder={t("d5ColAction")}
+                            className="text-sm col-span-1"
+                          />
+                          <Input
+                            value={row.responsible}
+                            onChange={(e) => {
+                              const updated = [...form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>];
+                              updated[i] = { ...updated[i], responsible: e.target.value };
+                              setF("d5PermanentActions", updated);
+                            }}
+                            placeholder={t("d5ColResponsible")}
+                            className="text-sm"
+                          />
+                          <div className="flex gap-1 items-center">
+                            <Input
+                              type="date"
+                              value={row.dueDate}
+                              onChange={(e) => {
+                                const updated = [...form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>];
+                                updated[i] = { ...updated[i], dueDate: e.target.value };
+                                setF("d5PermanentActions", updated);
+                              }}
+                              className="text-sm flex-1"
+                            />
+                            {(form.d5PermanentActions as Array<unknown>).length > 1 && (
+                              <Button
+                                type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 shrink-0"
+                                onClick={() => {
+                                  const updated = (form.d5PermanentActions as Array<unknown>).filter((_, idx) => idx !== i);
+                                  setF("d5PermanentActions", updated);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button" variant="outline" size="sm"
+                        onClick={() => setF("d5PermanentActions", [...(form.d5PermanentActions as Array<unknown>), { description: "", responsible: "", dueDate: "" }])}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> {tCommon("addRow")}
+                      </Button>
                     </div>
-                  ))}
-                  <Button
-                    type="button" variant="outline" size="sm"
-                    onClick={() => setF("d5PermanentActions", [...(form.d5PermanentActions as Array<unknown>), { description: "", responsible: "", dueDate: "" }])}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> {tCommon("addRow")}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {(form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>)
-                    .filter((r) => r.description)
-                    .map((row, i) => (
-                      <div key={i} className="text-sm flex gap-3">
-                        <span className="font-medium text-red-700 shrink-0">{i + 1}.</span>
-                        <span className="flex-1">{row.description}</span>
-                        {row.responsible && <span className="text-muted-foreground shrink-0">{row.responsible}</span>}
-                        {row.dueDate && <span className="text-muted-foreground shrink-0">{row.dueDate}</span>}
-                      </div>
-                    ))}
-                  {!(form.d5PermanentActions as Array<{description: string}>).some((r) => r.description) && (
-                    <p className="text-sm text-muted-foreground">—</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {(form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>)
+                        .filter((r) => r.description)
+                        .map((row, i) => (
+                          <div key={i} className="text-sm flex gap-3">
+                            <span className="font-medium text-red-700 shrink-0">{i + 1}.</span>
+                            <span className="flex-1">{row.description}</span>
+                            {row.responsible && <span className="text-muted-foreground shrink-0">{row.responsible}</span>}
+                            {row.dueDate && <span className="text-muted-foreground shrink-0">{row.dueDate}</span>}
+                          </div>
+                        ))}
+                      {!(form.d5PermanentActions as Array<{description: string}>).some((r) => r.description) && (
+                        <p className="text-sm text-muted-foreground">—</p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* D6 Implementation */}
-            <div className="border-l-2 border-teal-400 pl-3">
-              <p className="text-xs font-bold text-teal-600 mb-2">{t("d6")}</p>
-              {editing ? (
-                <div className="space-y-2">
-                  {(form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>).map((row, i) => (
-                    <div key={i} className="grid grid-cols-3 gap-2 items-center">
-                      <Input
-                        value={row.description}
-                        onChange={(e) => {
-                          const updated = [...form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>];
-                          updated[i] = { ...updated[i], description: e.target.value };
-                          setF("d6Implementation", updated);
-                        }}
-                        placeholder={t("d6ColAction")}
-                        className="text-sm"
-                      />
-                      <Input
-                        value={row.evidence}
-                        onChange={(e) => {
-                          const updated = [...form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>];
-                          updated[i] = { ...updated[i], evidence: e.target.value };
-                          setF("d6Implementation", updated);
-                        }}
-                        placeholder={t("d6ColEvidence")}
-                        className="text-sm"
-                      />
-                      <div className="flex gap-1 items-center">
-                        <Input
-                          type="date"
-                          value={row.verifiedAt}
-                          onChange={(e) => {
-                            const updated = [...form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>];
-                            updated[i] = { ...updated[i], verifiedAt: e.target.value };
-                            setF("d6Implementation", updated);
-                          }}
-                          className="text-sm flex-1"
-                        />
-                        {(form.d6Implementation as Array<unknown>).length > 1 && (
-                          <Button
-                            type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 shrink-0"
-                            onClick={() => {
-                              const updated = (form.d6Implementation as Array<unknown>).filter((_, idx) => idx !== i);
+                {/* D6 Implementation */}
+                <div className="border-l-2 border-teal-400 pl-3">
+                  <p className="text-xs font-bold text-teal-600 mb-2">{t("d6")}</p>
+                  {editing ? (
+                    <div className="space-y-2">
+                      {(form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>).map((row, i) => (
+                        <div key={i} className="grid grid-cols-3 gap-2 items-center">
+                          <Input
+                            value={row.description}
+                            onChange={(e) => {
+                              const updated = [...form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>];
+                              updated[i] = { ...updated[i], description: e.target.value };
                               setF("d6Implementation", updated);
                             }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </div>
+                            placeholder={t("d6ColAction")}
+                            className="text-sm"
+                          />
+                          <Input
+                            value={row.evidence}
+                            onChange={(e) => {
+                              const updated = [...form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>];
+                              updated[i] = { ...updated[i], evidence: e.target.value };
+                              setF("d6Implementation", updated);
+                            }}
+                            placeholder={t("d6ColEvidence")}
+                            className="text-sm"
+                          />
+                          <div className="flex gap-1 items-center">
+                            <Input
+                              type="date"
+                              value={row.verifiedAt}
+                              onChange={(e) => {
+                                const updated = [...form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>];
+                                updated[i] = { ...updated[i], verifiedAt: e.target.value };
+                                setF("d6Implementation", updated);
+                              }}
+                              className="text-sm flex-1"
+                            />
+                            {(form.d6Implementation as Array<unknown>).length > 1 && (
+                              <Button
+                                type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-400 hover:text-red-600 shrink-0"
+                                onClick={() => {
+                                  const updated = (form.d6Implementation as Array<unknown>).filter((_, idx) => idx !== i);
+                                  setF("d6Implementation", updated);
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button" variant="outline" size="sm"
+                        onClick={() => setF("d6Implementation", [...(form.d6Implementation as Array<unknown>), { description: "", evidence: "", verifiedAt: "" }])}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> {tCommon("addRow")}
+                      </Button>
                     </div>
-                  ))}
-                  <Button
-                    type="button" variant="outline" size="sm"
-                    onClick={() => setF("d6Implementation", [...(form.d6Implementation as Array<unknown>), { description: "", evidence: "", verifiedAt: "" }])}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> {tCommon("addRow")}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {(form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>)
-                    .filter((r) => r.description)
-                    .map((row, i) => (
-                      <div key={i} className="text-sm flex gap-3">
-                        <span className="font-medium text-teal-700 shrink-0">{i + 1}.</span>
-                        <span className="flex-1">{row.description}</span>
-                        {row.evidence && <span className="text-muted-foreground shrink-0">{row.evidence}</span>}
-                        {row.verifiedAt && <span className="text-muted-foreground shrink-0">{row.verifiedAt}</span>}
-                      </div>
-                    ))}
-                  {!(form.d6Implementation as Array<{description: string}>).some((r) => r.description) && (
-                    <p className="text-sm text-muted-foreground">—</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* D7 Prevention */}
-            <div className="border-l-2 border-purple-400 pl-3">
-              <p className="text-xs font-bold text-purple-600 mb-2">{t("d7")}</p>
-              <div className="space-y-2">
-                <div>
-                  <Label className="text-xs">{t("d7FmeaRef")}</Label>
-                  {editing ? (
-                    <Input value={form.fmeaRef} onChange={(e) => setF("fmeaRef", e.target.value)} placeholder={t("d7FmeaPlaceholder")} className="mt-1 text-sm" />
                   ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{capa.fmeaRef || "—"}</p>
+                    <div className="space-y-1">
+                      {(form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>)
+                        .filter((r) => r.description)
+                        .map((row, i) => (
+                          <div key={i} className="text-sm flex gap-3">
+                            <span className="font-medium text-teal-700 shrink-0">{i + 1}.</span>
+                            <span className="flex-1">{row.description}</span>
+                            {row.evidence && <span className="text-muted-foreground shrink-0">{row.evidence}</span>}
+                            {row.verifiedAt && <span className="text-muted-foreground shrink-0">{row.verifiedAt}</span>}
+                          </div>
+                        ))}
+                      {!(form.d6Implementation as Array<{description: string}>).some((r) => r.description) && (
+                        <p className="text-sm text-muted-foreground">—</p>
+                      )}
+                    </div>
                   )}
                 </div>
-                <div>
-                  <Label className="text-xs">{t("d7ChangeRef")}</Label>
-                  {editing ? (
-                    <Input value={form.changeRef} onChange={(e) => setF("changeRef", e.target.value)} placeholder={t("d7ChangePlaceholder")} className="mt-1 text-sm" />
-                  ) : (
-                    <p className="mt-1 text-sm text-muted-foreground">{capa.changeRef || "—"}</p>
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* D8 Recognition */}
-            <div className="border-l-2 border-green-400 pl-3">
-              <p className="text-xs font-bold text-green-600 mb-1">{t("d8")}</p>
-              {editing ? (
-                <Textarea value={form.d8Recognition} onChange={(e) => setF("d8Recognition", e.target.value)} rows={2} placeholder={t("d8Placeholder")} className="text-sm" />
-              ) : (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d8Recognition || "—"}</p>
-              )}
-            </div>
+                {/* D7 Prevention */}
+                <div className="border-l-2 border-purple-400 pl-3">
+                  <p className="text-xs font-bold text-purple-600 mb-2">{t("d7")}</p>
+                  <div className="space-y-2">
+                    <div>
+                      <Label className="text-xs">{t("d7FmeaRef")}</Label>
+                      {editing ? (
+                        <Input value={form.fmeaRef} onChange={(e) => setF("fmeaRef", e.target.value)} placeholder={t("d7FmeaPlaceholder")} className="mt-1 text-sm" />
+                      ) : (
+                        <p className="mt-1 text-sm text-muted-foreground">{capa.fmeaRef || "—"}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs">{t("d7ChangeRef")}</Label>
+                      {editing ? (
+                        <Input value={form.changeRef} onChange={(e) => setF("changeRef", e.target.value)} placeholder={t("d7ChangePlaceholder")} className="mt-1 text-sm" />
+                      ) : (
+                        <p className="mt-1 text-sm text-muted-foreground">{capa.changeRef || "—"}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* D8 Recognition */}
+                <div className="border-l-2 border-green-400 pl-3">
+                  <p className="text-xs font-bold text-green-600 mb-1">{t("d8")}</p>
+                  {editing ? (
+                    <Textarea value={form.d8Recognition} onChange={(e) => setF("d8Recognition", e.target.value)} rows={2} placeholder={t("d8Placeholder")} className="text-sm" />
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d8Recognition || "—"}</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* 조치 항목 */}
@@ -825,7 +1059,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
         </div>
       </div>
       </div>
-      <WriteGuidePanel type="capa" className="mt-[4.5rem]" />
+      <WriteGuidePanel type="capa" methodology={capa.methodology} className="mt-[4.5rem]" />
     </div>
   );
 }

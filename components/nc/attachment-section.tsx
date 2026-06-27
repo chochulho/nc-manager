@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Paperclip, Upload, X, FileText, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { upload } from "@vercel/blob/client";
 
 interface Attachment {
   id: string;
@@ -60,17 +61,36 @@ export function AttachmentSection({ entityType, entityId }: Props) {
     let successCount = 0;
 
     for (const file of fileArr) {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("entityType", entityType);
-      fd.append("entityId", entityId);
+      try {
+        const ext = file.name.split(".").pop() ?? "";
+        const safeName = `nc/${entityType}/${entityId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-      const res = await fetch("/api/nc/attachments", { method: "POST", body: fd });
-      if (res.ok) {
-        successCount++;
-      } else {
-        const err = await res.json().catch(() => ({}));
-        toast.error(`${file.name}: ${err.error ?? ta("uploadFailed")}`);
+        const blob = await upload(safeName, file, {
+          access: "public",
+          handleUploadUrl: "/api/nc/attachments/client-token",
+        });
+
+        const res = await fetch("/api/nc/attachments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            entityType,
+            entityId,
+            filename: file.name,
+            storageKey: blob.url,
+            mimeType: file.type || blob.contentType,
+            sizeBytes: file.size,
+          }),
+        });
+
+        if (res.ok) {
+          successCount++;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          toast.error(`${file.name}: ${err.error ?? ta("uploadFailed")}`);
+        }
+      } catch (err) {
+        toast.error(`${file.name}: ${err instanceof Error ? err.message : ta("uploadFailed")}`);
       }
     }
 

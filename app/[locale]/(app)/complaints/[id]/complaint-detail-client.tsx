@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Edit2, X, Clock, AlertCircle, ClipboardCheck, Plus } from "lucide-react";
+import { ArrowLeft, Save, Edit2, X, Clock, AlertCircle, ClipboardCheck, Plus, Loader2 } from "lucide-react";
 import { AttachmentSection } from "@/components/nc/attachment-section";
-import { NotificationSection } from "@/components/nc/notification-section";
 import { AnalysisReportSection } from "@/components/nc/analysis-report-section";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 import { FieldClaimDetailSection } from "@/components/nc/field-claim-detail-section";
+import { ComplaintPhotosPanel } from "@/components/nc/complaint-photos-panel";
 
 interface Option { id: string; name: string; code?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -91,6 +91,13 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copqEditing, setCopqEditing] = useState(false);
+  const [copqSaving, setCopqSaving] = useState(false);
+  const [copqForm, setCopqForm] = useState({
+    costRecallReturn: complaint.costRecallReturn ?? "",
+    costPenalty: complaint.costPenalty ?? "",
+    costOther: complaint.costOther ?? "",
+  });
   const [form, setForm] = useState({
     title: complaint.title,
     customerDescription: complaint.customerDescription ?? "",
@@ -133,6 +140,23 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
       router.refresh();
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCopqSave() {
+    setCopqSaving(true);
+    try {
+      const res = await fetch(`/api/nc/complaints/${complaint.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(copqForm),
+      });
+      if (!res.ok) { toast.error(tc("error")); return; }
+      toast.success(tc("success"));
+      setCopqEditing(false);
+      router.refresh();
+    } finally {
+      setCopqSaving(false);
     }
   }
 
@@ -269,19 +293,60 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
 
           {/* COPQ */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-            <h2 className="section-title">{t("copqSection")}</h2>
-            {editing ? (
-              <div className="grid grid-cols-3 gap-4">
-                <div><Label>{t("costRecallReturn")}</Label><Input type="number" value={form.costRecallReturn} onChange={(e) => set("costRecallReturn", e.target.value)} placeholder="0" className="mt-1" /></div>
-                <div><Label>{t("costPenalty")}</Label><Input type="number" value={form.costPenalty} onChange={(e) => set("costPenalty", e.target.value)} placeholder="0" className="mt-1" /></div>
-                <div><Label>{t("costOther")}</Label><Input type="number" value={form.costOther} onChange={(e) => set("costOther", e.target.value)} placeholder="0" className="mt-1" /></div>
-              </div>
+            <div className="flex items-center justify-between">
+              <h2 className="section-title">{t("copqSection")}</h2>
+              {!copqEditing && (
+                <Button variant="outline" size="sm" onClick={() => setCopqEditing(true)}>
+                  <Edit2 className="h-3.5 w-3.5 mr-1" />{tc("edit")}
+                </Button>
+              )}
+            </div>
+            {copqEditing ? (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-xs">{t("costRecallReturn")}</Label>
+                    <Input type="number" value={copqForm.costRecallReturn}
+                      onChange={(e) => setCopqForm((p) => ({ ...p, costRecallReturn: e.target.value }))}
+                      placeholder="0" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{t("costPenalty")}</Label>
+                    <Input type="number" value={copqForm.costPenalty}
+                      onChange={(e) => setCopqForm((p) => ({ ...p, costPenalty: e.target.value }))}
+                      placeholder="0" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{t("costOther")}</Label>
+                    <Input type="number" value={copqForm.costOther}
+                      onChange={(e) => setCopqForm((p) => ({ ...p, costOther: e.target.value }))}
+                      placeholder="0" className="mt-1" />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-1 border-t border-gray-100">
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setCopqEditing(false);
+                    setCopqForm({ costRecallReturn: complaint.costRecallReturn ?? "", costPenalty: complaint.costPenalty ?? "", costOther: complaint.costOther ?? "" });
+                  }}>{tc("cancel")}</Button>
+                  <Button size="sm" onClick={handleCopqSave} disabled={copqSaving}>
+                    {copqSaving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                    {tc("save")}
+                  </Button>
+                </div>
+              </>
             ) : (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <dt className="text-muted-foreground">{t("copqTotal")}</dt>
                   <dd className="font-medium mt-0.5 text-lg">{copqTotal.toLocaleString()} {t("copqUnit")}</dd>
                 </div>
+                {(complaint.costRecallReturn || complaint.costPenalty || complaint.costOther) && (
+                  <div className="col-span-2 grid grid-cols-3 gap-x-6 gap-y-1 text-xs text-muted-foreground mt-1">
+                    {complaint.costRecallReturn && <span>{t("costRecallReturn")}: {Number(complaint.costRecallReturn).toLocaleString()}</span>}
+                    {complaint.costPenalty && <span>{t("costPenalty")}: {Number(complaint.costPenalty).toLocaleString()}</span>}
+                    {complaint.costOther && <span>{t("costOther")}: {Number(complaint.costOther).toLocaleString()}</span>}
+                  </div>
+                )}
                 {complaint.resolutionType && (
                   <div>
                     <dt className="text-muted-foreground">{t("resolutionType")}</dt>
@@ -340,7 +405,6 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
             }}
             onComplaintClosed={() => router.refresh()}
           />
-          <NotificationSection entityType="customer_complaint" entityId={complaint.id} />
           <AttachmentSection entityType="customer_complaint" entityId={complaint.id} />
         </div>
 
@@ -390,6 +454,8 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
               </div>
             )}
           </div>
+
+          <ComplaintPhotosPanel complaintId={complaint.id} />
         </div>
       </div>
       </div>

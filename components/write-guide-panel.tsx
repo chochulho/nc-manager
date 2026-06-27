@@ -9,6 +9,7 @@ type GuideType = "internal_nc" | "complaint" | "capa" | "lessons_learned";
 
 interface Props {
   type: GuideType;
+  methodology?: string;
   className?: string;
 }
 
@@ -53,37 +54,49 @@ function GuideCardItem({ card }: { card: GuideCard }) {
   );
 }
 
-export function WriteGuidePanel({ type, className }: Props) {
+export function WriteGuidePanel({ type, methodology, className }: Props) {
   const t = useTranslations("guide");
   const [open, setOpen] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
 
   // Build guide data from translations
-  type TabKey = "nc" | "complaint" | "capa" | "ll";
-  const keyMap: Record<GuideType, TabKey> = {
+  type TabKey = "nc" | "complaint" | "ll";
+  const keyMap: Record<Exclude<GuideType, "capa">, TabKey> = {
     internal_nc: "nc",
     complaint: "complaint",
-    capa: "capa",
     lessons_learned: "ll",
   };
-  const tk = keyMap[type];
+  const tk = type !== "capa" ? keyMap[type] : ("nc" as TabKey);
 
-  const writingCards: GuideCard[] = type === "capa"
-    ? [
-        { color: "orange", title: t(`${tk}.w1_title`), body: t(`${tk}.w1_body`) },
-        { color: "navy",   title: t(`${tk}.w2_title`), body: t(`${tk}.w2_body`) },
-        { color: "yellow", title: t(`${tk}.w3_title`), body: t(`${tk}.w3_body`) },
-        { color: "green",  title: t(`${tk}.w4_title`), body: t(`${tk}.w4_body`) },
-        { color: "orange", title: t(`${tk}.w5_title`), body: t(`${tk}.w5_body`) },
-        { color: "navy",   title: t(`${tk}.w6_title`), body: t(`${tk}.w6_body`) },
-      ]
-    : [
-        { color: "orange", title: t(`${tk}.w1_title`), body: t(`${tk}.w1_body`) },
-        { color: "navy",   title: t(`${tk}.w2_title`), body: t(`${tk}.w2_body`) },
-        { color: "yellow", title: t(`${tk}.w3_title`), body: t(`${tk}.w3_body`) },
-        { color: "green",  title: t(`${tk}.w4_title`), body: t(`${tk}.w4_body`) },
-        { color: "navy",   title: t(`${tk}.w5_title`), body: t(`${tk}.w5_body`) },
+  let writingCards: GuideCard[];
+  if (type === "capa") {
+    if (methodology === "simple_capa") {
+      writingCards = [
+        { color: "orange", title: t("capa_simple.w1_title"), body: t("capa_simple.w1_body") },
+        { color: "navy",   title: t("capa_simple.w2_title"), body: t("capa_simple.w2_body") },
+        { color: "yellow", title: t("capa_simple.w3_title"), body: t("capa_simple.w3_body") },
+        { color: "green",  title: t("capa_simple.w4_title"), body: t("capa_simple.w4_body") },
+        { color: "orange", title: t("capa_simple.w5_title"), body: t("capa_simple.w5_body") },
       ];
+    } else {
+      writingCards = [
+        { color: "orange", title: t("capa.w1_title"), body: t("capa.w1_body") },
+        { color: "navy",   title: t("capa.w2_title"), body: t("capa.w2_body") },
+        { color: "yellow", title: t("capa.w3_title"), body: t("capa.w3_body") },
+        { color: "green",  title: t("capa.w4_title"), body: t("capa.w4_body") },
+        { color: "orange", title: t("capa.w5_title"), body: t("capa.w5_body") },
+        { color: "navy",   title: t("capa.w6_title"), body: t("capa.w6_body") },
+      ];
+    }
+  } else {
+    writingCards = [
+      { color: "orange", title: t(`${tk}.w1_title`), body: t(`${tk}.w1_body`) },
+      { color: "navy",   title: t(`${tk}.w2_title`), body: t(`${tk}.w2_body`) },
+      { color: "yellow", title: t(`${tk}.w3_title`), body: t(`${tk}.w3_body`) },
+      { color: "green",  title: t(`${tk}.w4_title`), body: t(`${tk}.w4_body`) },
+      { color: "navy",   title: t(`${tk}.w5_title`), body: t(`${tk}.w5_body`) },
+    ];
+  }
 
   const escalationCards: GuideCard[] = (type === "internal_nc" || type === "complaint")
     ? [
