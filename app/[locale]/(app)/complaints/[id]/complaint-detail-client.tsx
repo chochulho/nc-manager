@@ -32,6 +32,7 @@ interface Complaint {
   finalReportDueAt: Date | null; finalReportSentAt: Date | null;
   resolutionType: string | null;
   costRecallReturn: string | null; costPenalty: string | null; costOther: string | null;
+  receivedByName: string | null;
   createdAt: Date;
 }
 
@@ -453,6 +454,16 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
                 {!complaint.safetyRelated && !complaint.recallRisk && <span className="text-sm text-muted-foreground">{tc("none")}</span>}
               </div>
             )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+            <h2 className="section-title">{tc("registrationInfo")}</h2>
+            <dl className="space-y-3 text-sm">
+              <div><dt className="text-muted-foreground">{tc("registeredAt")}</dt><dd className="font-medium mt-0.5">{new Date(complaint.createdAt).toLocaleDateString()}</dd></div>
+              {complaint.receivedByName && (
+                <div><dt className="text-muted-foreground">{tc("createdBy")}</dt><dd className="font-medium mt-0.5">{complaint.receivedByName}</dd></div>
+              )}
+            </dl>
           </div>
 
           <ComplaintPhotosPanel complaintId={complaint.id} />

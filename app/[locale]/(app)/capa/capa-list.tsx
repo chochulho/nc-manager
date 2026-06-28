@@ -12,6 +12,7 @@ interface CAPAItem {
   id: string;
   capaNumber: string;
   title: string;
+  problemStatement: string | null;
   sourceType: string;
   sourceId: string;
   methodology: string;
@@ -104,10 +105,15 @@ export function CAPAList({
                         {item.capaNumber}
                       </Link>
                     </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/capa/${item.id}`} className="hover:underline font-medium">
+                    <td className="px-4 py-3 max-w-xs">
+                      <Link href={`/capa/${item.id}`} className="hover:underline font-medium block truncate">
                         {item.title}
                       </Link>
+                      {item.problemStatement && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                          {item.problemStatement}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {t(`sourceTypes.${item.sourceType}` as Parameters<typeof t>[0]) ?? item.sourceType}

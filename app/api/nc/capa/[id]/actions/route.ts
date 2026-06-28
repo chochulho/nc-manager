@@ -46,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!capa) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { actionType, description, responsibleUserId, dueAt } = body;
+  const { actionType, description, responsibleUserId, department, responsibleName, dueAt } = body;
 
   if (!actionType || !description) {
     return NextResponse.json({ error: "actionType, description은 필수입니다." }, { status: 400 });
@@ -59,6 +59,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       actionType,
       description,
       responsibleUserId: responsibleUserId ?? null,
+      department: department ?? null,
+      responsibleName: responsibleName ?? null,
       dueAt: dueAt ? new Date(dueAt) : null,
     })
     .returning();

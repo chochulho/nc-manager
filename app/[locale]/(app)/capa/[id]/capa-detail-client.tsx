@@ -21,6 +21,8 @@ interface CAPAAction {
   actionType: string;
   description: string;
   responsibleUserId: string | null;
+  department: string | null;
+  responsibleName: string | null;
   dueAt: Date | null;
   completedAt: Date | null;
   evidence: string | null;
@@ -55,6 +57,7 @@ interface CAPA {
   recurrenceNote: string | null;
   fmeaRef: string | null;
   changeRef: string | null;
+  createdByName: string | null;
   closedAt: Date | null;
   createdAt: Date;
 }
@@ -80,12 +83,7 @@ const ACTION_TYPE_COLORS: Record<string, string> = {
   preventive: "bg-green-50 text-green-700",
 };
 
-const NEXT_STATUS_KEYS: Record<string, string> = {
-  open: "in_progress",
-  in_progress: "actions_implemented",
-  actions_implemented: "effectiveness_monitoring",
-  effectiveness_monitoring: "closed",
-};
+const ALL_STATUSES = ["open", "in_progress", "actions_implemented", "effectiveness_monitoring", "closed"] as const;
 
 export function CAPADetailClient({ capa: initialCapa, actions: initialActions, sourceNumber, sourceTitle }: Props) {
   const router = useRouter();
@@ -121,12 +119,15 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     effectivenessNote: capa.effectivenessNote ?? "",
     recurrenceConfirmed: capa.recurrenceConfirmed === null ? "" : capa.recurrenceConfirmed ? "true" : "false",
     recurrenceNote: capa.recurrenceNote ?? "",
+    status: capa.status,
   });
 
   // Action 추가용 상태
   const [showAddAction, setShowAddAction] = useState(false);
-  const [newAction, setNewAction] = useState({ actionType: "corrective", description: "", dueAt: "" });
+  const [newAction, setNewAction] = useState({ actionType: "corrective", description: "", department: "", responsibleName: "", dueAt: "" });
   const [addingAction, setAddingAction] = useState(false);
+  // 완료일 선택 상태
+  const [completingAction, setCompletingAction] = useState<{ id: string; date: string } | null>(null);
 
   function setF(key: string, value: unknown) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -135,6 +136,12 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
   async function save() {
     setSaving(true);
     try {
+      if (form.status === "closed" && !form.effectivenessVerdict) {
+        toast.error(tCommon("required"));
+        setSaving(false);
+        return;
+      }
+
       const body: Record<string, unknown> = {
         title: form.title,
         problemStatement: form.problemStatement || null,
@@ -152,6 +159,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
         effectivenessNote: form.effectivenessNote || null,
         recurrenceConfirmed: form.recurrenceConfirmed === "" ? null : form.recurrenceConfirmed === "true",
         recurrenceNote: form.recurrenceNote || null,
+        status: form.status,
       };
 
       const res = await fetch(`/api/nc/capa/${capa.id}`, {
@@ -342,26 +350,6 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     doc.save(`CAPA_${capa.capaNumber}.pdf`);
   }
 
-  async function advanceStatus() {
-    const nextKey = NEXT_STATUS_KEYS[capa.status];
-    if (!nextKey) return;
-
-    if (nextKey === "closed" && !capa.effectivenessVerdict) {
-      toast.error(tCommon("required"));
-      return;
-    }
-
-    const res = await fetch(`/api/nc/capa/${capa.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextKey }),
-    });
-    if (!res.ok) { toast.error(tCommon("error")); return; }
-    const updated = await res.json();
-    setCapa(updated);
-    toast.success(t(`statuses.${nextKey}` as Parameters<typeof t>[0]));
-  }
-
   async function addAction() {
     if (!newAction.description) { toast.error(tCommon("required")); return; }
     setAddingAction(true);
@@ -372,24 +360,28 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
         body: JSON.stringify({
           actionType: newAction.actionType,
           description: newAction.description,
+          department: newAction.department || null,
+          responsibleName: newAction.responsibleName || null,
           dueAt: newAction.dueAt || null,
         }),
       });
       if (!res.ok) { toast.error(tCommon("error")); return; }
       const created = await res.json();
       setActions((prev) => [...prev, created]);
-      setNewAction({ actionType: "corrective", description: "", dueAt: "" });
+      setNewAction({ actionType: "corrective", description: "", department: "", responsibleName: "", dueAt: "" });
       setShowAddAction(false);
     } finally {
       setAddingAction(false);
     }
   }
 
-  async function updateActionStatus(actionId: string, status: string) {
+  async function updateActionStatus(actionId: string, status: string, completedAt?: string) {
+    const body: Record<string, unknown> = { status };
+    if (completedAt) body.completedAt = completedAt;
     const res = await fetch(`/api/nc/capa/${capa.id}/actions/${actionId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) return;
     const updated = await res.json();
@@ -409,8 +401,17 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     : null;
 
   const isSimpleCapa = capa.methodology === "simple_capa";
-  const isEffectivenessPhase = capa.status === "effectiveness_monitoring";
+  const isEffectivenessPhase = (editing ? form.status : capa.status) === "effectiveness_monitoring";
   const whyRows = form.d4RootCause as Array<{ why: string; because: string }>;
+  const capaWhyRows = Array.isArray(capa.d4RootCause)
+    ? (capa.d4RootCause as Array<{ why: string; because: string }>)
+    : [];
+  const capaD5 = Array.isArray(capa.d5PermanentActions)
+    ? (capa.d5PermanentActions as Array<{ description: string; responsible: string; dueDate: string }>)
+    : [];
+  const capaD6 = Array.isArray(capa.d6Implementation)
+    ? (capa.d6Implementation as Array<{ description: string; evidence: string; verifiedAt: string }>)
+    : [];
 
   return (
     <div className="flex gap-4 items-start">
@@ -460,7 +461,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
             {editing ? (
               <>
                 <div>
-                  <Label>{t("capaNumber")} *</Label>
+                  <Label>{tCommon("title")} *</Label>
                   <Input value={form.title} onChange={(e) => setF("title", e.target.value)} className="mt-1" />
                 </div>
                 <div>
@@ -490,7 +491,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   {editing ? (
                     <Textarea value={form.d3InterimContainment} onChange={(e) => setF("d3InterimContainment", e.target.value)} rows={2} placeholder={t("d3Placeholder")} className="text-sm" />
                   ) : (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d3InterimContainment || "—"}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{capa.d3InterimContainment || "—"}</p>
                   )}
                 </div>
 
@@ -500,7 +501,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   {editing ? (
                     <Textarea value={form.simpleRootCause} onChange={(e) => setF("simpleRootCause", e.target.value)} rows={3} placeholder={t("scRootCausePlaceholder")} className="text-sm" />
                   ) : (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.simpleRootCause || "—"}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(typeof capa.d4RootCause === "string" ? capa.d4RootCause : null) || "—"}</p>
                   )}
                 </div>
 
@@ -535,7 +536,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   {editing ? (
                     <Textarea value={form.d1Team} onChange={(e) => setF("d1Team", e.target.value)} rows={2} placeholder={t("d1Placeholder")} className="text-sm" />
                   ) : (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d1Team || "—"}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(typeof capa.d1Team === "string" ? capa.d1Team : null) || "—"}</p>
                   )}
                 </div>
 
@@ -545,7 +546,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   {editing ? (
                     <Textarea value={form.d2Description} onChange={(e) => setF("d2Description", e.target.value)} rows={3} placeholder={t("d2Placeholder")} className="text-sm" />
                   ) : (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d2Description || "—"}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{capa.d2Description || "—"}</p>
                   )}
                 </div>
 
@@ -555,7 +556,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   {editing ? (
                     <Textarea value={form.d3InterimContainment} onChange={(e) => setF("d3InterimContainment", e.target.value)} rows={2} placeholder={t("d3Placeholder")} className="text-sm" />
                   ) : (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d3InterimContainment || "—"}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{capa.d3InterimContainment || "—"}</p>
                   )}
                 </div>
 
@@ -591,14 +592,14 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {whyRows.filter((r) => r.why || r.because).map((row, i) => (
+                      {capaWhyRows.filter((r) => r.why || r.because).map((row, i) => (
                         <div key={i} className="text-sm">
                           <span className="font-medium text-orange-700">Why {i + 1}:</span>{" "}
                           <span className="text-muted-foreground">{row.why || "—"}</span>
                           {row.because && <span className="text-gray-500"> → {row.because}</span>}
                         </div>
                       ))}
-                      {whyRows.every((r) => !r.why && !r.because) && (
+                      {capaWhyRows.every((r) => !r.why && !r.because) && (
                         <p className="text-sm text-muted-foreground">—</p>
                       )}
                     </div>
@@ -666,17 +667,15 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {(form.d5PermanentActions as Array<{description: string; responsible: string; dueDate: string}>)
-                        .filter((r) => r.description)
-                        .map((row, i) => (
-                          <div key={i} className="text-sm flex gap-3">
-                            <span className="font-medium text-red-700 shrink-0">{i + 1}.</span>
-                            <span className="flex-1">{row.description}</span>
-                            {row.responsible && <span className="text-muted-foreground shrink-0">{row.responsible}</span>}
-                            {row.dueDate && <span className="text-muted-foreground shrink-0">{row.dueDate}</span>}
-                          </div>
-                        ))}
-                      {!(form.d5PermanentActions as Array<{description: string}>).some((r) => r.description) && (
+                      {capaD5.filter((r) => r.description).map((row, i) => (
+                        <div key={i} className="text-sm flex gap-3">
+                          <span className="font-medium text-red-700 shrink-0">{i + 1}.</span>
+                          <span className="flex-1">{row.description}</span>
+                          {row.responsible && <span className="text-muted-foreground shrink-0">{row.responsible}</span>}
+                          {row.dueDate && <span className="text-muted-foreground shrink-0">{row.dueDate}</span>}
+                        </div>
+                      ))}
+                      {!capaD5.some((r) => r.description) && (
                         <p className="text-sm text-muted-foreground">—</p>
                       )}
                     </div>
@@ -744,17 +743,15 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      {(form.d6Implementation as Array<{description: string; evidence: string; verifiedAt: string}>)
-                        .filter((r) => r.description)
-                        .map((row, i) => (
-                          <div key={i} className="text-sm flex gap-3">
-                            <span className="font-medium text-teal-700 shrink-0">{i + 1}.</span>
-                            <span className="flex-1">{row.description}</span>
-                            {row.evidence && <span className="text-muted-foreground shrink-0">{row.evidence}</span>}
-                            {row.verifiedAt && <span className="text-muted-foreground shrink-0">{row.verifiedAt}</span>}
-                          </div>
-                        ))}
-                      {!(form.d6Implementation as Array<{description: string}>).some((r) => r.description) && (
+                      {capaD6.filter((r) => r.description).map((row, i) => (
+                        <div key={i} className="text-sm flex gap-3">
+                          <span className="font-medium text-teal-700 shrink-0">{i + 1}.</span>
+                          <span className="flex-1">{row.description}</span>
+                          {row.evidence && <span className="text-muted-foreground shrink-0">{row.evidence}</span>}
+                          {row.verifiedAt && <span className="text-muted-foreground shrink-0">{row.verifiedAt}</span>}
+                        </div>
+                      ))}
+                      {!capaD6.some((r) => r.description) && (
                         <p className="text-sm text-muted-foreground">—</p>
                       )}
                     </div>
@@ -790,7 +787,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   {editing ? (
                     <Textarea value={form.d8Recognition} onChange={(e) => setF("d8Recognition", e.target.value)} rows={2} placeholder={t("d8Placeholder")} className="text-sm" />
                   ) : (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{form.d8Recognition || "—"}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{(typeof capa.d8Recognition === "string" ? capa.d8Recognition : null) || "—"}</p>
                   )}
                 </div>
               </>
@@ -827,6 +824,16 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                     <Input type="date" value={newAction.dueAt} onChange={(e) => setNewAction((p) => ({ ...p, dueAt: e.target.value }))} className="mt-1 h-8 text-sm" />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">{t("actionDepartment")}</Label>
+                    <Input value={newAction.department} onChange={(e) => setNewAction((p) => ({ ...p, department: e.target.value }))} placeholder={t("actionDepartmentPlaceholder")} className="mt-1 h-8 text-sm" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{t("actionResponsible")}</Label>
+                    <Input value={newAction.responsibleName} onChange={(e) => setNewAction((p) => ({ ...p, responsibleName: e.target.value }))} placeholder={t("actionResponsiblePlaceholder")} className="mt-1 h-8 text-sm" />
+                  </div>
+                </div>
                 <div>
                   <Label className="text-xs">{t("actionDescription")}</Label>
                   <Textarea value={newAction.description} onChange={(e) => setNewAction((p) => ({ ...p, description: e.target.value }))} rows={2} placeholder={t("actionDescPlaceholder")} className="mt-1 text-sm" />
@@ -846,41 +853,86 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
 
             <div className="space-y-2">
               {actions.map((action) => (
-                <div key={action.id} className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 group">
-                  <span className={`shrink-0 text-xs px-2 py-0.5 rounded font-semibold mt-0.5 ${ACTION_TYPE_COLORS[action.actionType] ?? "bg-gray-100 text-gray-600"}`}>
-                    {t(`actionTypes.${action.actionType}` as Parameters<typeof t>[0])}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${action.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
-                      {action.description}
-                    </p>
-                    {action.dueAt && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{t("actionDue")}: {formatDate(action.dueAt)}</p>
-                    )}
-                    {action.completedAt && (
-                      <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3" /> {t("actionCompleted")}: {formatDate(action.completedAt)}
+                <div key={action.id} className="rounded-lg border border-gray-100 hover:bg-gray-50 group">
+                  <div className="flex items-start gap-3 px-3 py-2.5">
+                    <span className={`shrink-0 text-xs px-2 py-0.5 rounded font-semibold mt-0.5 ${ACTION_TYPE_COLORS[action.actionType] ?? "bg-gray-100 text-gray-600"}`}>
+                      {t(`actionTypes.${action.actionType}` as Parameters<typeof t>[0])}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm ${action.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                        {action.description}
                       </p>
-                    )}
+                      <div className="flex flex-wrap gap-x-3 mt-0.5">
+                        {(action.department || action.responsibleName) && (
+                          <p className="text-xs text-muted-foreground">
+                            {[action.department, action.responsibleName].filter(Boolean).join(" / ")}
+                          </p>
+                        )}
+                        {action.dueAt && (
+                          <p className="text-xs text-muted-foreground">{t("actionDue")}: {formatDate(action.dueAt)}</p>
+                        )}
+                        {action.completedAt && (
+                          <p className="text-xs text-green-600 flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> {t("actionCompleted")}: {formatDate(action.completedAt)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <Select
+                        value={completingAction?.id === action.id ? "completed" : action.status}
+                        onValueChange={(v) => {
+                          if (v === "completed") {
+                            setCompletingAction({ id: action.id, date: new Date().toISOString().slice(0, 10) });
+                          } else {
+                            setCompletingAction(null);
+                            updateActionStatus(action.id, v);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(["open", "in_progress", "completed", "cancelled"] as const).map((v) => (
+                            <SelectItem key={v} value={v} className="text-xs">
+                              {t(`actionStatuses.${v}` as Parameters<typeof t>[0])}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => deleteAction(action.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <Select
-                      value={action.status}
-                      onValueChange={(v) => updateActionStatus(action.id, v)}
-                    >
-                      <SelectTrigger className="h-7 text-xs w-24"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {(["open", "in_progress", "completed", "cancelled"] as const).map((v) => (
-                          <SelectItem key={v} value={v} className="text-xs">
-                            {t(`actionStatuses.${v}` as Parameters<typeof t>[0])}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-400 hover:text-red-600" onClick={() => deleteAction(action.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  {completingAction?.id === action.id && (
+                    <div className="mx-3 mb-2.5 px-3 py-2 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 flex-wrap">
+                      <span className="text-xs text-green-700 font-medium">{t("actionCompleted")}:</span>
+                      <Input
+                        type="date"
+                        value={completingAction.date}
+                        onChange={(e) => setCompletingAction((prev) => prev ? { ...prev, date: e.target.value } : null)}
+                        className="h-7 text-xs w-36"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          updateActionStatus(action.id, "completed", completingAction.date);
+                          setCompletingAction(null);
+                        }}
+                      >
+                        {tCommon("confirm")}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => setCompletingAction(null)}
+                      >
+                        {tCommon("cancel")}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1011,20 +1063,25 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
 
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">{t("currentStatus")}</p>
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ${STATUS_COLORS[capa.status] ?? "bg-gray-50 text-gray-700 border-gray-200"}`}>
-                {t(`statuses.${capa.status}` as Parameters<typeof t>[0])}
-              </span>
+              {editing ? (
+                <Select value={form.status} onValueChange={(v) => setF("status", v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {t(`statuses.${s}` as Parameters<typeof t>[0])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ${STATUS_COLORS[capa.status] ?? "bg-gray-50 text-gray-700 border-gray-200"}`}>
+                  {t(`statuses.${capa.status}` as Parameters<typeof t>[0])}
+                </span>
+              )}
             </div>
-
-            {NEXT_STATUS_KEYS[capa.status] && (
-              <Button
-                className="w-full"
-                variant={capa.status === "effectiveness_monitoring" ? "default" : "outline"}
-                onClick={advanceStatus}
-              >
-                {t(`nextStatus.${capa.status}` as Parameters<typeof t>[0])} →
-              </Button>
-            )}
 
             {capa.status === "closed" && capa.closedAt && (
               <p className="text-xs text-muted-foreground text-center">{t("closedAt")}: {formatDate(capa.closedAt)}</p>
@@ -1055,6 +1112,12 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
               <p className="text-xs text-muted-foreground">{t("registeredAt")}</p>
               <p className="text-sm">{formatDate(capa.createdAt)}</p>
             </div>
+            {capa.createdByName && (
+              <div>
+                <p className="text-xs text-muted-foreground">{tCommon("createdBy")}</p>
+                <p className="text-sm font-medium">{capa.createdByName}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

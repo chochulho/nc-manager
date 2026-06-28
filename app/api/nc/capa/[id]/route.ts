@@ -56,11 +56,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     updates.effectivenessReviewedAt = now;
   }
 
-  const [updated] = await db
-    .update(capas)
-    .set(updates as Parameters<typeof db.update>[0] extends never ? never : any)
-    .where(eq(capas.id, id))
-    .returning();
+  let updated;
+  try {
+    [updated] = await db
+      .update(capas)
+      .set(updates as Parameters<typeof db.update>[0] extends never ? never : any)
+      .where(eq(capas.id, id))
+      .returning();
+  } catch (err) {
+    console.error("[CAPA PATCH] DB update failed:", err);
+    return NextResponse.json({ error: "DB update failed", details: String(err) }, { status: 500 });
+  }
+
+  if (!updated) return NextResponse.json({ error: "Not found after update" }, { status: 404 });
 
   // champion 변경 시 알림
   const newChampion = body.championUserId;

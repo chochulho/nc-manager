@@ -129,6 +129,8 @@ export const customerComplaints = pgTable("nc_customer_complaints", {
   costPenalty: numeric("cost_penalty"),
   costOther: numeric("cost_other"),
 
+  receivedByName: text("received_by_name"),
+
   closedAt: timestamp("closed_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
@@ -179,6 +181,9 @@ export const capas = pgTable("nc_capas", {
   fmeaRef: text("fmea_ref"),
   changeRef: text("change_ref"),
 
+  createdByUserId: text("created_by_user_id"),
+  createdByName: text("created_by_name"),
+
   closedAt: timestamp("closed_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
@@ -190,6 +195,8 @@ export const capaActions = pgTable("nc_capa_actions", {
   actionType: text("action_type", { enum: ["correction", "corrective", "preventive"] }).notNull(),
   description: text("description").notNull(),
   responsibleUserId: text("responsible_user_id"),
+  department: text("department"),
+  responsibleName: text("responsible_name"),
   dueAt: timestamp("due_at", { mode: "date" }),
   completedAt: timestamp("completed_at", { mode: "date" }),
   evidence: text("evidence"),

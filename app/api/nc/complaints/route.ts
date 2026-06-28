@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
       receivedChannel,
       isFormal: isFormal ?? true,
       receivedByUserId: session.user.id,
+      receivedByName: session.user.name ?? null,
       discoveryStage,
       partId: partId || null,
       lotNumber: lotNumber || null,

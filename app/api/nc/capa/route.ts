@@ -93,6 +93,8 @@ export async function POST(req: NextRequest) {
       title,
       methodology: methodology ?? "8d",
       problemStatement: problemStatement ?? null,
+      createdByUserId: session.user.id,
+      createdByName: session.user.name ?? null,
     })
     .returning();
 
