@@ -4,6 +4,7 @@
     "internalNc": "내부 부적합",
     "complaints": "고객 클레임",
     "capa": "CAPA",
+    "qAlerts": "Q-Alert",
     "lessonsLearned": "레슨런",
     "masters": "마스터 관리",
     "fieldAnalysis": "필드 클레임 분석",
@@ -484,6 +485,7 @@
       "none": "🟢 재발 없음",
       "found": "🔴 재발 있음"
     },
+    "docChanges": "표준문서 변경 관리",
     "notEffectiveWarning": "조치가 불충분합니다. 원인 재분석 및 조치 계획 재수립이 필요합니다.",
     "effectivenessRequired": "유효성 확인 필요",
     "currentStatus": "현재 상태",

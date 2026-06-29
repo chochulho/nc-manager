@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Edit2, Save, X, Plus, CheckCircle2, AlertTriangle, Trash2, FileSpreadsheet, FileText } from "lucide-react";
+import { ArrowLeft, Edit2, Save, X, Plus, CheckCircle2, AlertTriangle, Trash2, FileSpreadsheet, FileText, Bell } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AttachmentSection } from "@/components/nc/attachment-section";
+import { DocumentChangesSection, type DocChangeItem } from "@/components/capa/document-changes-section";
 import { formatDate } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -57,6 +58,7 @@ interface CAPA {
   recurrenceNote: string | null;
   fmeaRef: string | null;
   changeRef: string | null;
+  docChanges: DocChangeItem[] | null;
   createdByName: string | null;
   closedAt: Date | null;
   createdAt: Date;
@@ -112,6 +114,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     d8Recognition: typeof capa.d8Recognition === "string" ? capa.d8Recognition : "",
     fmeaRef: capa.fmeaRef ?? "",
     changeRef: capa.changeRef ?? "",
+    docChanges: capa.docChanges ?? [],
     effectivenessReviewDueAt: capa.effectivenessReviewDueAt
       ? new Date(capa.effectivenessReviewDueAt).toISOString().slice(0, 10)
       : "",
@@ -154,6 +157,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
         d8Recognition: isSimpleCapa ? null : (form.d8Recognition || null),
         fmeaRef: form.fmeaRef || null,
         changeRef: form.changeRef || null,
+        docChanges: (form.docChanges as DocChangeItem[]).length > 0 ? form.docChanges : null,
         effectivenessReviewDueAt: form.effectivenessReviewDueAt ? new Date(form.effectivenessReviewDueAt) : null,
         effectivenessVerdict: form.effectivenessVerdict || null,
         effectivenessNote: form.effectivenessNote || null,
@@ -433,6 +437,11 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
               <Button variant="ghost" size="sm" onClick={handleDownloadPdf} title="PDF 다운로드">
                 <span className="text-[10px] font-bold text-red-600">PDF</span>
               </Button>
+              <Link href={`/q-alerts/new?capaId=${capa.id}`}>
+                <Button variant="outline" size="sm" title="Q-Alert 초안 생성" className="text-orange-600 border-orange-200 hover:bg-orange-50">
+                  <Bell className="h-3.5 w-3.5 mr-1" /> Q-Alert
+                </Button>
+              </Link>
             </>
           )}
           {editing ? (
@@ -524,6 +533,16 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                       ) : (
                         <p className="mt-1 text-sm text-muted-foreground">{capa.changeRef || "—"}</p>
                       )}
+                    </div>
+                    <div>
+                      <Label className="text-xs">{t("docChanges")}</Label>
+                      <div className="mt-1">
+                        <DocumentChangesSection
+                          items={form.docChanges as DocChangeItem[]}
+                          editing={editing}
+                          onChange={(items) => setF("docChanges", items)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -777,6 +796,16 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                       ) : (
                         <p className="mt-1 text-sm text-muted-foreground">{capa.changeRef || "—"}</p>
                       )}
+                    </div>
+                    <div>
+                      <Label className="text-xs">{t("docChanges")}</Label>
+                      <div className="mt-1">
+                        <DocumentChangesSection
+                          items={form.docChanges as DocChangeItem[]}
+                          editing={editing}
+                          onChange={(items) => setF("docChanges", items)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

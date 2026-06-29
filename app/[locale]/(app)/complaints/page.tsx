@@ -37,8 +37,11 @@ export default async function ComplaintsPage({
       recallRisk: customerComplaints.recallRisk,
       initialResponseDueAt: customerComplaints.initialResponseDueAt,
       finalReportDueAt: customerComplaints.finalReportDueAt,
+      receivedChannel: customerComplaints.receivedChannel,
+      capaId: customerComplaints.capaId,
       customerName: ncCustomers.name,
       partName: ncParts.partName,
+      partNumber: ncParts.partNumber,
     })
     .from(customerComplaints)
     .leftJoin(ncCustomers, eq(customerComplaints.customerId, ncCustomers.id))

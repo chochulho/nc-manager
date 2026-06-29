@@ -1,0 +1,23 @@
+CREATE TABLE "nc_q_alerts" (
+  "id" text PRIMARY KEY,
+  "org_id" text NOT NULL,
+  "alert_number" text NOT NULL,
+  "title" text NOT NULL,
+  "problem_summary" text,
+  "root_cause" text,
+  "prevention" text,
+  "target_process" text,
+  "source_type" text,
+  "source_id" text,
+  "source_number" text,
+  "status" text DEFAULT 'draft' NOT NULL,
+  "posted_at" timestamp,
+  "expires_at" timestamp,
+  "trained_at" timestamp,
+  "trained_by_name" text,
+  "training_note" text,
+  "created_by_user_id" text,
+  "created_by_name" text,
+  "created_at" timestamp DEFAULT now() NOT NULL,
+  "updated_at" timestamp DEFAULT now() NOT NULL
+);

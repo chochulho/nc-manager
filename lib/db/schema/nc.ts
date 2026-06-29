@@ -180,6 +180,15 @@ export const capas = pgTable("nc_capas", {
 
   fmeaRef: text("fmea_ref"),
   changeRef: text("change_ref"),
+  docChanges: jsonb("doc_changes").$type<Array<{
+    id: string;
+    docType: string;
+    customLabel?: string;
+    docRef?: string;
+    status: "not_required" | "required" | "completed";
+    note?: string;
+    apqpDocId?: string;
+  }>>(),
 
   createdByUserId: text("created_by_user_id"),
   createdByName: text("created_by_name"),
@@ -341,11 +350,47 @@ export const ncSlaReminderLogs = pgTable("nc_sla_reminder_logs", {
   sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+// ── Q-Alert ───────────────────────────────────────────────────────────────────
+
+export const qAlerts = pgTable("nc_q_alerts", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull(),
+  alertNumber: text("alert_number").notNull(),
+
+  title: text("title").notNull(),
+  problemSummary: text("problem_summary"),
+  rootCause: text("root_cause"),
+  prevention: text("prevention"),
+  targetProcess: text("target_process"),
+
+  sourceType: text("source_type", {
+    enum: ["capa", "internal_nc", "customer_complaint", "standalone"],
+  }),
+  sourceId: text("source_id"),
+  sourceNumber: text("source_number"),
+
+  status: text("status", {
+    enum: ["draft", "reviewed", "posted", "archived"],
+  }).default("draft").notNull(),
+
+  postedAt: timestamp("posted_at", { mode: "date" }),
+  expiresAt: timestamp("expires_at", { mode: "date" }),
+
+  trainedAt: timestamp("trained_at", { mode: "date" }),
+  trainedByName: text("trained_by_name"),
+  trainingNote: text("training_note"),
+
+  createdByUserId: text("created_by_user_id"),
+  createdByName: text("created_by_name"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 // ── Sequence counters ─────────────────────────────────────────────────────────
 
 export const ncSequences = pgTable("nc_sequences", {
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
   year: integer("year").notNull(),
   lastSeq: integer("last_seq").default(0).notNull(),
 }, (t) => [

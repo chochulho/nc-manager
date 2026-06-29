@@ -4,6 +4,7 @@
     "internalNc": "Internal NC",
     "complaints": "Customer Complaints",
     "capa": "CAPA",
+    "qAlerts": "Q-Alert",
     "lessonsLearned": "Lessons Learned",
     "masters": "Masters",
     "fieldAnalysis": "Field Claim Analysis",
@@ -484,6 +485,7 @@
       "none": "🟢 No Recurrence",
       "found": "🔴 Recurrence Found"
     },
+    "docChanges": "Document Change Management",
     "notEffectiveWarning": "Actions are insufficient. Root cause re-analysis and revised action plan required.",
     "effectivenessRequired": "Effectiveness Review Required",
     "currentStatus": "Current Status",
