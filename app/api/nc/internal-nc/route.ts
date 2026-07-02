@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { internalNCs, ncSequences } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { sql } from "drizzle-orm";
-import { buildSiteFilter } from "@/lib/site-filter";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 
 async function nextNcNumber(orgId: string): Promise<string> {
   const year = new Date().getFullYear();
@@ -25,7 +25,8 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, internalNCs.occurrenceSiteId);
+  const selectedSiteId = await getSelectedSiteId();
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, internalNCs.occurrenceSiteId, selectedSiteId);
 
   const items = await db
     .select()

@@ -6,12 +6,13 @@ import { Link, useRouter, usePathname } from "@/lib/i18n/navigation";
 import {
   LayoutDashboard, AlertTriangle, MessageSquareWarning, ClipboardCheck,
   Database, Users, Shield, LogOut, ChevronDown,
-  PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb, ExternalLink, Bell,
+  PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb, ExternalLink, Bell, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -22,11 +23,19 @@ import type { AppSession } from "@/lib/auth";
 
 const STORAGE_KEY = "nc-sidebar-collapsed";
 
-interface AppSidebarProps {
-  session: AppSession;
+interface SiteItem {
+  id: string;
+  code: string;
+  name: string;
 }
 
-export function AppSidebar({ session }: AppSidebarProps) {
+interface AppSidebarProps {
+  session: AppSession;
+  sites?: SiteItem[];
+  currentSiteId?: string | null;
+}
+
+export function AppSidebar({ session, sites = [], currentSiteId = null }: AppSidebarProps) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const router = useRouter();
@@ -104,6 +113,68 @@ export function AppSidebar({ session }: AppSidebarProps) {
             {isCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
         </div>
+
+        {/* 사업장 스위처 — 2개 이상일 때만 표시 */}
+        {sites.length > 1 && (
+          <div className={cn("border-b", isCollapsed ? "px-1.5 py-2" : "px-3 py-2")}>
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="flex justify-center w-full h-9 w-9 mx-auto items-center rounded-lg text-muted-foreground hover:bg-sidebar-accent transition-colors relative">
+                    <Building2 className="h-4 w-4" />
+                    {currentSiteId && (
+                      <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-primary" />
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">
+                  {currentSiteId
+                    ? (sites.find((s) => s.id === currentSiteId)?.name ?? "사업장 선택됨")
+                    : "전체 사업장"}
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-sidebar-accent transition-colors text-left">
+                    <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 truncate font-medium">
+                      {currentSiteId
+                        ? `${sites.find((s) => s.id === currentSiteId)?.code ?? ""} ${sites.find((s) => s.id === currentSiteId)?.name ?? ""}`
+                        : "전체 사업장"}
+                    </span>
+                    <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      document.cookie = "nc-selected-site=; path=/; max-age=0";
+                      router.refresh();
+                    }}
+                    className={cn("text-xs cursor-pointer", !currentSiteId && "font-semibold text-primary")}
+                  >
+                    전체 사업장
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {sites.map((site) => (
+                    <DropdownMenuItem
+                      key={site.id}
+                      onClick={() => {
+                        document.cookie = `nc-selected-site=${site.id}; path=/; max-age=86400`;
+                        router.refresh();
+                      }}
+                      className={cn("text-xs cursor-pointer", currentSiteId === site.id && "font-semibold text-primary")}
+                    >
+                      <span className="font-mono mr-1.5 text-muted-foreground">{site.code}</span>
+                      {site.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        )}
 
         {/* Nav */}
         <nav className={cn("flex-1 py-4 space-y-1", isCollapsed ? "px-1.5" : "px-3")}>

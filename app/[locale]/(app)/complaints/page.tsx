@@ -5,6 +5,7 @@ import { customerComplaints, ncCustomers, ncParts, ncAnalysisReports } from "@/l
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { ComplaintList } from "./complaint-list";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 
 export default async function ComplaintsPage({
   searchParams,
@@ -18,7 +19,11 @@ export default async function ComplaintsPage({
   const { year, period } = parsePeriodParams(sp.year, sp.period);
   const range = periodToDateRange(year, period);
 
+  const selectedSiteId = await getSelectedSiteId();
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, customerComplaints.siteId, selectedSiteId);
+
   const conditions = [eq(customerComplaints.orgId, session.user.organizationId)];
+  if (siteFilter) conditions.push(siteFilter);
   if (range) {
     conditions.push(gte(customerComplaints.receivedAt, range.gte));
     conditions.push(lte(customerComplaints.receivedAt, range.lte));

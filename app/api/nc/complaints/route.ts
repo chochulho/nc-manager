@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { customerComplaints, ncSequences, ncCustomers, ncFieldClaimDetails } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { sql } from "drizzle-orm";
-import { buildSiteFilter } from "@/lib/site-filter";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 
 async function nextComplaintNumber(orgId: string): Promise<string> {
   const year = new Date().getFullYear();
@@ -25,7 +25,8 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, customerComplaints.siteId);
+  const selectedSiteId = await getSelectedSiteId();
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, customerComplaints.siteId, selectedSiteId);
 
   const items = await db
     .select()

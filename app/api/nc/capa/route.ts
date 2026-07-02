@@ -7,7 +7,7 @@ import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
 import { sendCapaAssignmentEmail } from "@/lib/email";
-import { buildSiteFilter } from "@/lib/site-filter";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 
 const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
   ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
@@ -36,7 +36,8 @@ export async function GET(req: NextRequest) {
   const { year, period } = parsePeriodParams(searchParams.get("year") ?? undefined, searchParams.get("period") ?? undefined);
   const range = periodToDateRange(year, period);
 
-  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, capas.siteId);
+  const selectedSiteId = await getSelectedSiteId();
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, capas.siteId, selectedSiteId);
 
   const conditions = [eq(capas.orgId, session.user.organizationId)];
   if (siteFilter) conditions.push(siteFilter);

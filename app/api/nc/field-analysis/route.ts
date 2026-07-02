@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { ncFieldClaimDetails, customerComplaints, ncCustomers, ncParts } from "@/lib/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
-import { buildSiteFilter } from "@/lib/site-filter";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
   const { year, period } = parsePeriodParams(sp.get("year") ?? undefined, sp.get("period") ?? undefined);
   const range = periodToDateRange(year, period);
 
-  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, customerComplaints.siteId);
+  const selectedSiteId = await getSelectedSiteId();
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, customerComplaints.siteId, selectedSiteId);
 
   const conditions = [eq(ncFieldClaimDetails.orgId, session.user.organizationId)];
   if (siteFilter) conditions.push(siteFilter);

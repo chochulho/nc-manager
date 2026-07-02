@@ -5,6 +5,7 @@ import { capas } from "@/lib/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { CAPAList } from "./capa-list";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 
 export default async function CAPAPage({
   searchParams,
@@ -18,7 +19,11 @@ export default async function CAPAPage({
   const { year, period } = parsePeriodParams(sp.year, sp.period);
   const range = periodToDateRange(year, period);
 
+  const selectedSiteId = await getSelectedSiteId();
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, capas.siteId, selectedSiteId);
+
   const conditions = [eq(capas.orgId, session.user.organizationId)];
+  if (siteFilter) conditions.push(siteFilter);
   if (range) {
     conditions.push(gte(capas.createdAt, range.gte));
     conditions.push(lte(capas.createdAt, range.lte));

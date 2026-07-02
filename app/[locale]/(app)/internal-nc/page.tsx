@@ -5,6 +5,7 @@ import { internalNCs, ncParts, ncCategoriesL2 } from "@/lib/db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { InternalNCList } from "./internal-nc-list";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 
 export default async function InternalNCPage({
   searchParams,
@@ -18,7 +19,11 @@ export default async function InternalNCPage({
   const { year, period } = parsePeriodParams(sp.year, sp.period);
   const range = periodToDateRange(year, period);
 
+  const selectedSiteId = await getSelectedSiteId();
+  const siteFilter = buildSiteFilter(session.user.allowedSiteIds, internalNCs.occurrenceSiteId, selectedSiteId);
+
   const conditions = [eq(internalNCs.orgId, session.user.organizationId)];
+  if (siteFilter) conditions.push(siteFilter);
   if (range) {
     conditions.push(gte(internalNCs.discoveredAt, range.gte));
     conditions.push(lte(internalNCs.discoveredAt, range.lte));
