@@ -4,6 +4,7 @@ import {
   customerComplaints, capas, capaActions,
   ncSlaReminderLogs,
 } from "@/lib/db/schema";
+import { sendEffectivenessReminderEmail } from "@/lib/email";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and, isNotNull, notInArray, lte, gte } from "drizzle-orm";
 import { sendSlaReminderEmail } from "@/lib/email";
@@ -214,6 +215,74 @@ export async function GET(req: NextRequest) {
           orgId: a.capaOrgId,
           entityType: "capa_action",
           entityId: a.id,
+          sentToEmail: userEmail,
+        });
+        sent++;
+      } catch {
+        skipped++;
+      }
+    }
+  }
+
+  // ── 3. CAPA 유효성 평가 검토일 임박 ─────────────────────────────────────────
+
+  const pendingEffectiveness = await db
+    .select({
+      id: capas.id,
+      capaNumber: capas.capaNumber,
+      title: capas.title,
+      orgId: capas.orgId,
+      effectivenessReviewDueAt: capas.effectivenessReviewDueAt,
+      effectivenessReviewerUserId: capas.effectivenessReviewerUserId,
+      status: capas.status,
+    })
+    .from(capas)
+    .where(
+      and(
+        isNotNull(capas.effectivenessReviewDueAt),
+        isNotNull(capas.effectivenessReviewerUserId),
+        notInArray(capas.status, ["closed"]),
+        lte(capas.effectivenessReviewDueAt, windowEnd)
+      )
+    );
+
+  for (const c of pendingEffectiveness) {
+    if (!c.effectivenessReviewDueAt || !c.effectivenessReviewerUserId) continue;
+
+    const { data: userData } = await supabase.auth.admin.getUserById(c.effectivenessReviewerUserId);
+    const userEmail = userData?.user?.email;
+    const userName = userData?.user?.user_metadata?.full_name ?? "담당자";
+
+    if (!userEmail) continue;
+
+    const alreadySent = await db
+      .select({ id: ncSlaReminderLogs.id })
+      .from(ncSlaReminderLogs)
+      .where(
+        and(
+          eq(ncSlaReminderLogs.entityType, "capa_effectiveness"),
+          eq(ncSlaReminderLogs.entityId, c.id),
+          eq(ncSlaReminderLogs.sentToEmail, userEmail),
+          gte(ncSlaReminderLogs.sentAt, todayStart)
+        )
+      )
+      .then((r) => r.length > 0);
+
+    if (!alreadySent) {
+      try {
+        await sendEffectivenessReminderEmail({
+          to: userEmail,
+          recipientName: userName,
+          orgName: "",
+          capaNumber: c.capaNumber,
+          title: c.title,
+          reviewDueAt: c.effectivenessReviewDueAt,
+          capaUrl: `${APP_URL}/capa/${c.id}`,
+        });
+        await db.insert(ncSlaReminderLogs).values({
+          orgId: c.orgId,
+          entityType: "capa_effectiveness",
+          entityId: c.id,
           sentToEmail: userEmail,
         });
         sent++;

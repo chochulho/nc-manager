@@ -171,6 +171,7 @@ export const capas = pgTable("nc_capas", {
 
   effectivenessReviewDueAt: timestamp("effectiveness_review_due_at", { mode: "date" }),
   effectivenessReviewedAt: timestamp("effectiveness_reviewed_at", { mode: "date" }),
+  effectivenessReviewerUserId: text("effectiveness_reviewer_user_id"),
   effectivenessVerdict: text("effectiveness_verdict", {
     enum: ["effective", "not_effective", "partial"],
   }),
@@ -343,7 +344,7 @@ export const ncSlaReminderLogs = pgTable("nc_sla_reminder_logs", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
   entityType: text("entity_type", {
-    enum: ["complaint_initial", "complaint_final", "capa_action"],
+    enum: ["complaint_initial", "complaint_final", "capa_action", "capa_effectiveness"],
   }).notNull(),
   entityId: text("entity_id").notNull(),
   sentToEmail: text("sent_to_email").notNull(),

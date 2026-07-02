@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { internalNCs, customerComplaints } from "@/lib/db/schema";
+import { internalNCs, customerComplaints, ncAnalysisReports } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NewCAPAForm } from "./new-capa-form";
 
@@ -45,6 +45,14 @@ export default async function NewCAPAPage({
       sourceLabel = `[${cc.complaintNumber}] ${cc.title}`;
       sourceTitle = cc.title;
       sourceDescription = cc.customerDescription ?? "";
+    }
+    // 분석보고서가 있으면 problemDescription으로 우선 대체
+    const [ar] = await db
+      .select({ sections: ncAnalysisReports.sections })
+      .from(ncAnalysisReports)
+      .where(and(eq(ncAnalysisReports.complaintId, sourceId), eq(ncAnalysisReports.orgId, orgId)));
+    if (ar?.sections?.problemDescription) {
+      sourceDescription = ar.sections.problemDescription;
     }
   }
 

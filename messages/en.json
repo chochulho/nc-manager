@@ -466,6 +466,8 @@
     "actionResponsiblePlaceholder": "Person in charge",
     "effectivenessReviewDue": "Review Due Date",
     "effectivenessReviewedAt": "Reviewed At",
+    "effectivenessReviewer": "Reviewer",
+    "effectivenessReviewerPlaceholder": "Select reviewer",
     "effectivenessVerdict": "Verdict",
     "effectivenessNote": "Evidence / Notes",
     "effectivenessNotePlaceholder": "Evidence and basis for the effectiveness verdict",

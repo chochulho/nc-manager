@@ -23,7 +23,9 @@ export async function PATCH(
   const body = await req.json();
   const updates: Record<string, unknown> = { ...body };
 
-  if (body.status === "completed" && !body.completedAt) {
+  if (body.completedAt) {
+    updates.completedAt = new Date(body.completedAt as string);
+  } else if (body.status === "completed") {
     updates.completedAt = new Date();
   }
 

@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { capas, capaActions, internalNCs, customerComplaints } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { CAPADetailClient } from "./capa-detail-client";
 
 export default async function CAPADetailPage({
@@ -45,12 +46,32 @@ export default async function CAPADetailPage({
     if (cc) { sourceNumber = cc.complaintNumber; sourceTitle = cc.title; }
   }
 
+  // 유효성 평가 담당자 선택을 위한 멤버 목록 조회
+  const supabase = createSupabaseAdminClient();
+  const { data: memberRows } = await supabase
+    .from("org_members")
+    .select("user_id, role, status")
+    .eq("org_id", session.user.organizationId)
+    .eq("status", "active");
+
+  const members = await Promise.all(
+    (memberRows ?? []).map(async (m) => {
+      const { data: ud } = await supabase.auth.admin.getUserById(m.user_id);
+      return {
+        id: m.user_id as string,
+        name: (ud?.user?.user_metadata?.full_name ?? ud?.user?.email ?? m.user_id) as string,
+        email: (ud?.user?.email ?? "") as string,
+      };
+    })
+  );
+
   return (
     <CAPADetailClient
       capa={capa as any}
       actions={actions}
       sourceNumber={sourceNumber}
       sourceTitle={sourceTitle}
+      members={members}
     />
   );
 }

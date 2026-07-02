@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { customerComplaints, ncCustomers, ncParts } from "@/lib/db/schema";
+import { customerComplaints, ncCustomers, ncParts, ncAnalysisReports } from "@/lib/db/schema";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { ComplaintList } from "./complaint-list";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
@@ -39,13 +39,16 @@ export default async function ComplaintsPage({
       finalReportDueAt: customerComplaints.finalReportDueAt,
       receivedChannel: customerComplaints.receivedChannel,
       capaId: customerComplaints.capaId,
+      resolutionType: customerComplaints.resolutionType,
       customerName: ncCustomers.name,
       partName: ncParts.partName,
       partNumber: ncParts.partNumber,
+      analysisStatus: ncAnalysisReports.status,
     })
     .from(customerComplaints)
     .leftJoin(ncCustomers, eq(customerComplaints.customerId, ncCustomers.id))
     .leftJoin(ncParts, eq(customerComplaints.partId, ncParts.id))
+    .leftJoin(ncAnalysisReports, eq(ncAnalysisReports.complaintId, customerComplaints.id))
     .where(and(...conditions))
     .orderBy(desc(customerComplaints.createdAt))
     .limit(500);

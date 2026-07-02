@@ -23,9 +23,11 @@ interface ComplaintItem {
   finalReportDueAt: Date | null;
   receivedChannel: string | null;
   capaId: string | null;
+  resolutionType: string | null;
   customerName: string | null;
   partName: string | null;
   partNumber: string | null;
+  analysisStatus: string | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -52,6 +54,13 @@ const CHANNEL_LABELS: Record<string, string> = {
   phone:    "전화",
   meeting:  "미팅",
   informal: "비공식",
+};
+
+const RESOLUTION_LABELS: Record<string, { label: string; className: string }> = {
+  confirmed_nc:    { label: "실제 부적합", className: "text-indigo-700 bg-indigo-50" },
+  ntf:             { label: "NTF",         className: "text-gray-600  bg-gray-100"   },
+  customer_misuse: { label: "고객 귀책",   className: "text-purple-700 bg-purple-50" },
+  partial:         { label: "부분 확인",   className: "text-orange-700 bg-orange-50" },
 };
 
 function isSlaOverdue(due: Date | null): boolean {
@@ -224,6 +233,20 @@ export function ComplaintList({
                             <span className="text-xs text-blue-600 font-medium">CAPA 연결</span>
                           ) : (
                             <span className="text-xs text-gray-400">CAPA 미연결</span>
+                          )}
+
+                          {/* 분석결과 */}
+                          {c.resolutionType && RESOLUTION_LABELS[c.resolutionType] && (
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${RESOLUTION_LABELS[c.resolutionType].className}`}>
+                              {RESOLUTION_LABELS[c.resolutionType].label}
+                            </span>
+                          )}
+
+                          {/* 분석보고서 상태 */}
+                          {c.analysisStatus && (
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${c.analysisStatus === "final" ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"}`}>
+                              분석 {c.analysisStatus === "final" ? "확정" : "초안"}
+                            </span>
                           )}
                         </div>
                       </div>

@@ -466,6 +466,8 @@
     "actionResponsiblePlaceholder": "담당자 이름",
     "effectivenessReviewDue": "검토 예정일",
     "effectivenessReviewedAt": "검토 완료일",
+    "effectivenessReviewer": "담당자",
+    "effectivenessReviewerPlaceholder": "담당자 선택",
     "effectivenessVerdict": "평가 결과",
     "effectivenessNote": "평가 근거",
     "effectivenessNotePlaceholder": "유효성 평가 근거 및 증거",

@@ -124,6 +124,55 @@ export async function sendCapaAssignmentEmail({
   });
 }
 
+export async function sendEffectivenessReminderEmail({
+  to,
+  recipientName,
+  orgName,
+  capaNumber,
+  title,
+  reviewDueAt,
+  capaUrl,
+}: {
+  to: string;
+  recipientName: string;
+  orgName: string;
+  capaNumber: string;
+  title: string;
+  reviewDueAt: Date;
+  capaUrl: string;
+}) {
+  const dueDateStr = reviewDueAt.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+  const isOverdue = reviewDueAt < new Date();
+  const subject = isOverdue
+    ? `[NC Manager] ⚠️ CAPA 유효성 평가 기한 초과 — ${capaNumber}`
+    : `[NC Manager] 🔔 CAPA 유효성 평가 검토일 임박 — ${capaNumber}`;
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <p style="color:#6b7280;font-size:12px;margin-bottom:16px;">[NC Manager] ${orgName}</p>
+        <h2 style="font-size:18px;margin-bottom:8px;">${isOverdue ? "⚠️ 유효성 평가 기한이 초과되었습니다" : "🔔 유효성 평가 검토일이 다가오고 있습니다"}</h2>
+        <p style="color:#374151;font-size:14px;">안녕하세요, ${recipientName}님.</p>
+        <p style="color:#374151;font-size:14px;">아래 CAPA의 <strong>유효성 평가</strong> 검토 예정일을 확인해 주세요.</p>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0;">
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">CAPA 번호</p>
+          <p style="margin:0 0 16px;font-size:15px;font-weight:600;font-family:monospace;">${capaNumber}</p>
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">제목</p>
+          <p style="margin:0 0 16px;font-size:14px;">${title}</p>
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">검토 예정일</p>
+          <p style="margin:0;font-size:14px;font-weight:600;color:${isOverdue ? "#ef4444" : "#f59e0b"};">${dueDateStr}${isOverdue ? " (초과)" : ""}</p>
+        </div>
+        <a href="${capaUrl}" style="display:inline-block;background:#1d4ed8;color:white;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;margin-top:8px;">CAPA 확인하기</a>
+        <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb;"/>
+        <p style="color:#9ca3af;font-size:11px;">이 이메일은 NC Manager에서 자동 발송되었습니다.</p>
+      </div>
+    `,
+  });
+}
+
 export async function sendCapaActionAssignmentEmail({
   to,
   recipientName,

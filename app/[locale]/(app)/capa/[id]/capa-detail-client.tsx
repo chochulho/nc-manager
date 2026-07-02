@@ -52,6 +52,7 @@ interface CAPA {
   championUserId: string | null;
   effectivenessReviewDueAt: Date | null;
   effectivenessReviewedAt: Date | null;
+  effectivenessReviewerUserId: string | null;
   effectivenessVerdict: string | null;
   effectivenessNote: string | null;
   recurrenceConfirmed: boolean | null;
@@ -64,11 +65,18 @@ interface CAPA {
   createdAt: Date;
 }
 
+interface OrgMember {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface Props {
   capa: CAPA;
   actions: CAPAAction[];
   sourceNumber: string;
   sourceTitle: string;
+  members?: OrgMember[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -87,7 +95,7 @@ const ACTION_TYPE_COLORS: Record<string, string> = {
 
 const ALL_STATUSES = ["open", "in_progress", "actions_implemented", "effectiveness_monitoring", "closed"] as const;
 
-export function CAPADetailClient({ capa: initialCapa, actions: initialActions, sourceNumber, sourceTitle }: Props) {
+export function CAPADetailClient({ capa: initialCapa, actions: initialActions, sourceNumber, sourceTitle, members = [] }: Props) {
   const router = useRouter();
   const t = useTranslations("capa");
   const tCommon = useTranslations("common");
@@ -118,6 +126,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     effectivenessReviewDueAt: capa.effectivenessReviewDueAt
       ? new Date(capa.effectivenessReviewDueAt).toISOString().slice(0, 10)
       : "",
+    effectivenessReviewerUserId: capa.effectivenessReviewerUserId ?? "",
     effectivenessVerdict: capa.effectivenessVerdict ?? "",
     effectivenessNote: capa.effectivenessNote ?? "",
     recurrenceConfirmed: capa.recurrenceConfirmed === null ? "" : capa.recurrenceConfirmed ? "true" : "false",
@@ -387,7 +396,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return;
+    if (!res.ok) { toast.error(tCommon("error")); return; }
     const updated = await res.json();
     setActions((prev) => prev.map((a) => (a.id === actionId ? updated : a)));
   }
@@ -888,7 +897,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                       {t(`actionTypes.${action.actionType}` as Parameters<typeof t>[0])}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${action.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
+                      <p className="text-sm">
                         {action.description}
                       </p>
                       <div className="flex flex-wrap gap-x-3 mt-0.5">
@@ -981,6 +990,18 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   <Input type="date" value={form.effectivenessReviewDueAt} onChange={(e) => setF("effectivenessReviewDueAt", e.target.value)} className="mt-1" />
                 </div>
                 <div>
+                  <Label>{t("effectivenessReviewer")}</Label>
+                  <Select value={form.effectivenessReviewerUserId || "__none__"} onValueChange={(v) => setF("effectivenessReviewerUserId", v === "__none__" ? "" : v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={t("effectivenessReviewerPlaceholder")} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">{t("effectivenessReviewerPlaceholder")}</SelectItem>
+                      {members.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>{t("effectivenessVerdict")}</Label>
                   <div className="flex gap-3 mt-2">
                     {(["effective", "partial", "not_effective"] as const).map((v) => (
@@ -1040,6 +1061,10 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                     <p className="text-xs text-muted-foreground">{t("effectivenessReviewedAt")}</p>
                     <p>{capa.effectivenessReviewedAt ? formatDate(capa.effectivenessReviewedAt) : "—"}</p>
                   </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("effectivenessReviewer")}</p>
+                  <p>{capa.effectivenessReviewerUserId ? (members.find((m) => m.id === capa.effectivenessReviewerUserId)?.name ?? "—") : "—"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{t("effectivenessVerdict")}</p>

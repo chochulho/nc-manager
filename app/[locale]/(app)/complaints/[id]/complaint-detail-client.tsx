@@ -360,6 +360,21 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
             )}
           </div>
 
+          <AnalysisReportSection
+            complaintId={complaint.id}
+            capaId={complaint.capaId}
+            complaintInfo={{
+              complaintNumber: complaint.complaintNumber,
+              title: complaint.title,
+              customerName: customers.find((c) => c.id === complaint.customerId)?.name ?? "-",
+              partName: complaint.partId ? (parts.find((p) => p.id === complaint.partId)?.name ?? "-") : "-",
+              receivedAt: complaint.receivedAt,
+              severity: complaint.severity,
+              resolutionType: complaint.resolutionType,
+            }}
+            onComplaintClosed={() => router.refresh()}
+          />
+
           {/* CAPA Link */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <h2 className="section-title flex items-center gap-2 mb-3">
@@ -391,21 +406,6 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
               </div>
             )}
           </div>
-
-          <AnalysisReportSection
-            complaintId={complaint.id}
-            capaId={complaint.capaId}
-            complaintInfo={{
-              complaintNumber: complaint.complaintNumber,
-              title: complaint.title,
-              customerName: customers.find((c) => c.id === complaint.customerId)?.name ?? "-",
-              partName: complaint.partId ? (parts.find((p) => p.id === complaint.partId)?.name ?? "-") : "-",
-              receivedAt: complaint.receivedAt,
-              severity: complaint.severity,
-              resolutionType: complaint.resolutionType,
-            }}
-            onComplaintClosed={() => router.refresh()}
-          />
           <AttachmentSection entityType="customer_complaint" entityId={complaint.id} />
         </div>
 
