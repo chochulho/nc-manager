@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { customerComplaints, ncCustomers, ncParts } from "@/lib/db/schema";
+import { customerComplaints, ncCustomers, ncParts, capas } from "@/lib/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange, periodLabel } from "@/lib/period-utils";
 import * as XLSX from "xlsx";
@@ -18,6 +18,25 @@ const STATUS_LABELS: Record<string, string> = {
 const CHANNEL_LABELS: Record<string, string> = {
   portal: "포털", email: "이메일", phone: "전화", meeting: "회의", informal: "비공식",
 };
+const RECURRENCE_LABELS: Record<string, string> = { new: "신규", repeat: "재발" };
+const DOC_STATUS_LABELS: Record<string, string> = {
+  not_required: "해당없음", required: "필요", completed: "완료",
+};
+
+type DocChange = { docType: string; status: string; customLabel?: string };
+
+function docStatus(docChanges: DocChange[] | null, docType: string): string {
+  const item = docChanges?.find((d) => d.docType === docType);
+  return item ? (DOC_STATUS_LABELS[item.status] ?? item.status) : "";
+}
+
+function customDocSummary(docChanges: DocChange[] | null): string {
+  if (!docChanges) return "";
+  return docChanges
+    .filter((d) => d.docType === "custom")
+    .map((d) => `${d.customLabel ?? "기타"}(${DOC_STATUS_LABELS[d.status] ?? d.status})`)
+    .join(", ");
+}
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -38,7 +57,9 @@ export async function GET(req: NextRequest) {
       complaintNumber: customerComplaints.complaintNumber,
       title: customerComplaints.title,
       receivedAt: customerComplaints.receivedAt,
+      occurredAt: customerComplaints.occurredAt,
       discoveryStage: customerComplaints.discoveryStage,
+      recurrenceType: customerComplaints.recurrenceType,
       severity: customerComplaints.severity,
       status: customerComplaints.status,
       safetyRelated: customerComplaints.safetyRelated,
@@ -46,6 +67,7 @@ export async function GET(req: NextRequest) {
       isFormal: customerComplaints.isFormal,
       receivedChannel: customerComplaints.receivedChannel,
       lotNumber: customerComplaints.lotNumber,
+      partNumberDetail: customerComplaints.partNumberDetail,
       quantityClaimed: customerComplaints.quantityClaimed,
       quantityConfirmed: customerComplaints.quantityConfirmed,
       initialResponseDueAt: customerComplaints.initialResponseDueAt,
@@ -58,10 +80,15 @@ export async function GET(req: NextRequest) {
       partName: ncParts.partName,
       partNumber: ncParts.partNumber,
       receivedByUserId: customerComplaints.receivedByUserId,
+      capaNumber: capas.capaNumber,
+      docChanges: capas.docChanges,
+      effectivenessReviewedAt: capas.effectivenessReviewedAt,
+      effectivenessVerdict: capas.effectivenessVerdict,
     })
     .from(customerComplaints)
     .leftJoin(ncCustomers, eq(customerComplaints.customerId, ncCustomers.id))
     .leftJoin(ncParts, eq(customerComplaints.partId, ncParts.id))
+    .leftJoin(capas, eq(customerComplaints.capaId, capas.id))
     .where(and(...conditions))
     .orderBy(desc(customerComplaints.receivedAt))
     .limit(5000);
@@ -73,7 +100,9 @@ export async function GET(req: NextRequest) {
     "제목": r.title,
     "고객사": r.customerName ?? "",
     "접수일": fmt(r.receivedAt),
+    "발생일": fmt(r.occurredAt),
     "발견단계": DISCOVERY_STAGE_LABELS[r.discoveryStage] ?? r.discoveryStage,
+    "재발/신규": r.recurrenceType ? (RECURRENCE_LABELS[r.recurrenceType] ?? r.recurrenceType) : "",
     "심각도": SEVERITY_LABELS[r.severity] ?? r.severity,
     "상태": STATUS_LABELS[r.status] ?? r.status,
     "안전관련": r.safetyRelated ? "Y" : "N",
@@ -82,6 +111,7 @@ export async function GET(req: NextRequest) {
     "접수경로": CHANNEL_LABELS[r.receivedChannel] ?? r.receivedChannel,
     "부품명": r.partName ?? "",
     "부품번호": r.partNumber ?? "",
+    "상세품번": r.partNumberDetail ?? "",
     "LOT번호": r.lotNumber ?? "",
     "클레임수량": r.quantityClaimed ?? "",
     "확인수량": r.quantityConfirmed ?? "",
@@ -90,6 +120,15 @@ export async function GET(req: NextRequest) {
     "최종보고기한": fmt(r.finalReportDueAt),
     "최종보고완료": fmt(r.finalReportSentAt),
     "내용": r.description ?? "",
+    "연결 CAPA": r.capaNumber ?? "",
+    "표준류-공정흐름도": docStatus(r.docChanges, "PFD"),
+    "표준류-FMEA": docStatus(r.docChanges, "PFMEA"),
+    "표준류-관리계획서": docStatus(r.docChanges, "CP"),
+    "표준류-작업표준서": docStatus(r.docChanges, "WI"),
+    "표준류-체크시트": docStatus(r.docChanges, "체크시트"),
+    "표준류-기타": customDocSummary(r.docChanges),
+    "유효성검증일": fmt(r.effectivenessReviewedAt),
+    "유효성검증결과": r.effectivenessVerdict ?? "",
     "접수담당자(ID)": r.receivedByUserId ?? "",
     "등록일": fmt(r.createdAt),
   }));
@@ -100,10 +139,12 @@ export async function GET(req: NextRequest) {
 
   ws["!cols"] = [
     { wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 12 }, { wch: 12 },
-    { wch: 8 }, { wch: 12 }, { wch: 8 }, { wch: 8 }, { wch: 8 },
-    { wch: 10 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 10 },
-    { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 },
-    { wch: 40 }, { wch: 12 }, { wch: 12 },
+    { wch: 12 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 8 },
+    { wch: 8 }, { wch: 8 }, { wch: 10 }, { wch: 18 }, { wch: 16 },
+    { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 40 }, { wch: 14 },
+    { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 },
+    { wch: 20 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
   ];
 
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });

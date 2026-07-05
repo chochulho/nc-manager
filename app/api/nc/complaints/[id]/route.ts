@@ -29,8 +29,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     "title", "customerDescription", "status", "severity",
     "siteId",
     "customerId", "customerSiteName", "customerReference",
-    "receivedAt", "receivedChannel", "isFormal",
-    "discoveryStage", "partId", "lotNumber", "quantityClaimed", "quantityConfirmed",
+    "receivedAt", "occurredAt", "receivedChannel", "isFormal",
+    "discoveryStage", "recurrenceType", "partId", "partNumberDetail", "lotNumber", "quantityClaimed", "quantityConfirmed",
     "categoryL2Id", "safetyRelated", "recallRisk", "resolutionType",
     "initialResponseSentAt", "containedAt", "finalReportSentAt",
     "costRecallReturn", "costPenalty", "costOther",
@@ -40,7 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   for (const key of allowedFields) {
     if (key in body) patch[key] = body[key] === "" ? null : body[key];
   }
-  for (const dateKey of ["receivedAt", "initialResponseSentAt", "containedAt", "finalReportSentAt"]) {
+  for (const dateKey of ["receivedAt", "occurredAt", "initialResponseSentAt", "containedAt", "finalReportSentAt"]) {
     if (patch[dateKey]) patch[dateKey] = new Date(patch[dateKey] as string);
   }
 

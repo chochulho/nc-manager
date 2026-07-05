@@ -22,9 +22,9 @@ interface Complaint {
   id: string; complaintNumber: string; title: string; customerDescription: string | null;
   siteId: string | null;
   customerId: string; customerSiteName: string | null; customerReference: string | null;
-  receivedAt: Date; receivedChannel: string; isFormal: boolean;
-  discoveryStage: string; severity: string; status: string;
-  partId: string | null; lotNumber: string | null;
+  receivedAt: Date; occurredAt: Date | null; receivedChannel: string; isFormal: boolean;
+  discoveryStage: string; recurrenceType: string | null; severity: string; status: string;
+  partId: string | null; partNumberDetail: string | null; lotNumber: string | null;
   quantityClaimed: string | null; quantityConfirmed: string | null;
   categoryL2Id: string | null; safetyRelated: boolean; recallRisk: boolean;
   capaId: string | null;
@@ -107,11 +107,14 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
     title: complaint.title,
     customerDescription: complaint.customerDescription ?? "",
     status: complaint.status,
+    occurredAt: complaint.occurredAt ? new Date(complaint.occurredAt).toISOString().slice(0, 10) : "",
+    recurrenceType: complaint.recurrenceType ?? "",
     severity: complaint.severity,
     customerId: complaint.customerId,
     customerSiteName: complaint.customerSiteName ?? "",
     customerReference: complaint.customerReference ?? "",
     partId: complaint.partId ?? "",
+    partNumberDetail: complaint.partNumberDetail ?? "",
     lotNumber: complaint.lotNumber ?? "",
     quantityClaimed: complaint.quantityClaimed ?? "",
     quantityConfirmed: complaint.quantityConfirmed ?? "",
@@ -233,6 +236,17 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
                       </SelectContent>
                     </Select>
                   </div>
+                  <div><Label>{t("occurredAt")}</Label><Input type="date" value={form.occurredAt} onChange={(e) => set("occurredAt", e.target.value)} className="mt-1" /></div>
+                  <div>
+                    <Label>{t("recurrenceType")}</Label>
+                    <Select value={form.recurrenceType} onValueChange={(v: string) => set("recurrenceType", v)}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="new">{t("recurrenceTypes.new")}</SelectItem>
+                        <SelectItem value="repeat">{t("recurrenceTypes.repeat")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <Label>{t("resolutionType")}</Label>
                     <Select value={form.resolutionType} onValueChange={(v: string) => set("resolutionType", v)}>
@@ -251,6 +265,7 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
                       <SelectContent>{parts.map(p => <SelectItem key={p.id} value={p.id}>{p.number} — {p.name}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
+                  <div><Label>{t("partNumberDetail")}</Label><Input value={form.partNumberDetail} onChange={(e) => set("partNumberDetail", e.target.value)} placeholder={t("partNumberDetailPlaceholder")} className="mt-1" /></div>
                   <div><Label>{t("lotNumber")}</Label><Input value={form.lotNumber} onChange={(e) => set("lotNumber", e.target.value)} className="mt-1" /></div>
                   <div><Label>{t("quantity")}</Label><Input type="number" value={form.quantityClaimed} onChange={(e) => set("quantityClaimed", e.target.value)} className="mt-1" /></div>
                   <div><Label>{t("quantityConfirmed")}</Label><Input type="number" value={form.quantityConfirmed} onChange={(e) => set("quantityConfirmed", e.target.value)} className="mt-1" /></div>
@@ -260,10 +275,13 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
             ) : (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div><dt className="text-muted-foreground">{t("receivedAt")}</dt><dd className="font-medium mt-0.5">{new Date(complaint.receivedAt).toLocaleDateString()}</dd></div>
+                {complaint.occurredAt && <div><dt className="text-muted-foreground">{t("occurredAt")}</dt><dd className="font-medium mt-0.5">{new Date(complaint.occurredAt).toLocaleDateString()}</dd></div>}
                 <div><dt className="text-muted-foreground">{t("receivedChannel")}</dt><dd className="font-medium mt-0.5">{t(`channels.${complaint.receivedChannel}` as Parameters<typeof t>[0]) ?? complaint.receivedChannel}</dd></div>
                 <div><dt className="text-muted-foreground">{t("discoveryStage")}</dt><dd className="font-medium mt-0.5">{t(`stages.${complaint.discoveryStage}` as Parameters<typeof t>[0]) ?? complaint.discoveryStage}</dd></div>
+                {complaint.recurrenceType && <div><dt className="text-muted-foreground">{t("recurrenceType")}</dt><dd className="font-medium mt-0.5">{t(`recurrenceTypes.${complaint.recurrenceType}` as Parameters<typeof t>[0])}</dd></div>}
                 <div><dt className="text-muted-foreground">{t("isFormal")}</dt><dd className="font-medium mt-0.5">{complaint.isFormal ? t("formal") : t("informal")}</dd></div>
                 <div><dt className="text-muted-foreground">{t("part")}</dt><dd className="font-medium mt-0.5">{complaint.partId ? partMap[complaint.partId] ?? "-" : "-"}</dd></div>
+                {complaint.partNumberDetail && <div><dt className="text-muted-foreground">{t("partNumberDetail")}</dt><dd className="font-medium mt-0.5">{complaint.partNumberDetail}</dd></div>}
                 <div><dt className="text-muted-foreground">{t("category")}</dt><dd className="font-medium mt-0.5">{complaint.categoryL2Id ? catMap[complaint.categoryL2Id] ?? "-" : "-"}</dd></div>
                 <div><dt className="text-muted-foreground">{t("quantity")}</dt><dd className="font-medium mt-0.5">{complaint.quantityClaimed ?? "-"}</dd></div>
                 <div><dt className="text-muted-foreground">{t("quantityConfirmed")}</dt><dd className="font-medium mt-0.5">{complaint.quantityConfirmed ?? "-"}</dd></div>

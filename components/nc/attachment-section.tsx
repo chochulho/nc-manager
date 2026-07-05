@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Paperclip, Upload, X, FileText, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { upload } from "@vercel/blob/client";
+import { isEditableElement } from "@/lib/is-editable-element";
 
 interface Attachment {
   id: string;
@@ -118,6 +119,7 @@ export function AttachmentSection({ entityType, entityId }: Props) {
 
   useEffect(() => {
     function handlePaste(e: ClipboardEvent) {
+      if (isEditableElement(document.activeElement)) return;
       const items = e.clipboardData?.items;
       if (!items) return;
       const images: File[] = [];

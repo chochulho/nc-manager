@@ -24,11 +24,17 @@ interface ComplaintItem {
   receivedChannel: string | null;
   capaId: string | null;
   resolutionType: string | null;
+  recurrenceType: string | null;
+  lotNumber: string | null;
+  partNumberDetail: string | null;
   customerName: string | null;
   partName: string | null;
   partNumber: string | null;
   analysisStatus: string | null;
   analysisSections: { rootCause?: string; conclusion?: string } | null;
+  vehicleModel: string | null;
+  vehicleVin: string | null;
+  mileageKm: string | null;
 }
 
 function analysisSnippet(sections: ComplaintItem["analysisSections"]): string | null {
@@ -214,7 +220,7 @@ export function ComplaintList({
                         </span>
                       </div>
 
-                      {/* 2행: 발생단계 | 품번 | 접수채널 | CAPA | 접수일 */}
+                      {/* 2행: 발생단계 | 품번 | LOT | 차종 | VIN | 주행거리 | 접수채널 | CAPA | 접수일 */}
                       <div className="grid grid-cols-[7rem_1fr] gap-x-3 mt-1">
                         {/* 번호 열 아래 빈 공간 맞춤 */}
                         <span className="text-xs text-muted-foreground">
@@ -226,11 +232,41 @@ export function ComplaintList({
                             {t(`stages.${c.discoveryStage}` as Parameters<typeof t>[0])}
                           </span>
 
+                          {/* 재발 여부 */}
+                          {c.recurrenceType === "repeat" && (
+                            <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">재발</span>
+                          )}
+
                           {/* 품번 */}
                           {c.partNumber && (
                             <span className="text-xs text-muted-foreground">
                               {c.partNumber}{c.partName ? ` · ${c.partName}` : ""}
                             </span>
+                          )}
+
+                          {/* 상세 품번 */}
+                          {c.partNumberDetail && (
+                            <span className="text-xs text-muted-foreground font-mono">{c.partNumberDetail}</span>
+                          )}
+
+                          {/* LOT */}
+                          {c.lotNumber && (
+                            <span className="text-xs text-muted-foreground font-mono">LOT {c.lotNumber}</span>
+                          )}
+
+                          {/* 차종 */}
+                          {c.vehicleModel && (
+                            <span className="text-xs text-muted-foreground">{c.vehicleModel}</span>
+                          )}
+
+                          {/* VIN */}
+                          {c.vehicleVin && (
+                            <span className="text-xs text-muted-foreground font-mono">VIN {c.vehicleVin}</span>
+                          )}
+
+                          {/* 주행거리 */}
+                          {c.mileageKm && (
+                            <span className="text-xs text-muted-foreground">{Number(c.mileageKm).toLocaleString()}km</span>
                           )}
 
                           {/* 접수 채널 */}

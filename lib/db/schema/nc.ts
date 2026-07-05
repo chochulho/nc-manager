@@ -83,6 +83,7 @@ export const customerComplaints = pgTable("nc_customer_complaints", {
   customerReference: text("customer_reference"),
 
   receivedAt: timestamp("received_at", { mode: "date" }).notNull(),
+  occurredAt: timestamp("occurred_at", { mode: "date" }),  // 실제 불량 발생일 (접수일과 별개)
   receivedChannel: text("received_channel", {
     enum: ["portal", "email", "phone", "meeting", "informal"],
   }).notNull(),
@@ -92,8 +93,10 @@ export const customerComplaints = pgTable("nc_customer_complaints", {
   discoveryStage: text("discovery_stage", {
     enum: ["inline_0km", "field", "warranty", "other"],
   }).notNull(),
+  recurrenceType: text("recurrence_type", { enum: ["new", "repeat"] }),  // 재발/신규 구분
 
   partId: text("part_id").references(() => ncParts.id),
+  partNumberDetail: text("part_number_detail"),  // 마스터 부품(대분류)과 별개로 자유 입력하는 세부 품번
   lotNumber: text("lot_number"),
   quantityClaimed: numeric("quantity_claimed"),
   quantityConfirmed: numeric("quantity_confirmed"),

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, Paperclip, X, Plus, MapPin } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
+import { isEditableElement } from "@/lib/is-editable-element";
 
 interface Option { id: string; name: string; code?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -47,11 +48,14 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
     customerSiteName: "",
     customerReference: "",
     receivedAt: new Date().toISOString().slice(0, 10),
+    occurredAt: "",
     receivedChannel: "",
     isFormal: true,
     discoveryStage: "",
+    recurrenceType: "",
     severity: "",
     partId: "",
+    partNumberDetail: "",
     lotNumber: "",
     quantityClaimed: "",
     categoryL2Id: "",
@@ -81,6 +85,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
 
   useEffect(() => {
     function handlePaste(e: ClipboardEvent) {
+      if (isEditableElement(document.activeElement)) return;
       const items = e.clipboardData?.items;
       if (!items) return;
       const images: File[] = [];
@@ -114,7 +119,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
             fieldClaim: {
               ...fieldClaim,
               usageMonths: fieldClaim.usageMonths !== "" ? parseInt(fieldClaim.usageMonths) : null,
-              manufacturedAt: fieldClaim.manufacturedAt ? `${fieldClaim.manufacturedAt}-01` : null,
+              manufacturedAt: fieldClaim.manufacturedAt || null,
               extraData: {
                 soldAt: fieldClaim.soldAt || null,
                 repairedAt: fieldClaim.repairedAt || null,
@@ -188,6 +193,10 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
                   <Input type="date" value={form.receivedAt} onChange={(e) => set("receivedAt", e.target.value)} required className="mt-1" />
                 </div>
                 <div>
+                  <Label>{t("occurredAt")}</Label>
+                  <Input type="date" value={form.occurredAt} onChange={(e) => set("occurredAt", e.target.value)} className="mt-1" />
+                </div>
+                <div>
                   <Label>{t("receivedChannel")} *</Label>
                   <Select value={form.receivedChannel} onValueChange={(v: string) => set("receivedChannel", v)}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
@@ -231,6 +240,16 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
                   </Select>
                 </div>
                 <div>
+                  <Label>{t("recurrenceType")}</Label>
+                  <Select value={form.recurrenceType} onValueChange={(v: string) => set("recurrenceType", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">{t("recurrenceTypes.new")}</SelectItem>
+                      <SelectItem value="repeat">{t("recurrenceTypes.repeat")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>{t("isFormal")}</Label>
                   <Select value={form.isFormal ? "true" : "false"} onValueChange={(v: string) => set("isFormal", v === "true")}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
@@ -259,6 +278,10 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
                   </Select>
                 </div>
                 <div>
+                  <Label>{t("partNumberDetail")}</Label>
+                  <Input value={form.partNumberDetail} onChange={(e) => set("partNumberDetail", e.target.value)} placeholder={t("partNumberDetailPlaceholder")} className="mt-1" />
+                </div>
+                <div>
                   <Label>{t("lotNumber")}</Label>
                   <Input value={form.lotNumber} onChange={(e) => set("lotNumber", e.target.value)} placeholder="LOT-XXXXXX" className="mt-1" />
                 </div>
@@ -283,7 +306,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
                   </div>
                   <div>
                     <Label>{t("manufacturedAt")}</Label>
-                    <Input type="month" value={fieldClaim.manufacturedAt} onChange={(e) => setFc("manufacturedAt", e.target.value)} className="mt-1" />
+                    <Input type="date" value={fieldClaim.manufacturedAt} onChange={(e) => setFc("manufacturedAt", e.target.value)} className="mt-1" />
                   </div>
                   <div>
                     <Label>VIN</Label>

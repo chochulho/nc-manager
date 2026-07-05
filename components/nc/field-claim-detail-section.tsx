@@ -66,7 +66,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
     setForm({
       vehicleModel: d.vehicleModel ?? "",
       vehicleVin: d.vehicleVin ?? "",
-      manufacturedAt: d.manufacturedAt ? new Date(d.manufacturedAt).toISOString().slice(0, 7) : "",
+      manufacturedAt: d.manufacturedAt ? new Date(d.manufacturedAt).toISOString().slice(0, 10) : "",
       soldAt: d.extraData?.soldAt ?? "",
       repairedAt: d.extraData?.repairedAt ?? "",
       incidentLocationType: d.extraData?.incidentLocationType ?? "",
@@ -110,7 +110,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
         body: JSON.stringify({
           ...form,
           usageMonths: form.usageMonths !== "" ? parseInt(form.usageMonths) : null,
-          manufacturedAt: form.manufacturedAt ? `${form.manufacturedAt}-01` : null,
+          manufacturedAt: form.manufacturedAt || null,
           extraData: {
             soldAt: form.soldAt || null,
             repairedAt: form.repairedAt || null,
@@ -196,7 +196,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
                 </div>
                 <div>
                   <Label className="text-xs">{t("manufacturedAt")}</Label>
-                  <Input type="month" value={form.manufacturedAt} onChange={(e) => setForm((p) => ({ ...p, manufacturedAt: e.target.value }))}
+                  <Input type="date" value={form.manufacturedAt} onChange={(e) => setForm((p) => ({ ...p, manufacturedAt: e.target.value }))}
                     className="mt-1 h-8 text-sm" />
                 </div>
                 <div>
@@ -300,7 +300,7 @@ export function FieldClaimDetailSection({ complaintId }: Props) {
           ) : hasData ? (
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
               {detail.vehicleModel && <><dt className="text-muted-foreground">{t("vehicleModel")}</dt><dd className="font-medium">{detail.vehicleModel}</dd></>}
-              {detail.manufacturedAt && <><dt className="text-muted-foreground">{t("manufacturedAt")}</dt><dd className="font-medium">{new Date(detail.manufacturedAt).toLocaleDateString(undefined, { year: "numeric", month: "2-digit" })}</dd></>}
+              {detail.manufacturedAt && <><dt className="text-muted-foreground">{t("manufacturedAt")}</dt><dd className="font-medium">{new Date(detail.manufacturedAt).toLocaleDateString()}</dd></>}
               {detail.vehicleVin && <><dt className="text-muted-foreground">VIN</dt><dd className="font-medium font-mono text-xs">{detail.vehicleVin}</dd></>}
               {detail.usageMonths != null && <><dt className="text-muted-foreground">{t("usageMonths")}</dt><dd className="font-medium">{detail.usageMonths}개월</dd></>}
               {detail.extraData?.soldAt && <><dt className="text-muted-foreground">{t("soldAt")}</dt><dd className="font-medium">{new Date(detail.extraData.soldAt).toLocaleDateString()}</dd></>}
