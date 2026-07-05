@@ -84,6 +84,7 @@
     "safetyRelated": "Safety Related",
     "attachmentsHint": "Attachments (Upload on Registration)",
     "dropzoneHint": "Click or drag & drop files here",
+    "pasteHint": "You can paste images directly with Ctrl+V",
     "printReport": "Print Report",
     "registeredSuccess": "{number} registered",
     "registeredSuccessAttachments": "{number} registered ({count} attachments)",
@@ -309,6 +310,7 @@
       "finalizeAndClose": "Finalize + Close Complaint",
       "finalize": "Finalize",
       "notEntered": "Not entered",
+      "optional": "(optional)",
       "ntfBanner": "This is an NTF case. You can close the complaint directly from the report after writing it.",
       "faultBanner": "This is a customer fault case. You can close the complaint directly from the report after writing it.",
       "claimOverview": "Complaint Overview (Auto)",
@@ -329,17 +331,18 @@
         "partial": "Partial"
       },
       "sections": {
-        "problemDescription": "Problem Description",
-        "immediateContainment": "Immediate Containment",
-        "immediateContainmentNtf": "Initial Response",
+        "problemDescription": "Problem & Investigation Findings",
         "rootCause": "Root Cause Analysis",
         "rootCauseNtf": "NTF Verification Result",
         "rootCauseFault": "Fault Attribution Analysis",
+        "conclusion": "Conclusion",
+        "followUp": "Follow-up Actions",
+        "followUpCapaHint": "Detailed actions are tracked in CAPA. Add a brief summary here if needed.",
+        "followUpPlaceholder": "Preventive measures, customer response, etc.",
+        "legacyFieldsTitle": "Legacy 8D Fields (read-only)",
+        "immediateContainment": "Immediate Containment",
         "permanentActions": "Permanent Actions",
-        "permanentActionsNtf": "Additional Action Plan",
-        "prevention": "Recurrence Prevention",
-        "preventionNtf": "Customer Feedback & Future Response",
-        "conclusion": "Conclusion"
+        "prevention": "Recurrence Prevention"
       }
     },
     "severities": {

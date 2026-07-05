@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
@@ -24,9 +24,10 @@ interface Props {
   parts: Array<{ id: string; name: string; number: string }>;
   suppliers: Option[];
   categoriesL2: CategoryL2[];
+  defaultSiteId?: string | null;
 }
 
-export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: Props) {
+export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2, defaultSiteId }: Props) {
   const t = useTranslations("nc");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -39,6 +40,7 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
     discoveredAt: new Date().toISOString().slice(0, 10),
     discoveryStage: "",
     severity: "",
+    occurrenceSiteId: defaultSiteId ?? "",
     discoveredBySiteId: "",
     discoveredByProcessId: "",
     occurrenceSupplierId: "",
@@ -55,6 +57,29 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
   function set(key: string, value: string | boolean) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
+
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const images: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = file.type.split("/")[1] || "png";
+            images.push(new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type }));
+          }
+        }
+      }
+      if (images.length > 0) {
+        e.preventDefault();
+        setPendingFiles((prev) => [...prev, ...images]);
+      }
+    }
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -112,6 +137,16 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
             {/* 기본 정보 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
               <h2 className="section-title">{t("basicInfo")}</h2>
+
+              {sites.length > 0 && (
+                <div>
+                  <Label>{t("site")}</Label>
+                  <Select value={form.occurrenceSiteId} onValueChange={(v: string) => set("occurrenceSiteId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="title">{tc("title")} *</Label>
@@ -326,11 +361,17 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2 }: 
                   onChange={(e) => { if (e.target.files) setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]); }} />
                 <Paperclip className="h-5 w-5 mx-auto mb-1.5 text-gray-400" />
                 <p className="text-sm text-muted-foreground">{tc("dropzoneHint")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{tc("pasteHint")}</p>
               </label>
               {pendingFiles.length > 0 && (
                 <div className="space-y-1">
                   {pendingFiles.map((f, i) => (
                     <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 text-sm">
+                      {f.type.startsWith("image/") ? (
+                        <img src={URL.createObjectURL(f)} alt={f.name} className="h-8 w-8 rounded object-cover shrink-0" />
+                      ) : (
+                        <Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
+                      )}
                       <span className="flex-1 truncate">{f.name}</span>
                       <span className="text-xs text-muted-foreground shrink-0">
                         {f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(0)}KB` : `${(f.size / 1024 / 1024).toFixed(1)}MB`}

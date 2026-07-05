@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
@@ -20,9 +20,11 @@ interface Props {
   customers: Option[];
   parts: Array<{ id: string; name: string; number: string }>;
   categoriesL2: CategoryL2[];
+  sites: Option[];
+  defaultSiteId?: string | null;
 }
 
-export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
+export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaultSiteId }: Props) {
   const t = useTranslations("complaint");
   const tc = useTranslations("common");
   const tn = useTranslations("nc");
@@ -38,6 +40,7 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
     usageMonths: "", symptomDescription: "", dtcCodes: [] as string[],
   });
   const [form, setForm] = useState({
+    siteId: defaultSiteId ?? "",
     title: "",
     customerDescription: "",
     customerId: "",
@@ -75,6 +78,29 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
   function removeDtc(code: string) {
     setFieldClaim((prev) => ({ ...prev, dtcCodes: prev.dtcCodes.filter((c) => c !== code) }));
   }
+
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const images: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = file.type.split("/")[1] || "png";
+            images.push(new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type }));
+          }
+        }
+      }
+      if (images.length > 0) {
+        e.preventDefault();
+        setPendingFiles((prev) => [...prev, ...images]);
+      }
+    }
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   const isFieldClaim = form.discoveryStage === "field" || form.discoveryStage === "warranty";
 
@@ -143,6 +169,15 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
             {/* 기본 정보 */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
               <h2 className="section-title">{t("basicInfo")}</h2>
+              {sites.length > 0 && (
+                <div>
+                  <Label>{tn("site")}</Label>
+                  <Select value={form.siteId} onValueChange={(v: string) => set("siteId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <Label>{tc("title")} *</Label>
                 <Input value={form.title} onChange={(e) => set("title", e.target.value)} required placeholder={t("title2")} className="mt-1" />
@@ -374,11 +409,17 @@ export function NewComplaintForm({ customers, parts, categoriesL2 }: Props) {
                   onChange={(e) => { if (e.target.files) setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]); }} />
                 <Paperclip className="h-5 w-5 mx-auto mb-1.5 text-gray-400" />
                 <p className="text-sm text-muted-foreground">{tc("dropzoneHint")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{tc("pasteHint")}</p>
               </label>
               {pendingFiles.length > 0 && (
                 <div className="space-y-1">
                   {pendingFiles.map((f, i) => (
                     <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 text-sm">
+                      {f.type.startsWith("image/") ? (
+                        <img src={URL.createObjectURL(f)} alt={f.name} className="h-8 w-8 rounded object-cover shrink-0" />
+                      ) : (
+                        <Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
+                      )}
                       <span className="flex-1 truncate">{f.name}</span>
                       <span className="text-xs text-muted-foreground shrink-0">
                         {f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(0)}KB` : `${(f.size / 1024 / 1024).toFixed(1)}MB`}

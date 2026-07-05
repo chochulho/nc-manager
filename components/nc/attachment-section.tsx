@@ -21,7 +21,7 @@ function viewUrl(id: string) {
 }
 
 interface Props {
-  entityType: "internal_nc" | "customer_complaint" | "capa";
+  entityType: "internal_nc" | "customer_complaint" | "capa" | "q_alert";
   entityId: string;
 }
 
@@ -116,6 +116,29 @@ export function AttachmentSection({ entityType, entityId }: Props) {
     uploadFiles(e.dataTransfer.files);
   }, [entityType, entityId]);
 
+  useEffect(() => {
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const images: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = file.type.split("/")[1] || "png";
+            images.push(new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type }));
+          }
+        }
+      }
+      if (images.length > 0) {
+        e.preventDefault();
+        uploadFiles(images);
+      }
+    }
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [entityType, entityId]);
+
   const images = attachments.filter((a) => isImage(a.mimeType));
   const files = attachments.filter((a) => !isImage(a.mimeType));
 
@@ -158,6 +181,7 @@ export function AttachmentSection({ entityType, entityId }: Props) {
         <p className="text-muted-foreground">
           {tc("dropzoneHint")}
           <span className="block text-xs mt-0.5">{ta("dropzoneDetail")}</span>
+          <span className="block text-xs mt-0.5">{tc("pasteHint")}</span>
         </p>
       </div>
 

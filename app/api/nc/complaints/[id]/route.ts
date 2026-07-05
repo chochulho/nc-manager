@@ -27,6 +27,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const allowedFields = [
     "title", "customerDescription", "status", "severity",
+    "siteId",
     "customerId", "customerSiteName", "customerReference",
     "receivedAt", "receivedChannel", "isFormal",
     "discoveryStage", "partId", "lotNumber", "quantityClaimed", "quantityConfirmed",

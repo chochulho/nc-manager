@@ -28,6 +28,12 @@ interface ComplaintItem {
   partName: string | null;
   partNumber: string | null;
   analysisStatus: string | null;
+  analysisSections: { rootCause?: string; conclusion?: string } | null;
+}
+
+function analysisSnippet(sections: ComplaintItem["analysisSections"]): string | null {
+  const text = sections?.conclusion?.trim() || sections?.rootCause?.trim();
+  return text || null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -250,6 +256,16 @@ export function ComplaintList({
                           )}
                         </div>
                       </div>
+
+                      {/* 3행: 분석 내용 요약 */}
+                      {analysisSnippet(c.analysisSections) && (
+                        <div className="grid grid-cols-[7rem_1fr] gap-x-3 mt-1">
+                          <span />
+                          <p className="text-xs text-muted-foreground truncate" title={analysisSnippet(c.analysisSections)!}>
+                            {analysisSnippet(c.analysisSections)}
+                          </p>
+                        </div>
+                      )}
                     </Link>
                   </li>
                 );

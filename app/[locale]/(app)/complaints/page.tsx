@@ -49,6 +49,7 @@ export default async function ComplaintsPage({
       partName: ncParts.partName,
       partNumber: ncParts.partNumber,
       analysisStatus: ncAnalysisReports.status,
+      analysisSections: ncAnalysisReports.sections,
     })
     .from(customerComplaints)
     .leftJoin(ncCustomers, eq(customerComplaints.customerId, ncCustomers.id))

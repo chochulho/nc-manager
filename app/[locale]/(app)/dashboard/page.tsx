@@ -8,6 +8,7 @@ import { AlertTriangle, MessageSquareWarning, CheckCircle2, ClipboardCheck } fro
 import { PeriodFilter } from "@/components/nc/period-filter";
 import { PrintButton } from "@/components/nc/print-button";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
+import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
 import { getTranslations } from "next-intl/server";
 
 function countBy<T>(arr: T[], key: (item: T) => string): Record<string, number> {
@@ -36,6 +37,7 @@ export default async function DashboardPage({
   ]);
 
   const orgId = session?.user?.organizationId;
+  const selectedSiteId = await getSelectedSiteId();
 
   const sp = await searchParams;
   const { year, period } = parsePeriodParams(sp.year, sp.period);
@@ -50,6 +52,16 @@ export default async function DashboardPage({
 
   const ncConditions = orgId ? [eq(internalNCs.orgId, orgId)] : null;
   const ccConditions = orgId ? [eq(customerComplaints.orgId, orgId)] : null;
+  const capaConditions = orgId ? [eq(capas.orgId, orgId)] : null;
+
+  if (orgId && session?.user) {
+    const ncSiteFilter = buildSiteFilter(session.user.allowedSiteIds, internalNCs.occurrenceSiteId, selectedSiteId);
+    if (ncSiteFilter && ncConditions) ncConditions.push(ncSiteFilter);
+    const ccSiteFilter = buildSiteFilter(session.user.allowedSiteIds, customerComplaints.siteId, selectedSiteId);
+    if (ccSiteFilter && ccConditions) ccConditions.push(ccSiteFilter);
+    const capaSiteFilter = buildSiteFilter(session.user.allowedSiteIds, capas.siteId, selectedSiteId);
+    if (capaSiteFilter && capaConditions) capaConditions.push(capaSiteFilter);
+  }
 
   if (range && ncConditions) {
     ncConditions.push(gte(internalNCs.discoveredAt, range.gte));
@@ -59,8 +71,6 @@ export default async function DashboardPage({
     ccConditions.push(gte(customerComplaints.receivedAt, range.gte));
     ccConditions.push(lte(customerComplaints.receivedAt, range.lte));
   }
-
-  const capaConditions = orgId ? [eq(capas.orgId, orgId)] : null;
   if (range && capaConditions) {
     capaConditions.push(gte(capas.createdAt, range.gte));
     capaConditions.push(lte(capas.createdAt, range.lte));

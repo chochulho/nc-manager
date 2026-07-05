@@ -20,6 +20,7 @@ interface Option { id: string; name: string; code?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
 interface Complaint {
   id: string; complaintNumber: string; title: string; customerDescription: string | null;
+  siteId: string | null;
   customerId: string; customerSiteName: string | null; customerReference: string | null;
   receivedAt: Date; receivedChannel: string; isFormal: boolean;
   discoveryStage: string; severity: string; status: string;
@@ -43,6 +44,7 @@ interface Props {
   customers: Option[];
   parts: Array<{ id: string; name: string; number: string }>;
   categoriesL2: CategoryL2[];
+  sites: Option[];
   linkedCapa: LinkedCapa | null;
 }
 
@@ -84,11 +86,12 @@ function SlaIndicator({
   );
 }
 
-export function ComplaintDetailClient({ complaint, customers, parts, categoriesL2, linkedCapa }: Props) {
+export function ComplaintDetailClient({ complaint, customers, parts, categoriesL2, sites, linkedCapa }: Props) {
   const router = useRouter();
   const t = useTranslations("complaint");
   const tc = useTranslations("common");
   const tCapa = useTranslations("capa");
+  const tn = useTranslations("nc");
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -100,6 +103,7 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
     costOther: complaint.costOther ?? "",
   });
   const [form, setForm] = useState({
+    siteId: complaint.siteId ?? "",
     title: complaint.title,
     customerDescription: complaint.customerDescription ?? "",
     status: complaint.status,
@@ -161,6 +165,7 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
     }
   }
 
+  const siteMap = Object.fromEntries(sites.map(s => [s.id, s.name]));
   const customerMap = Object.fromEntries(customers.map(c => [c.id, c.name]));
   const partMap = Object.fromEntries(parts.map(p => [p.id, `${p.number} — ${p.name}`]));
   const catMap = Object.fromEntries(categoriesL2.map(c => [c.id, `[${c.code}] ${c.nameKo}`]));
@@ -411,6 +416,20 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
 
         {/* Sidebar */}
         <div className="space-y-5">
+          {sites.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+              <h2 className="section-title">{tn("site")}</h2>
+              {editing ? (
+                <Select value={form.siteId} onValueChange={(v: string) => set("siteId", v)}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                  <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                </Select>
+              ) : (
+                <p className="text-sm font-medium">{complaint.siteId ? siteMap[complaint.siteId] ?? "-" : "-"}</p>
+              )}
+            </div>
+          )}
+
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
             <h2 className="section-title">{t("customer")}</h2>
             {editing ? (

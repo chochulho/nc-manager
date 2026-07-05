@@ -263,7 +263,7 @@ export const approvalActions = pgTable("nc_approval_actions", {
 export const ncAttachments = pgTable("nc_attachments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
   entityId: text("entity_id").notNull(),
   uploadedById: text("uploaded_by_id").notNull(),
   filename: text("filename").notNull(),
@@ -313,11 +313,13 @@ export const ncAnalysisReports = pgTable("nc_analysis_reports", {
   status: text("status", { enum: ["draft", "final"] }).default("draft").notNull(),
   sections: jsonb("sections").notNull().$type<{
     problemDescription: string;
-    immediateContainment: string;
     rootCause: string;
-    permanentActions: string;
-    prevention: string;
     conclusion: string;
+    followUp: string;
+    // 레거시 필드 (구버전 8D 구조 보고서 호환용, 신규 작성 시 사용 안 함)
+    immediateContainment?: string;
+    permanentActions?: string;
+    prevention?: string;
   }>(),
   createdByUserId: text("created_by_user_id").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),

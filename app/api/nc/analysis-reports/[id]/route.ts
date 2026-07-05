@@ -83,20 +83,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const { capaId } = await req.json() as { capaId: string };
 
+  const [existing] = await db.select().from(ncAnalysisReports).where(eq(ncAnalysisReports.id, id));
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const [capa] = await db.select().from(capas).where(eq(capas.id, capaId));
   if (!capa) return NextResponse.json({ error: "CAPA not found" }, { status: 404 });
 
+  const prevention = typeof capa.d7Prevention === "string"
+    ? capa.d7Prevention
+    : (capa.d7Prevention ? JSON.stringify(capa.d7Prevention) : "");
+  const followUp = [
+    capa.d3InterimContainment ? `[봉쇄조치]\n${capa.d3InterimContainment}` : "",
+    extractActions(capa.d5PermanentActions) ? `[영구 시정조치]\n${extractActions(capa.d5PermanentActions)}` : "",
+    extractImplementation(capa.d6Implementation) ? `[실행 근거]\n${extractImplementation(capa.d6Implementation)}` : "",
+    prevention ? `[재발방지/수평전개]\n${prevention}` : "",
+  ].filter(Boolean).join("\n\n");
+
   const mappedSections = {
+    ...existing.sections,
     problemDescription: capa.d2Description ?? "",
-    immediateContainment: capa.d3InterimContainment ?? "",
     rootCause: extractRootCause(capa.d4RootCause),
-    permanentActions: [
-      extractActions(capa.d5PermanentActions),
-      extractImplementation(capa.d6Implementation),
-    ].filter(Boolean).join("\n\n"),
-    prevention: typeof capa.d7Prevention === "string"
-      ? capa.d7Prevention
-      : (capa.d7Prevention ? JSON.stringify(capa.d7Prevention) : ""),
+    followUp,
   };
 
   const [updated] = await db

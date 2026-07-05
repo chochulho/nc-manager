@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -10,15 +10,24 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
 
 interface Sections {
   problemDescription: string;
-  immediateContainment: string;
   rootCause: string;
-  permanentActions: string;
-  prevention: string;
   conclusion: string;
+  followUp: string;
+  // 레거시 필드 (구버전 8D 구조 보고서 호환용, 신규 작성 시 사용 안 함)
+  immediateContainment?: string;
+  permanentActions?: string;
+  prevention?: string;
 }
+
+const LEGACY_FIELDS: Array<{ key: "immediateContainment" | "permanentActions" | "prevention"; labelKey: string }> = [
+  { key: "immediateContainment", labelKey: "sections.immediateContainment" },
+  { key: "permanentActions", labelKey: "sections.permanentActions" },
+  { key: "prevention", labelKey: "sections.prevention" },
+];
 
 interface Report {
   id: string;
@@ -45,8 +54,8 @@ interface Props {
   onComplaintClosed?: () => void;
 }
 
-type SectionKey = keyof Sections;
-type SectionDef = { key: SectionKey; label: string; d: string; placeholder: string };
+type SectionKey = "problemDescription" | "rootCause" | "conclusion" | "followUp";
+type SectionDef = { key: SectionKey; label: string; placeholder: string };
 
 export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onComplaintClosed }: Props) {
   const t = useTranslations("complaint");
@@ -64,15 +73,6 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       {
         key: "problemDescription",
         label: tr("sections.problemDescription" as Parameters<typeof tr>[0]),
-        d: "D2",
-        placeholder: "",
-      },
-      {
-        key: "immediateContainment",
-        label: isClosureByReport
-          ? tr("sections.immediateContainmentNtf" as Parameters<typeof tr>[0])
-          : tr("sections.immediateContainment" as Parameters<typeof tr>[0]),
-        d: "D3",
         placeholder: "",
       },
       {
@@ -82,30 +82,19 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
           : isCustomerFault
           ? tr("sections.rootCauseFault" as Parameters<typeof tr>[0])
           : tr("sections.rootCause" as Parameters<typeof tr>[0]),
-        d: "D4",
-        placeholder: "",
-      },
-      {
-        key: "permanentActions",
-        label: isClosureByReport
-          ? tr("sections.permanentActionsNtf" as Parameters<typeof tr>[0])
-          : tr("sections.permanentActions" as Parameters<typeof tr>[0]),
-        d: isClosureByReport ? "" : "D5/D6",
-        placeholder: "",
-      },
-      {
-        key: "prevention",
-        label: isClosureByReport
-          ? tr("sections.preventionNtf" as Parameters<typeof tr>[0])
-          : tr("sections.prevention" as Parameters<typeof tr>[0]),
-        d: isClosureByReport ? "" : "D7",
         placeholder: "",
       },
       {
         key: "conclusion",
         label: tr("sections.conclusion" as Parameters<typeof tr>[0]),
-        d: "",
         placeholder: "",
+      },
+      {
+        key: "followUp",
+        label: tr("sections.followUp" as Parameters<typeof tr>[0]),
+        placeholder: capaId
+          ? tr("sections.followUpCapaHint" as Parameters<typeof tr>[0])
+          : tr("sections.followUpPlaceholder" as Parameters<typeof tr>[0]),
       },
     ];
   }
@@ -117,9 +106,10 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [importingCapa, setImportingCapa] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
   const [sections, setSections] = useState<Sections>({
-    problemDescription: "", immediateContainment: "", rootCause: "",
-    permanentActions: "", prevention: "", conclusion: "",
+    problemDescription: "", rootCause: "", conclusion: "", followUp: "",
   });
 
   const sectionDefs = getSectionDefs();
@@ -220,99 +210,28 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     if (!confirm(tr("deleteConfirm" as Parameters<typeof tr>[0]))) return;
     await fetch(`/api/nc/analysis-reports/${report.id}`, { method: "DELETE" });
     setReport(null);
-    setSections({ problemDescription: "", immediateContainment: "", rootCause: "", permanentActions: "", prevention: "", conclusion: "" });
+    setSections({ problemDescription: "", rootCause: "", conclusion: "", followUp: "" });
     setEditing(false);
     setExpanded(false);
     toast.success(tc("success"));
   }
 
   async function handleDownloadPdf() {
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-    const MARGIN = 18;
-    const PAGE_W = 210;
-    const CONTENT_W = PAGE_W - MARGIN * 2;
-    let y = MARGIN;
-
-    const addPage = () => { doc.addPage(); y = MARGIN; };
-    const checkY = (needed: number) => { if (y + needed > 280) addPage(); };
-
-    // Header bar
-    doc.setFillColor(30, 64, 175);
-    doc.rect(0, 0, PAGE_W, 12, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.text("NC Manager  |  분석보고서", MARGIN, 8);
-    y = 22;
-
-    // Title
-    doc.setTextColor(17, 24, 39);
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text(complaintInfo.title, MARGIN, y);
-    y += 8;
-
-    // Meta info
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(107, 114, 128);
-    const meta = [
-      `${complaintInfo.complaintNumber}`,
-      `고객사: ${complaintInfo.customerName}`,
-      `부품: ${complaintInfo.partName}`,
-      `접수일: ${new Date(complaintInfo.receivedAt).toLocaleDateString()}`,
-      resolutionType ? `판정: ${resolutionLabels[resolutionType] ?? resolutionType}` : "",
-    ].filter(Boolean).join("   |   ");
-    doc.text(meta, MARGIN, y, { maxWidth: CONTENT_W });
-    y += 8;
-
-    // Divider
-    doc.setDrawColor(229, 231, 235);
-    doc.line(MARGIN, y, PAGE_W - MARGIN, y);
-    y += 8;
-
-    // Sections
-    for (const def of sectionDefs) {
-      const content = sections[def.key];
-      if (!content?.trim()) continue;
-
-      checkY(20);
-
-      // Section label
-      doc.setFillColor(243, 244, 246);
-      doc.roundedRect(MARGIN, y, CONTENT_W, 8, 2, 2, "F");
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 64, 175);
-      const label = def.d ? `${def.d}  ${def.label}` : def.label;
-      doc.text(label, MARGIN + 3, y + 5.5);
-      y += 12;
-
-      // Section content
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(31, 41, 55);
-      const lines = doc.splitTextToSize(content, CONTENT_W);
-      for (const line of lines) {
-        checkY(6);
-        doc.text(line, MARGIN, y);
-        y += 5.5;
+    if (!report) return;
+    setExportingPdf(true);
+    try {
+      const wasExpanded = expanded;
+      if (!wasExpanded) {
+        setExpanded(true);
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       }
-      y += 6;
+      if (printRef.current) {
+        await exportNodeToPdf(printRef.current, `report_${complaintInfo.complaintNumber}.pdf`);
+      }
+      if (!wasExpanded) setExpanded(false);
+    } finally {
+      setExportingPdf(false);
     }
-
-    // Footer on all pages
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.text(`${new Date().toLocaleDateString()}`, MARGIN, 290);
-      doc.text(`${i} / ${totalPages}`, PAGE_W - MARGIN, 290, { align: "right" });
-    }
-
-    doc.save(`report_${complaintInfo.complaintNumber}.pdf`);
   }
 
   async function handleDownloadPptx() {
@@ -354,8 +273,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       const slide = prs.addSlide();
       slide.background = { color: "FFFFFF" };
       slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-      const headerText = def.d ? `${def.d}  ${def.label}` : def.label;
-      slide.addText(headerText, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+      slide.addText(def.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
       slide.addText(content, { x: 0.4, y: 1.1, w: 12.5, h: 4.7, fontSize: 13, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 6 });
     }
 
@@ -409,7 +327,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             <Button variant="ghost" size="sm" onClick={() => window.print()} title="인쇄">
               <Printer className="h-3.5 w-3.5" />
             </Button>
-            <Button variant="ghost" size="sm" onClick={handleDownloadPdf} title="PDF 다운로드">
+            <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={editing || exportingPdf} title="PDF 다운로드">
               <span className="text-[10px] font-bold text-red-600">PDF</span>
             </Button>
             <Button variant="ghost" size="sm" onClick={handleDownloadPptx} title="PPT 다운로드">
@@ -450,7 +368,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       )}
 
       {report && expanded && (
-        <div className="space-y-4">
+        <div ref={printRef} className="space-y-4">
           {/* Claim overview (auto) */}
           <div className={`rounded-xl p-4 text-sm space-y-1 ${isNtf ? "bg-gray-50" : isCustomerFault ? "bg-purple-50" : "bg-indigo-50"}`}>
             <p className={`font-semibold mb-2 ${isNtf ? "text-gray-700" : isCustomerFault ? "text-purple-800" : "text-indigo-800"}`}>
@@ -473,28 +391,42 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
           {/* Sections */}
           {sectionDefs.map((def) => (
             <div key={def.key} className="space-y-1.5">
-              <Label className="flex items-center gap-1.5 text-sm font-semibold">
-                {def.d && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded font-mono ${isNtf ? "bg-gray-100 text-gray-600" : isCustomerFault ? "bg-purple-100 text-purple-700" : "bg-indigo-100 text-indigo-700"}`}>
-                    {def.d}
-                  </span>
-                )}
+              <Label className="text-sm font-semibold">
                 {def.label}
+                {def.key === "followUp" && <span className="ml-1.5 font-normal text-xs text-muted-foreground">{tr("optional" as Parameters<typeof tr>[0])}</span>}
               </Label>
               {editing ? (
                 <Textarea
                   value={sections[def.key]}
                   onChange={(e) => setSections((p) => ({ ...p, [def.key]: e.target.value }))}
                   rows={4}
+                  placeholder={def.placeholder}
                   className="text-sm"
                 />
               ) : (
                 <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm whitespace-pre-wrap min-h-[60px]">
-                  {sections[def.key] || <span className="text-muted-foreground italic">{tr("notEntered" as Parameters<typeof tr>[0])}</span>}
+                  {sections[def.key] || <span className="text-muted-foreground italic">
+                    {def.key === "followUp" && capaId ? tr("sections.followUpCapaHint" as Parameters<typeof tr>[0]) : tr("notEntered" as Parameters<typeof tr>[0])}
+                  </span>}
                 </div>
               )}
             </div>
           ))}
+
+          {/* 레거시 8D 항목 (구버전 보고서에 데이터가 남아있는 경우에만 읽기 전용으로 표시) */}
+          {LEGACY_FIELDS.some((f) => report.sections[f.key]?.trim()) && (
+            <div className="pt-2 border-t border-dashed border-gray-200 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">{tr("legacyFieldsTitle" as Parameters<typeof tr>[0])}</p>
+              {LEGACY_FIELDS.filter((f) => report.sections[f.key]?.trim()).map((f) => (
+                <div key={f.key} className="space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground">{tr(f.labelKey as Parameters<typeof tr>[0])}</p>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm whitespace-pre-wrap text-muted-foreground">
+                    {report.sections[f.key]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {editing && (
             <div className="flex items-center justify-between pt-2 border-t border-gray-100">

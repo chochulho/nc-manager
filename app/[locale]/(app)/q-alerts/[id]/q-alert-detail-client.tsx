@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "@/lib/i18n/navigation";
 import { Link } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AttachmentSection } from "@/components/nc/attachment-section";
+import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
 import { formatDate } from "@/lib/utils";
 
 interface QAlert {
@@ -61,6 +63,8 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
   const [alert, setAlert] = useState<QAlert>(initial);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     title: alert.title,
     problemSummary: alert.problemSummary ?? "",
@@ -116,86 +120,13 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
   }
 
   async function handleDownloadPdf() {
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-    const M = 15;
-    const W = 210 - M * 2;
-    let y = M;
-
-    // 헤더 배경
-    doc.setFillColor(234, 88, 12); // orange-600
-    doc.rect(0, 0, 210, 22, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text("Q-ALERT", M, 14);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(alert.alertNumber, 210 - M, 14, { align: "right" });
-    y = 32;
-
-    // 제목
-    doc.setTextColor(17, 24, 39);
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    const titleLines = doc.splitTextToSize(alert.title, W);
-    doc.text(titleLines, M, y);
-    y += titleLines.length * 7 + 4;
-
-    // 메타정보
-    doc.setFontSize(8.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(107, 114, 128);
-    const meta = [
-      alert.sourceNumber ? `출처: ${alert.sourceNumber}` : null,
-      alert.targetProcess ? `대상공정: ${alert.targetProcess}` : null,
-      alert.postedAt ? `게시일: ${new Date(alert.postedAt).toLocaleDateString()}` : null,
-      alert.expiresAt ? `만료일: ${new Date(alert.expiresAt).toLocaleDateString()}` : null,
-    ].filter(Boolean).join("   |   ");
-    if (meta) { doc.text(meta, M, y); y += 6; }
-
-    doc.setDrawColor(229, 231, 235);
-    doc.line(M, y, 210 - M, y);
-    y += 8;
-
-    const sections: Array<[string, string, [number, number, number]]> = [
-      ["문제 요약", alert.problemSummary ?? "", [220, 38, 38]],
-      ["근본 원인", alert.rootCause ?? "", [234, 88, 12]],
-      ["재발방지 조치", alert.prevention ?? "", [22, 163, 74]],
-    ];
-
-    for (const [label, content, [r, g, b]] of sections) {
-      if (!content.trim()) continue;
-      if (y > 255) { doc.addPage(); y = M; }
-
-      doc.setFillColor(r, g, b);
-      doc.roundedRect(M, y, W, 7, 1.5, 1.5, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9.5);
-      doc.setFont("helvetica", "bold");
-      doc.text(label, M + 3, y + 5);
-      y += 10;
-
-      doc.setTextColor(31, 41, 55);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      const lines = doc.splitTextToSize(content, W);
-      for (const line of lines) {
-        if (y > 270) { doc.addPage(); y = M; }
-        doc.text(line, M, y);
-        y += 5.5;
-      }
-      y += 5;
+    if (!contentRef.current) return;
+    setExportingPdf(true);
+    try {
+      await exportNodeToPdf(contentRef.current, `QAlert_${alert.alertNumber}.pdf`);
+    } finally {
+      setExportingPdf(false);
     }
-
-    // 푸터
-    doc.setFontSize(7.5);
-    doc.setTextColor(156, 163, 175);
-    doc.text(new Date().toLocaleDateString(), M, 291);
-    doc.text("NC Manager", 210 - M, 291, { align: "right" });
-
-    doc.save(`QAlert_${alert.alertNumber}.pdf`);
   }
 
   const cfg = STATUS_CONFIG[alert.status] ?? STATUS_CONFIG.draft;
@@ -220,7 +151,7 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
         <div className="flex items-center gap-2">
           {!editing && (
             <>
-              <Button variant="ghost" size="sm" onClick={handleDownloadPdf} title="PDF 게시물 다운로드">
+              <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={exportingPdf} title="PDF 게시물 다운로드">
                 <Printer className="h-4 w-4 text-orange-600" />
               </Button>
               <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-500 hover:text-red-700">
@@ -245,7 +176,7 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
         </div>
       </div>
 
-      <div className="space-y-5">
+      <div ref={contentRef} className="space-y-5">
         {/* 기본 정보 카드 */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -380,6 +311,8 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
             </div>
           </div>
         </div>
+
+        <AttachmentSection entityType="q_alert" entityId={alert.id} />
 
         {/* 출처 정보 */}
         {(alert.sourceType || alert.createdByName) && (

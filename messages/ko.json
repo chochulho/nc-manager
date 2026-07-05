@@ -84,6 +84,7 @@
     "safetyRelated": "안전 관련 (Safety)",
     "attachmentsHint": "첨부파일 (등록 시 함께 업로드)",
     "dropzoneHint": "클릭하거나 파일을 끌어다 놓으세요",
+    "pasteHint": "이미지는 Ctrl+V로 바로 붙여넣기 가능",
     "printReport": "보고서 출력",
     "registeredSuccess": "{number} 등록 완료",
     "registeredSuccessAttachments": "{number} 등록 완료 (첨부 {count}개)",
@@ -309,6 +310,7 @@
       "finalizeAndClose": "확정 + 클레임 종결",
       "finalize": "최종 확정",
       "notEntered": "미입력",
+      "optional": "(선택)",
       "ntfBanner": "NTF 케이스입니다. 분석보고서 작성 후 보고서에서 직접 클레임을 종결할 수 있습니다.",
       "faultBanner": "고객 귀책 케이스입니다. 분석보고서 작성 후 보고서에서 직접 클레임을 종결할 수 있습니다.",
       "claimOverview": "클레임 개요 (자동)",
@@ -329,17 +331,18 @@
         "partial": "부분 인정"
       },
       "sections": {
-        "problemDescription": "문제 설명",
-        "immediateContainment": "즉각 봉쇄 조치",
-        "immediateContainmentNtf": "접수 대응 조치",
+        "problemDescription": "문제 현상 및 조사 내용",
         "rootCause": "원인 분석",
         "rootCauseNtf": "불량 미재현 / 검증 결과",
         "rootCauseFault": "귀책 분석",
+        "conclusion": "결론 및 종합",
+        "followUp": "후속 조치",
+        "followUpCapaHint": "CAPA에서 상세 조치를 관리 중입니다. 필요 시 요약만 남기세요.",
+        "followUpPlaceholder": "재발방지 대책, 고객 회신 내용 등",
+        "legacyFieldsTitle": "이전 버전 8D 항목 (읽기 전용)",
+        "immediateContainment": "즉각 봉쇄 조치",
         "permanentActions": "영구 시정조치",
-        "permanentActionsNtf": "추가 조치 계획",
-        "prevention": "재발 방지 / 수평전개",
-        "preventionNtf": "고객 피드백 및 향후 대응",
-        "conclusion": "결론 및 종합"
+        "prevention": "재발 방지 / 수평전개"
       }
     },
     "severities": {

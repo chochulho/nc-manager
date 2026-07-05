@@ -34,12 +34,22 @@ function extractImplementation(d6: unknown): string {
 
 const EMPTY_SECTIONS = {
   problemDescription: "",
-  immediateContainment: "",
   rootCause: "",
-  permanentActions: "",
-  prevention: "",
   conclusion: "",
+  followUp: "",
 };
+
+function buildFollowUp(capa: { d3InterimContainment: string | null; d5PermanentActions: unknown; d6Implementation: unknown; d7Prevention: unknown }): string {
+  const prevention = typeof capa.d7Prevention === "string"
+    ? capa.d7Prevention
+    : (capa.d7Prevention ? JSON.stringify(capa.d7Prevention) : "");
+  return [
+    capa.d3InterimContainment ? `[봉쇄조치]\n${capa.d3InterimContainment}` : "",
+    extractActions(capa.d5PermanentActions) ? `[영구 시정조치]\n${extractActions(capa.d5PermanentActions)}` : "",
+    extractImplementation(capa.d6Implementation) ? `[실행 근거]\n${extractImplementation(capa.d6Implementation)}` : "",
+    prevention ? `[재발방지/수평전개]\n${prevention}` : "",
+  ].filter(Boolean).join("\n\n");
+}
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -95,16 +105,9 @@ export async function POST(req: NextRequest) {
     if (capa) {
       sections = {
         problemDescription: capa.d2Description ?? complaint.customerDescription ?? "",
-        immediateContainment: capa.d3InterimContainment ?? "",
         rootCause: extractRootCause(capa.d4RootCause),
-        permanentActions: [
-          extractActions(capa.d5PermanentActions),
-          extractImplementation(capa.d6Implementation),
-        ].filter(Boolean).join("\n\n"),
-        prevention: typeof capa.d7Prevention === "string"
-          ? capa.d7Prevention
-          : (capa.d7Prevention ? JSON.stringify(capa.d7Prevention) : ""),
         conclusion: "",
+        followUp: buildFollowUp(capa),
       };
     }
   }

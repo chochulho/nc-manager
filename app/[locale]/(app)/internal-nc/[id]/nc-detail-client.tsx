@@ -20,6 +20,7 @@ interface CategoryL2 { id: string; code: string; nameKo: string }
 interface NC {
   id: string; ncNumber: string; title: string; description: string | null;
   discoveredAt: Date; discoveryStage: string; severity: string; status: string;
+  occurrenceSiteId: string | null;
   discoveredBySiteId: string | null; discoveredByProcessId: string | null;
   occurrenceSupplierId: string | null; partId: string | null;
   lotNumber: string | null; quantityInspected: string | null; quantityNc: string | null;
@@ -62,6 +63,7 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
     discoveryStage: nc.discoveryStage,
     severity: nc.severity,
     status: nc.status,
+    occurrenceSiteId: nc.occurrenceSiteId ?? "",
     discoveredBySiteId: nc.discoveredBySiteId ?? "",
     discoveredByProcessId: nc.discoveredByProcessId ?? "",
     occurrenceSupplierId: nc.occurrenceSupplierId ?? "",
@@ -341,6 +343,13 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
             {editing ? (
               <div className="space-y-3">
                 <div>
+                  <Label>{t("site")}</Label>
+                  <Select value={form.occurrenceSiteId} onValueChange={(v: string) => set("occurrenceSiteId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>{t("discoveredBySite")}</Label>
                   <Select value={form.discoveredBySiteId} onValueChange={(v: string) => set("discoveredBySiteId", v)}>
                     <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
@@ -366,6 +375,7 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
               </div>
             ) : (
               <dl className="space-y-3 text-sm">
+                <div><dt className="text-muted-foreground">{t("site")}</dt><dd className="font-medium mt-0.5">{nc.occurrenceSiteId ? siteMap[nc.occurrenceSiteId] ?? "-" : "-"}</dd></div>
                 <div><dt className="text-muted-foreground">{t("discoveredBySite")}</dt><dd className="font-medium mt-0.5">{nc.discoveredBySiteId ? siteMap[nc.discoveredBySiteId] ?? "-" : "-"}</dd></div>
                 <div><dt className="text-muted-foreground">{t("discoveredByProcess")}</dt><dd className="font-medium mt-0.5">{nc.discoveredByProcessId ? processMap[nc.discoveredByProcessId] ?? "-" : "-"}</dd></div>
                 {nc.occurrenceSupplierId && <div><dt className="text-muted-foreground">{t("supplier")}</dt><dd className="font-medium mt-0.5">{supplierMap[nc.occurrenceSupplierId] ?? "-"}</dd></div>}

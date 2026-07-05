@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Edit2, Save, X, Plus, CheckCircle2, AlertTriangle, Trash2, FileSpreadsheet, FileText, Bell } from "lucide-react";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AttachmentSection } from "@/components/nc/attachment-section";
 import { DocumentChangesSection, type DocChangeItem } from "@/components/capa/document-changes-section";
+import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
 import { formatDate } from "@/lib/utils";
 import { useTranslations } from "next-intl";
 
@@ -103,6 +104,8 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
   const [actions, setActions] = useState<CAPAAction[]>(initialActions);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState({
     title: capa.title,
     problemStatement: capa.problemStatement ?? "",
@@ -253,114 +256,13 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
   }
 
   async function handleDownloadPdf() {
-    const { jsPDF } = await import("jspdf");
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-    const M = 18;
-    const W = 210 - M * 2;
-    let y = M;
-    const checkY = (n: number) => { if (y + n > 282) { doc.addPage(); y = M; } };
-
-    doc.setFillColor(30, 64, 175);
-    doc.rect(0, 0, 210, 12, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.text("NC Manager  |  CAPA", M, 8);
-    y = 22;
-
-    doc.setTextColor(17, 24, 39);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${capa.capaNumber}  ${capa.title}`, M, y, { maxWidth: W });
-    y += 9;
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(107, 114, 128);
-    doc.text(`방법론: ${capa.methodology === "8d" ? "8D" : "Simple CAPA"}   |   상태: ${capa.status}   |   출처: ${sourceNumber}`, M, y);
-    y += 8;
-
-    doc.setDrawColor(229, 231, 235);
-    doc.line(M, y, 210 - M, y);
-    y += 8;
-
-    const sections: Array<[string, string]> = [
-      ["문제점", capa.problemStatement ?? ""],
-      ["D2. 문제 기술", capa.d2Description ?? ""],
-      ["D3. 봉쇄조치", capa.d3InterimContainment ?? ""],
-      ["D4. 근본원인", extractText(capa.d4RootCause)],
-      ["D7. 예방조치", extractText(capa.d7Prevention)],
-      ["D8. 종결", extractText(capa.d8Recognition)],
-    ];
-
-    for (const [label, content] of sections) {
-      if (!content.trim()) continue;
-      checkY(16);
-      doc.setFillColor(243, 244, 246);
-      doc.roundedRect(M, y, W, 7, 2, 2, "F");
-      doc.setFontSize(9.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 64, 175);
-      doc.text(label, M + 3, y + 5);
-      y += 11;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9.5);
-      doc.setTextColor(31, 41, 55);
-      const lines = doc.splitTextToSize(content, W);
-      for (const line of lines) {
-        checkY(5.5);
-        doc.text(line, M, y);
-        y += 5;
-      }
-      y += 5;
+    if (!printRef.current) return;
+    setExportingPdf(true);
+    try {
+      await exportNodeToPdf(printRef.current, `CAPA_${capa.capaNumber}.pdf`);
+    } finally {
+      setExportingPdf(false);
     }
-
-    // 조치 항목 테이블
-    if (actions.length > 0) {
-      checkY(20);
-      doc.setFillColor(243, 244, 246);
-      doc.roundedRect(M, y, W, 7, 2, 2, "F");
-      doc.setFontSize(9.5);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 64, 175);
-      doc.text("조치 항목", M + 3, y + 5);
-      y += 11;
-
-      for (const action of actions) {
-        const typeLabel = action.actionType === "correction" ? "[시정]" : action.actionType === "corrective" ? "[시정조치]" : "[예방조치]";
-        checkY(10);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.setTextColor(31, 41, 55);
-        doc.text(`${typeLabel} ${action.description}`, M, y, { maxWidth: W - 30 });
-        if (action.dueAt) {
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(107, 114, 128);
-          doc.text(`기한: ${new Date(action.dueAt).toLocaleDateString()}`, 210 - M, y, { align: "right" });
-        }
-        y += 5;
-        if (action.evidence) {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(8.5);
-          doc.setTextColor(107, 114, 128);
-          doc.text(`근거: ${action.evidence}`, M + 3, y, { maxWidth: W - 6 });
-          y += 4.5;
-        }
-        y += 2;
-      }
-    }
-
-    const total = doc.getNumberOfPages();
-    for (let i = 1; i <= total; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.text(new Date().toLocaleDateString(), M, 291);
-      doc.text(`${i} / ${total}`, 210 - M, 291, { align: "right" });
-    }
-
-    doc.save(`CAPA_${capa.capaNumber}.pdf`);
   }
 
   async function addAction() {
@@ -443,7 +345,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
               <Button variant="ghost" size="sm" onClick={handleDownloadExcel} title="Excel 다운로드">
                 <FileSpreadsheet className="h-4 w-4 text-green-600" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleDownloadPdf} title="PDF 다운로드">
+              <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={exportingPdf} title="PDF 다운로드">
                 <span className="text-[10px] font-bold text-red-600">PDF</span>
               </Button>
               <Link href={`/q-alerts/new?capaId=${capa.id}`}>
@@ -470,7 +372,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div ref={printRef} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 좌측 본문 */}
         <div className="lg:col-span-2 space-y-5">
           {/* 기본 정보 */}
