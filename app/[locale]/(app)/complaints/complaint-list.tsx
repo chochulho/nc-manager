@@ -136,13 +136,14 @@ export function ComplaintList({
             </div>
 
             {/* 헤더 */}
-            <div className="hidden md:grid grid-cols-[7rem_1fr_8rem_5rem_7rem_8rem] gap-x-3 px-4 py-2 border-b bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="hidden md:grid grid-cols-[7rem_1fr_12rem_8rem_5rem_7rem_8rem] gap-x-3 px-4 py-2 border-b bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <span>{tCommon("number")}</span>
               <span>{tCommon("title")}</span>
+              <span>{t("analysisSummary")}</span>
               <span>{t("customer")}</span>
               <span>{t("severity")}</span>
               <span>{t("status")}</span>
-              <span>{t("sla")}</span>
+              <span>{t("finalReportDueLabel")}</span>
             </div>
 
             <ul className="divide-y">
@@ -159,8 +160,8 @@ export function ComplaintList({
                     className={`group hover:bg-gray-50/70 transition-colors ${overdue ? "bg-red-50/25" : ""}`}
                   >
                     <Link href={`/complaints/${c.id}`} className="block px-4 py-3">
-                      {/* 1행: 번호 | 제목 | 고객사 | 심각도 | 상태 | SLA */}
-                      <div className="grid grid-cols-[7rem_1fr_8rem_5rem_7rem_8rem] gap-x-3 items-center">
+                      {/* 1행: 번호 | 제목 | 분석내용 | 고객사 | 심각도 | 상태 | SLA */}
+                      <div className="grid grid-cols-[7rem_1fr_12rem_8rem_5rem_7rem_8rem] gap-x-3 items-center">
                         {/* 번호 */}
                         <span className="font-mono text-xs font-semibold text-primary group-hover:underline whitespace-nowrap">
                           {c.complaintNumber}
@@ -172,6 +173,11 @@ export function ComplaintList({
                           {c.recallRisk    && <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1 rounded shrink-0">리콜</span>}
                           <span className="font-medium text-sm truncate">{c.title}</span>
                         </div>
+
+                        {/* 분석내용 */}
+                        <span className="text-xs text-muted-foreground truncate" title={analysisSnippet(c.analysisSections) ?? undefined}>
+                          {analysisSnippet(c.analysisSections) ?? "—"}
+                        </span>
 
                         {/* 고객사 */}
                         <span className="text-sm text-muted-foreground truncate">{c.customerName ?? "—"}</span>
@@ -256,16 +262,6 @@ export function ComplaintList({
                           )}
                         </div>
                       </div>
-
-                      {/* 3행: 분석 내용 요약 */}
-                      {analysisSnippet(c.analysisSections) && (
-                        <div className="grid grid-cols-[7rem_1fr] gap-x-3 mt-1">
-                          <span />
-                          <p className="text-xs text-muted-foreground truncate" title={analysisSnippet(c.analysisSections)!}>
-                            {analysisSnippet(c.analysisSections)}
-                          </p>
-                        </div>
-                      )}
                     </Link>
                   </li>
                 );

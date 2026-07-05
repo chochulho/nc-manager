@@ -181,9 +181,9 @@ export function AttachmentSection({ entityType, entityId }: Props) {
         <p className="text-muted-foreground">
           {tc("dropzoneHint")}
           <span className="block text-xs mt-0.5">{ta("dropzoneDetail")}</span>
-          <span className="block text-xs mt-0.5">{tc("pasteHint")}</span>
         </p>
       </div>
+      <p className="text-xs text-muted-foreground text-center">{tc("pasteHint")}</p>
 
       {/* Image grid */}
       {images.length > 0 && (

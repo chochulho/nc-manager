@@ -361,8 +361,8 @@ export function NewNCForm({ sites, processes, parts, suppliers, categoriesL2, de
                   onChange={(e) => { if (e.target.files) setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]); }} />
                 <Paperclip className="h-5 w-5 mx-auto mb-1.5 text-gray-400" />
                 <p className="text-sm text-muted-foreground">{tc("dropzoneHint")}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{tc("pasteHint")}</p>
               </label>
+              <p className="text-xs text-muted-foreground text-center">{tc("pasteHint")}</p>
               {pendingFiles.length > 0 && (
                 <div className="space-y-1">
                   {pendingFiles.map((f, i) => (
