@@ -1,11 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "@/lib/i18n/navigation";
 import { Link } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Edit2, Save, X, Trash2, Bell, CheckCircle2,
+  ArrowLeft, Edit2, Save, X, Bell, CheckCircle2,
   Archive, Eye, FileText, Printer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AttachmentSection } from "@/components/nc/attachment-section";
+import { AdminRecordPanel } from "@/components/nc/admin-record-panel";
 import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
 import { formatDate } from "@/lib/utils";
 
@@ -58,8 +58,7 @@ const SOURCE_HREF: Record<string, (id: string) => string> = {
   customer_complaint: (id) => `/complaints/${id}`,
 };
 
-export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
-  const router = useRouter();
+export function QAlertDetailClient({ alert: initial, isOrgAdmin = false }: { alert: QAlert; isOrgAdmin?: boolean }) {
   const [alert, setAlert] = useState<QAlert>(initial);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -113,12 +112,6 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm("Q-Alert를 삭제하시겠습니까?")) return;
-    const res = await fetch(`/api/nc/q-alerts/${alert.id}`, { method: "DELETE" });
-    if (res.ok) { router.push("/q-alerts"); toast.success("삭제됐습니다."); }
-  }
-
   async function handleDownloadPdf() {
     if (!contentRef.current) return;
     setExportingPdf(true);
@@ -153,9 +146,6 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
             <>
               <Button variant="ghost" size="sm" onClick={handleDownloadPdf} disabled={exportingPdf} title="PDF 게시물 다운로드">
                 <Printer className="h-4 w-4 text-orange-600" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleDelete} className="text-red-500 hover:text-red-700">
-                <Trash2 className="h-4 w-4" />
               </Button>
             </>
           )}
@@ -343,6 +333,16 @@ export function QAlertDetailClient({ alert: initial }: { alert: QAlert }) {
               </div>
             </div>
           </div>
+        )}
+
+        {isOrgAdmin && (
+          <AdminRecordPanel
+            currentNumber={alert.alertNumber}
+            deleteApiUrl={`/api/nc/q-alerts/${alert.id}`}
+            renumberApiUrl={`/api/nc/q-alerts/${alert.id}/renumber`}
+            listHref="/q-alerts"
+            onRenumbered={(newNumber) => setAlert((prev) => ({ ...prev, alertNumber: newNumber }))}
+          />
         )}
       </div>
     </div>

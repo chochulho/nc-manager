@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { customerComplaints, ncCustomers, ncParts, ncCategoriesL2, capas, ncSites } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { isRecordAdmin } from "@/lib/nc/admin-registry";
 import { ComplaintDetailClient } from "./complaint-detail-client";
 
 export default async function ComplaintDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -26,5 +27,15 @@ export default async function ComplaintDetailPage({ params }: { params: Promise<
     ? await db.select({ id: capas.id, capaNumber: capas.capaNumber, status: capas.status }).from(capas).where(eq(capas.id, complaint.capaId)).then((r) => r[0] ?? null)
     : null;
 
-  return <ComplaintDetailClient complaint={complaint} customers={customers} parts={parts} categoriesL2={categoriesL2} sites={sites} linkedCapa={linkedCapa} />;
+  return (
+    <ComplaintDetailClient
+      complaint={complaint}
+      customers={customers}
+      parts={parts}
+      categoriesL2={categoriesL2}
+      sites={sites}
+      linkedCapa={linkedCapa}
+      isOrgAdmin={isRecordAdmin(session)}
+    />
+  );
 }

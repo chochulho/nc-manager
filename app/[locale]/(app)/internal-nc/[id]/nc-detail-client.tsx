@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Save, Edit2, X, ClipboardCheck, Plus } from "lucide-react";
 import { AttachmentSection } from "@/components/nc/attachment-section";
+import { AdminRecordPanel } from "@/components/nc/admin-record-panel";
 import { NotificationSection } from "@/components/nc/notification-section";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 
@@ -38,6 +39,7 @@ interface Props {
   sites: Option[]; processes: Option[]; parts: Array<{ id: string; name: string; number: string }>;
   suppliers: Option[]; categoriesL2: CategoryL2[];
   linkedCapa: LinkedCapa | null;
+  isOrgAdmin?: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -49,7 +51,7 @@ const SEVERITY_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-800", major: "bg-orange-100 text-orange-800", minor: "bg-yellow-100 text-yellow-800",
 };
 
-export function NCDetailClient({ nc, sites, processes, parts, suppliers, categoriesL2, linkedCapa }: Props) {
+export function NCDetailClient({ nc, sites, processes, parts, suppliers, categoriesL2, linkedCapa, isOrgAdmin = false }: Props) {
   const t = useTranslations("nc");
   const tc = useTranslations("common");
   const tCapa = useTranslations("capa");
@@ -408,6 +410,16 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
               </div>
             )}
           </div>
+
+          {isOrgAdmin && (
+            <AdminRecordPanel
+              currentNumber={nc.ncNumber}
+              deleteApiUrl={`/api/nc/internal-nc/${nc.id}`}
+              renumberApiUrl={`/api/nc/internal-nc/${nc.id}/renumber`}
+              listHref="/internal-nc"
+              onRenumbered={() => router.refresh()}
+            />
+          )}
         </div>
       </div>
       </div>

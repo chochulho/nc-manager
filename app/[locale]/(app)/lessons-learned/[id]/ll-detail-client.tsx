@@ -5,7 +5,7 @@ import { useRouter, Link } from "@/lib/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Pencil, Save, X, Lightbulb, ExternalLink, Trash2,
+  ArrowLeft, Pencil, Save, X, Lightbulb, ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
+import { AdminRecordPanel } from "@/components/nc/admin-record-panel";
 import { formatDate, cn } from "@/lib/utils";
 
 interface LLItem {
@@ -49,7 +50,7 @@ const STATUS_CLS: Record<string, string> = {
   published: "bg-green-50 text-green-800",
 };
 
-export function LLDetailClient({ item }: { item: LLItem }) {
+export function LLDetailClient({ item, isOrgAdmin = false }: { item: LLItem; isOrgAdmin?: boolean }) {
   const router = useRouter();
   const t = useTranslations("ll");
   const tc = useTranslations("common");
@@ -62,7 +63,6 @@ export function LLDetailClient({ item }: { item: LLItem }) {
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const [form, setForm] = useState({
     title: item.title,
@@ -134,18 +134,6 @@ export function LLDetailClient({ item }: { item: LLItem }) {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm(t("deleteConfirm"))) return;
-    setDeleting(true);
-    try {
-      await fetch(`/api/nc/lessons-learned/${item.id}`, { method: "DELETE" });
-      toast.success(tc("success"));
-      router.push("/lessons-learned");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
   const st = statusConfig[item.status as keyof typeof statusConfig] ?? statusConfig.draft;
 
   return (
@@ -200,15 +188,6 @@ export function LLDetailClient({ item }: { item: LLItem }) {
                 </Button>
               </>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
           </div>
         </div>
 
@@ -366,6 +345,18 @@ export function LLDetailClient({ item }: { item: LLItem }) {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {isOrgAdmin && (
+          <div className="mt-5">
+            <AdminRecordPanel
+              currentNumber={item.llNumber}
+              deleteApiUrl={`/api/nc/lessons-learned/${item.id}`}
+              renumberApiUrl={`/api/nc/lessons-learned/${item.id}/renumber`}
+              listHref="/lessons-learned"
+              onRenumbered={() => router.refresh()}
+            />
           </div>
         )}
       </div>

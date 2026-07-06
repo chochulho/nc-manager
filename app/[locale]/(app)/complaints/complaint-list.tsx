@@ -142,7 +142,7 @@ export function ComplaintList({
             </div>
 
             {/* 헤더 */}
-            <div className="hidden md:grid grid-cols-[7rem_1fr_12rem_8rem_5rem_7rem_8rem] gap-x-3 px-4 py-2 border-b bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="hidden md:grid grid-cols-[7rem_1.3fr_1fr_8rem_5rem_7rem_8rem] gap-x-3 px-4 py-2 border-b bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <span>{tCommon("number")}</span>
               <span>{tCommon("title")}</span>
               <span>{t("analysisSummary")}</span>
@@ -166,18 +166,25 @@ export function ComplaintList({
                     className={`group hover:bg-gray-50/70 transition-colors ${overdue ? "bg-red-50/25" : ""}`}
                   >
                     <Link href={`/complaints/${c.id}`} className="block px-4 py-3">
-                      {/* 1행: 번호 | 제목 | 분석내용 | 고객사 | 심각도 | 상태 | SLA */}
-                      <div className="grid grid-cols-[7rem_1fr_12rem_8rem_5rem_7rem_8rem] gap-x-3 items-center">
+                      {/* 1행: 번호 | 제목(+차종/품번) | 분석내용 | 고객사 | 심각도 | 상태 | SLA */}
+                      <div className="grid grid-cols-[7rem_1.3fr_1fr_8rem_5rem_7rem_8rem] gap-x-3 items-center">
                         {/* 번호 */}
                         <span className="font-mono text-xs font-semibold text-primary group-hover:underline whitespace-nowrap">
                           {c.complaintNumber}
                         </span>
 
                         {/* 제목 */}
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          {c.safetyRelated && <AlertCircle className="h-3.5 w-3.5 text-red-600 shrink-0" />}
-                          {c.recallRisk    && <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1 rounded shrink-0">리콜</span>}
-                          <span className="font-medium text-sm truncate">{c.title}</span>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {c.safetyRelated && <AlertCircle className="h-3.5 w-3.5 text-red-600 shrink-0" />}
+                            {c.recallRisk    && <span className="text-[10px] font-bold text-red-700 bg-red-100 px-1 rounded shrink-0">리콜</span>}
+                            <span className="font-medium text-sm truncate">{c.title}</span>
+                          </div>
+                          {(c.vehicleModel || c.partNumber || c.partNumberDetail) && (
+                            <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                              {[c.vehicleModel, c.partNumberDetail || c.partNumber].filter(Boolean).join(" · ")}
+                            </div>
+                          )}
                         </div>
 
                         {/* 분석내용 */}
@@ -220,7 +227,7 @@ export function ComplaintList({
                         </span>
                       </div>
 
-                      {/* 2행: 발생단계 | 품번 | LOT | 차종 | VIN | 주행거리 | 접수채널 | CAPA | 접수일 */}
+                      {/* 2행: 발생단계 | 재발 | 부품명 | LOT | VIN | 주행거리 | 접수채널 | CAPA | 분석결과 | 접수일 */}
                       <div className="grid grid-cols-[7rem_1fr] gap-x-3 mt-1">
                         {/* 번호 열 아래 빈 공간 맞춤 */}
                         <span className="text-xs text-muted-foreground">
@@ -237,26 +244,14 @@ export function ComplaintList({
                             <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">재발</span>
                           )}
 
-                          {/* 품번 */}
-                          {c.partNumber && (
-                            <span className="text-xs text-muted-foreground">
-                              {c.partNumber}{c.partName ? ` · ${c.partName}` : ""}
-                            </span>
-                          )}
-
-                          {/* 상세 품번 */}
-                          {c.partNumberDetail && (
-                            <span className="text-xs text-muted-foreground font-mono">{c.partNumberDetail}</span>
+                          {/* 부품명 (품번은 제목 아래로 이동) */}
+                          {c.partName && (
+                            <span className="text-xs text-muted-foreground">{c.partName}</span>
                           )}
 
                           {/* LOT */}
                           {c.lotNumber && (
                             <span className="text-xs text-muted-foreground font-mono">LOT {c.lotNumber}</span>
-                          )}
-
-                          {/* 차종 */}
-                          {c.vehicleModel && (
-                            <span className="text-xs text-muted-foreground">{c.vehicleModel}</span>
                           )}
 
                           {/* VIN */}

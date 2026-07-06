@@ -15,6 +15,7 @@ import { AnalysisReportSection } from "@/components/nc/analysis-report-section";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 import { FieldClaimDetailSection } from "@/components/nc/field-claim-detail-section";
 import { ComplaintPhotosPanel } from "@/components/nc/complaint-photos-panel";
+import { AdminRecordPanel } from "@/components/nc/admin-record-panel";
 
 interface Option { id: string; name: string; code?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -46,6 +47,7 @@ interface Props {
   categoriesL2: CategoryL2[];
   sites: Option[];
   linkedCapa: LinkedCapa | null;
+  isOrgAdmin?: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -86,7 +88,7 @@ function SlaIndicator({
   );
 }
 
-export function ComplaintDetailClient({ complaint, customers, parts, categoriesL2, sites, linkedCapa }: Props) {
+export function ComplaintDetailClient({ complaint, customers, parts, categoriesL2, sites, linkedCapa, isOrgAdmin = false }: Props) {
   const router = useRouter();
   const t = useTranslations("complaint");
   const tc = useTranslations("common");
@@ -504,6 +506,16 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
           </div>
 
           <ComplaintPhotosPanel complaintId={complaint.id} />
+
+          {isOrgAdmin && (
+            <AdminRecordPanel
+              currentNumber={complaint.complaintNumber}
+              deleteApiUrl={`/api/nc/complaints/${complaint.id}`}
+              renumberApiUrl={`/api/nc/complaints/${complaint.id}/renumber`}
+              listHref="/complaints"
+              onRenumbered={() => router.refresh()}
+            />
+          )}
         </div>
       </div>
       </div>

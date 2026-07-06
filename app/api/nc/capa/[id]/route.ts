@@ -5,6 +5,7 @@ import { capas, capaActions } from "@/lib/db/schema";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and } from "drizzle-orm";
 import { sendCapaAssignmentEmail } from "@/lib/email";
+import { findBlockingLinks, isRecordAdmin, logAdminAction } from "@/lib/nc/admin-registry";
 
 const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
   ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
@@ -97,4 +98,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   return NextResponse.json(updated);
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isRecordAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { id } = await params;
+  const [existing] = await db
+    .select({ id: capas.id, capaNumber: capas.capaNumber, title: capas.title })
+    .from(capas)
+    .where(and(eq(capas.id, id), eq(capas.orgId, session.user.organizationId)));
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const blockers = await findBlockingLinks("capa", id, session.user.organizationId);
+  if (blockers.length > 0) return NextResponse.json({ error: "Linked", blockers }, { status: 409 });
+
+  await db.delete(capas).where(and(eq(capas.id, id), eq(capas.orgId, session.user.organizationId)));
+  await logAdminAction(session.user.organizationId, "capa", id, session.user.id, "deleted", { number: existing.capaNumber, title: existing.title });
+
+  return NextResponse.json({ ok: true });
 }

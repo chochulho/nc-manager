@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AttachmentSection } from "@/components/nc/attachment-section";
+import { AdminRecordPanel } from "@/components/nc/admin-record-panel";
 import { DocumentChangesSection, type DocChangeItem } from "@/components/capa/document-changes-section";
 import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
 import { formatDate } from "@/lib/utils";
@@ -78,6 +79,7 @@ interface Props {
   sourceNumber: string;
   sourceTitle: string;
   members?: OrgMember[];
+  isOrgAdmin?: boolean;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -96,7 +98,7 @@ const ACTION_TYPE_COLORS: Record<string, string> = {
 
 const ALL_STATUSES = ["open", "in_progress", "actions_implemented", "effectiveness_monitoring", "closed"] as const;
 
-export function CAPADetailClient({ capa: initialCapa, actions: initialActions, sourceNumber, sourceTitle, members = [] }: Props) {
+export function CAPADetailClient({ capa: initialCapa, actions: initialActions, sourceNumber, sourceTitle, members = [], isOrgAdmin = false }: Props) {
   const router = useRouter();
   const t = useTranslations("capa");
   const tCommon = useTranslations("common");
@@ -1076,6 +1078,16 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
               </div>
             )}
           </div>
+
+          {isOrgAdmin && (
+            <AdminRecordPanel
+              currentNumber={capa.capaNumber}
+              deleteApiUrl={`/api/nc/capa/${capa.id}`}
+              renumberApiUrl={`/api/nc/capa/${capa.id}/renumber`}
+              listHref="/capa"
+              onRenumbered={(newNumber) => setCapa((prev) => ({ ...prev, capaNumber: newNumber }))}
+            />
+          )}
         </div>
       </div>
       </div>

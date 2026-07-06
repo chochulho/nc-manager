@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { internalNCs } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { findBlockingLinks, isRecordAdmin, logAdminAction } from "@/lib/nc/admin-registry";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -54,4 +55,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(updated);
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isRecordAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const { id } = await params;
+  const [existing] = await db
+    .select({ id: internalNCs.id, ncNumber: internalNCs.ncNumber, title: internalNCs.title })
+    .from(internalNCs)
+    .where(and(eq(internalNCs.id, id), eq(internalNCs.orgId, session.user.organizationId)));
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const blockers = await findBlockingLinks("internal_nc", id, session.user.organizationId);
+  if (blockers.length > 0) return NextResponse.json({ error: "Linked", blockers }, { status: 409 });
+
+  await db.delete(internalNCs).where(and(eq(internalNCs.id, id), eq(internalNCs.orgId, session.user.organizationId)));
+  await logAdminAction(session.user.organizationId, "internal_nc", id, session.user.id, "deleted", { number: existing.ncNumber, title: existing.title });
+
+  return NextResponse.json({ ok: true });
 }

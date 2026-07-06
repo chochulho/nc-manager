@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { qAlerts } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { isRecordAdmin } from "@/lib/nc/admin-registry";
 import { QAlertDetailClient } from "./q-alert-detail-client";
 
 export default async function QAlertDetailPage({
@@ -22,5 +23,5 @@ export default async function QAlertDetailPage({
 
   if (!alert) notFound();
 
-  return <QAlertDetailClient alert={alert} />;
+  return <QAlertDetailClient alert={alert} isOrgAdmin={isRecordAdmin(session)} />;
 }

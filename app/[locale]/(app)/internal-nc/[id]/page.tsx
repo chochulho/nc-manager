@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { internalNCs, ncSites, ncProcesses, ncParts, ncSuppliers, ncCategoriesL2, capas } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { isRecordAdmin } from "@/lib/nc/admin-registry";
 import { NCDetailClient } from "./nc-detail-client";
 
 export default async function NCDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +37,7 @@ export default async function NCDetailPage({ params }: { params: Promise<{ id: s
       suppliers={suppliers}
       categoriesL2={categoriesL2}
       linkedCapa={linkedCapa}
+      isOrgAdmin={isRecordAdmin(session)}
     />
   );
 }

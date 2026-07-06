@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { lessonsLearned, internalNCs, customerComplaints } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { isRecordAdmin, logAdminAction } from "@/lib/nc/admin-registry";
 
 export async function GET(
   req: NextRequest,
@@ -127,8 +128,19 @@ export async function DELETE(
   if (!session?.user?.organizationId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (!isRecordAdmin(session)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const { id } = await params;
+
+  const [existing] = await db
+    .select({ id: lessonsLearned.id, llNumber: lessonsLearned.llNumber, title: lessonsLearned.title })
+    .from(lessonsLearned)
+    .where(and(eq(lessonsLearned.id, id), eq(lessonsLearned.orgId, session.user.organizationId)));
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   await db
     .delete(lessonsLearned)
@@ -138,6 +150,11 @@ export async function DELETE(
         eq(lessonsLearned.orgId, session.user.organizationId)
       )
     );
+
+  await logAdminAction(session.user.organizationId, "lessons_learned", id, session.user.id, "deleted", {
+    number: existing.llNumber,
+    title: existing.title,
+  });
 
   return NextResponse.json({ ok: true });
 }

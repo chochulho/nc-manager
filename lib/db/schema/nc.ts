@@ -279,7 +279,7 @@ export const ncAttachments = pgTable("nc_attachments", {
 export const ncActivities = pgTable("nc_activities", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
   entityId: text("entity_id").notNull(),
   userId: text("user_id"),
   action: text("action").notNull(),

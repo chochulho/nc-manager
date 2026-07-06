@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { capas, capaActions, internalNCs, customerComplaints } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { isRecordAdmin } from "@/lib/nc/admin-registry";
 import { CAPADetailClient } from "./capa-detail-client";
 
 export default async function CAPADetailPage({
@@ -72,6 +73,7 @@ export default async function CAPADetailPage({
       sourceNumber={sourceNumber}
       sourceTitle={sourceTitle}
       members={members}
+      isOrgAdmin={isRecordAdmin(session)}
     />
   );
 }

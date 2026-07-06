@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { qAlerts } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { isRecordAdmin, logAdminAction } from "@/lib/nc/admin-registry";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -49,11 +50,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!isRecordAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { id } = await params;
-  await db
-    .delete(qAlerts)
+  const [existing] = await db
+    .select({ id: qAlerts.id, alertNumber: qAlerts.alertNumber, title: qAlerts.title })
+    .from(qAlerts)
     .where(and(eq(qAlerts.id, id), eq(qAlerts.orgId, session.user.organizationId)));
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  await db.delete(qAlerts).where(and(eq(qAlerts.id, id), eq(qAlerts.orgId, session.user.organizationId)));
+  await logAdminAction(session.user.organizationId, "q_alert", id, session.user.id, "deleted", { number: existing.alertNumber, title: existing.title });
 
   return NextResponse.json({ ok: true });
 }

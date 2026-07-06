@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { lessonsLearned, internalNCs, customerComplaints, ncCustomers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { isRecordAdmin } from "@/lib/nc/admin-registry";
 import { LLDetailClient } from "./ll-detail-client";
 
 export default async function LLDetailPage({
@@ -55,5 +56,5 @@ export default async function LLDetailPage({
 
   if (!item) notFound();
 
-  return <LLDetailClient item={item} />;
+  return <LLDetailClient item={item} isOrgAdmin={isRecordAdmin(session)} />;
 }
