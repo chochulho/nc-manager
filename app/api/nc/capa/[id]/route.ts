@@ -49,6 +49,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const now = new Date();
   const updates: Record<string, unknown> = { ...body, updatedAt: now };
 
+  if (typeof updates.effectivenessReviewDueAt === "string") {
+    updates.effectivenessReviewDueAt = new Date(updates.effectivenessReviewDueAt);
+  }
+
   if (body.status === "closed" && !body.closedAt) {
     updates.closedAt = now;
   }

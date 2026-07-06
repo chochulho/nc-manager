@@ -171,6 +171,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
         changeRef: form.changeRef || null,
         docChanges: (form.docChanges as DocChangeItem[]).length > 0 ? form.docChanges : null,
         effectivenessReviewDueAt: form.effectivenessReviewDueAt ? new Date(form.effectivenessReviewDueAt) : null,
+        effectivenessReviewerUserId: form.effectivenessReviewerUserId || null,
         effectivenessVerdict: form.effectivenessVerdict || null,
         effectivenessNote: form.effectivenessNote || null,
         recurrenceConfirmed: form.recurrenceConfirmed === "" ? null : form.recurrenceConfirmed === "true",
