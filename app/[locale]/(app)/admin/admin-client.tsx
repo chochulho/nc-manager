@@ -3,10 +3,9 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Shield, Building2, ExternalLink, Database, RefreshCw, Plus, Search } from "lucide-react";
+import { Shield, Building2, ExternalLink, Database, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -38,8 +37,6 @@ interface Props {
 export default function AdminClient({ orgs, categoryCount, currentUser }: Props) {
   const t = useTranslations("admin");
   const [seeding, setSeeding] = useState(false);
-  const [newOrgName, setNewOrgName] = useState("");
-  const [creatingOrg, setCreatingOrg] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagResult, setDiagResult] = useState<Record<string, unknown> | null>(null);
 
@@ -57,34 +54,6 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
       toast.error(t("requestFailed"));
     } finally {
       setSeeding(false);
-    }
-  }
-
-  async function handleCreateOrg() {
-    if (!newOrgName.trim()) {
-      toast.error(t("orgNameRequired"));
-      return;
-    }
-    setCreatingOrg(true);
-    try {
-      const res = await fetch("/api/nc/admin/create-org", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newOrgName.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message ?? t("orgCreated"));
-        setNewOrgName("");
-        // Refresh the page to show updated org list and re-run auth
-        setTimeout(() => window.location.reload(), 1500);
-      } else {
-        toast.error(data.error ?? t("orgCreateFailed"));
-      }
-    } catch {
-      toast.error(t("requestFailed"));
-    } finally {
-      setCreatingOrg(false);
     }
   }
 
@@ -219,32 +188,6 @@ export default function AdminClient({ orgs, categoryCount, currentUser }: Props)
               ))}
             </div>
           )}
-
-          {/* 조직 생성 폼 */}
-          <div className="pt-2 border-t space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">{t("newOrg")}</p>
-            <div className="flex gap-2">
-              <Input
-                value={newOrgName}
-                onChange={(e) => setNewOrgName(e.target.value)}
-                placeholder={t("orgNamePlaceholder")}
-                className="flex-1 text-sm"
-                onKeyDown={(e) => e.key === "Enter" && handleCreateOrg()}
-              />
-              <Button
-                size="sm"
-                onClick={handleCreateOrg}
-                disabled={creatingOrg || !newOrgName.trim()}
-                className="gap-1"
-              >
-                <Plus className={`h-3 w-3 ${creatingOrg ? "animate-spin" : ""}`} />
-                {t("create")}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {t("orgCreationHint")}
-            </p>
-          </div>
         </CardContent>
       </Card>
 
