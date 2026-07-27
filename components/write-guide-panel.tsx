@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { BookOpen, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type GuideType = "internal_nc" | "complaint" | "capa" | "lessons_learned";
+type GuideType = "internal_nc" | "part_nc" | "complaint" | "capa" | "lessons_learned";
 
 interface Props {
   type: GuideType;
@@ -63,6 +63,7 @@ export function WriteGuidePanel({ type, methodology, className }: Props) {
   type TabKey = "nc" | "complaint" | "ll";
   const keyMap: Record<Exclude<GuideType, "capa">, TabKey> = {
     internal_nc: "nc",
+    part_nc: "nc",
     complaint: "complaint",
     lessons_learned: "ll",
   };
@@ -98,7 +99,7 @@ export function WriteGuidePanel({ type, methodology, className }: Props) {
     ];
   }
 
-  const escalationCards: GuideCard[] = (type === "internal_nc" || type === "complaint")
+  const escalationCards: GuideCard[] = (type === "internal_nc" || type === "part_nc" || type === "complaint")
     ? [
         { color: "red",    title: t(`${tk}.e1_title`), body: t(`${tk}.e1_body`) },
         { color: "orange", title: t(`${tk}.e2_title`), body: t(`${tk}.e2_body`) },

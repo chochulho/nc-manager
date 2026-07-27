@@ -23,6 +23,7 @@ interface LLItem {
   llNumber: string;
   title: string;
   sourceInternalNcId: string | null;
+  sourcePartNcId: string | null;
   sourceComplaintId: string | null;
   problemSummary: string | null;
   rootCause: string | null;
@@ -38,6 +39,9 @@ interface LLItem {
   ncNumber: string | null;
   ncTitle: string | null;
   ncSeverity: string | null;
+  pncNumber: string | null;
+  pncTitle: string | null;
+  pncSeverity: string | null;
   complaintNumber: string | null;
   complaintTitle: string | null;
   complaintSeverity: string | null;
@@ -192,7 +196,7 @@ export function LLDetailClient({ item, isOrgAdmin = false }: { item: LLItem; isO
         </div>
 
         {/* Source links */}
-        {(item.ncNumber || item.complaintNumber) && (
+        {(item.ncNumber || item.pncNumber || item.complaintNumber) && (
           <div className="bg-blue-50 rounded-xl border border-blue-100 px-4 py-3 mb-5 flex flex-wrap gap-4">
             {item.ncNumber && (
               <Link
@@ -203,6 +207,17 @@ export function LLDetailClient({ item, isOrgAdmin = false }: { item: LLItem; isO
                 <ExternalLink className="h-3.5 w-3.5" />
                 {t("sourceInternalNc")} {item.ncNumber}
                 {item.ncTitle && <span className="text-gray-500 font-normal">— {item.ncTitle}</span>}
+              </Link>
+            )}
+            {item.pncNumber && (
+              <Link
+                href={`/part-nc/${item.sourcePartNcId}`}
+                className="flex items-center gap-1.5 text-sm hover:underline font-medium"
+                style={{ color: "#2B4B8C" }}
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {t("sourcePartNc")} {item.pncNumber}
+                {item.pncTitle && <span className="text-gray-500 font-normal">— {item.pncTitle}</span>}
               </Link>
             )}
             {item.complaintNumber && (

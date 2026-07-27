@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { lessonsLearned, internalNCs, customerComplaints, ncCustomers } from "@/lib/db/schema";
+import { lessonsLearned, internalNCs, partNCs, customerComplaints, ncCustomers } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { isRecordAdmin } from "@/lib/nc/admin-registry";
 import { LLDetailClient } from "./ll-detail-client";
@@ -22,6 +22,7 @@ export default async function LLDetailPage({
       llNumber: lessonsLearned.llNumber,
       title: lessonsLearned.title,
       sourceInternalNcId: lessonsLearned.sourceInternalNcId,
+      sourcePartNcId: lessonsLearned.sourcePartNcId,
       sourceComplaintId: lessonsLearned.sourceComplaintId,
       problemSummary: lessonsLearned.problemSummary,
       rootCause: lessonsLearned.rootCause,
@@ -38,6 +39,9 @@ export default async function LLDetailPage({
       ncNumber: internalNCs.ncNumber,
       ncTitle: internalNCs.title,
       ncSeverity: internalNCs.severity,
+      pncNumber: partNCs.pncNumber,
+      pncTitle: partNCs.title,
+      pncSeverity: partNCs.severity,
       complaintNumber: customerComplaints.complaintNumber,
       complaintTitle: customerComplaints.title,
       complaintSeverity: customerComplaints.severity,
@@ -45,6 +49,7 @@ export default async function LLDetailPage({
     })
     .from(lessonsLearned)
     .leftJoin(internalNCs, eq(lessonsLearned.sourceInternalNcId, internalNCs.id))
+    .leftJoin(partNCs, eq(lessonsLearned.sourcePartNcId, partNCs.id))
     .leftJoin(customerComplaints, eq(lessonsLearned.sourceComplaintId, customerComplaints.id))
     .leftJoin(ncCustomers, eq(customerComplaints.customerId, ncCustomers.id))
     .where(

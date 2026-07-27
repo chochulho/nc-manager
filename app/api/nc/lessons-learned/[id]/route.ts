@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { lessonsLearned, internalNCs, customerComplaints } from "@/lib/db/schema";
+import { lessonsLearned, internalNCs, partNCs, customerComplaints } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { isRecordAdmin, logAdminAction } from "@/lib/nc/admin-registry";
 
@@ -23,6 +23,7 @@ export async function GET(
       llNumber: lessonsLearned.llNumber,
       title: lessonsLearned.title,
       sourceInternalNcId: lessonsLearned.sourceInternalNcId,
+      sourcePartNcId: lessonsLearned.sourcePartNcId,
       sourceComplaintId: lessonsLearned.sourceComplaintId,
       problemSummary: lessonsLearned.problemSummary,
       rootCause: lessonsLearned.rootCause,
@@ -40,6 +41,11 @@ export async function GET(
       ncTitle: internalNCs.title,
       ncDescription: internalNCs.description,
       ncSeverity: internalNCs.severity,
+      // joined part NC
+      pncNumber: partNCs.pncNumber,
+      pncTitle: partNCs.title,
+      pncDescription: partNCs.description,
+      pncSeverity: partNCs.severity,
       // joined complaint
       complaintNumber: customerComplaints.complaintNumber,
       complaintTitle: customerComplaints.title,
@@ -48,6 +54,7 @@ export async function GET(
     })
     .from(lessonsLearned)
     .leftJoin(internalNCs, eq(lessonsLearned.sourceInternalNcId, internalNCs.id))
+    .leftJoin(partNCs, eq(lessonsLearned.sourcePartNcId, partNCs.id))
     .leftJoin(customerComplaints, eq(lessonsLearned.sourceComplaintId, customerComplaints.id))
     .where(
       and(
@@ -78,6 +85,7 @@ export async function PATCH(
   const {
     title,
     sourceInternalNcId,
+    sourcePartNcId,
     sourceComplaintId,
     problemSummary,
     rootCause,
@@ -94,6 +102,7 @@ export async function PATCH(
     .set({
       ...(title !== undefined && { title }),
       ...(sourceInternalNcId !== undefined && { sourceInternalNcId: sourceInternalNcId || null }),
+      ...(sourcePartNcId !== undefined && { sourcePartNcId: sourcePartNcId || null }),
       ...(sourceComplaintId !== undefined && { sourceComplaintId: sourceComplaintId || null }),
       ...(problemSummary !== undefined && { problemSummary }),
       ...(rootCause !== undefined && { rootCause }),

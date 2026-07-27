@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { capas, capaActions, internalNCs, customerComplaints } from "@/lib/db/schema";
+import { capas, capaActions, internalNCs, partNCs, customerComplaints } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { isRecordAdmin } from "@/lib/nc/admin-registry";
@@ -39,6 +39,12 @@ export default async function CAPADetailPage({
       .from(internalNCs)
       .where(eq(internalNCs.id, capa.sourceId));
     if (nc) { sourceNumber = nc.ncNumber; sourceTitle = nc.title; }
+  } else if (capa.sourceType === "part_nc") {
+    const [pnc] = await db
+      .select({ pncNumber: partNCs.pncNumber, title: partNCs.title })
+      .from(partNCs)
+      .where(eq(partNCs.id, capa.sourceId));
+    if (pnc) { sourceNumber = pnc.pncNumber; sourceTitle = pnc.title; }
   } else if (capa.sourceType === "customer_complaint") {
     const [cc] = await db
       .select({ complaintNumber: customerComplaints.complaintNumber, title: customerComplaints.title })

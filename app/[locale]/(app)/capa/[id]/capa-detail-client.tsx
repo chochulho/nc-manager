@@ -314,6 +314,8 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
 
   const sourceHref = capa.sourceType === "internal_nc"
     ? `/internal-nc/${capa.sourceId}`
+    : capa.sourceType === "part_nc"
+    ? `/part-nc/${capa.sourceId}`
     : capa.sourceType === "customer_complaint"
     ? `/complaints/${capa.sourceId}`
     : null;

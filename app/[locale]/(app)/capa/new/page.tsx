@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { internalNCs, customerComplaints, ncAnalysisReports } from "@/lib/db/schema";
+import { internalNCs, partNCs, customerComplaints, ncAnalysisReports } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NewCAPAForm } from "./new-capa-form";
 
@@ -31,6 +31,15 @@ export default async function NewCAPAPage({
       sourceNumber = nc.ncNumber;
       sourceLabel = `[${nc.ncNumber}] ${nc.title}`;
     }
+  } else if (sourceType === "part_nc" && sourceId) {
+    const [pnc] = await db
+      .select({ pncNumber: partNCs.pncNumber, title: partNCs.title })
+      .from(partNCs)
+      .where(and(eq(partNCs.id, sourceId), eq(partNCs.orgId, orgId)));
+    if (pnc) {
+      sourceNumber = pnc.pncNumber;
+      sourceLabel = `[${pnc.pncNumber}] ${pnc.title}`;
+    }
   } else if (sourceType === "customer_complaint" && sourceId) {
     const [cc] = await db
       .select({
@@ -56,11 +65,15 @@ export default async function NewCAPAPage({
     }
   }
 
-  const [ncList, complaintList] = await Promise.all([
+  const [ncList, partNcList, complaintList] = await Promise.all([
     db.select({ id: internalNCs.id, ncNumber: internalNCs.ncNumber, title: internalNCs.title })
       .from(internalNCs)
       .where(eq(internalNCs.orgId, orgId))
       .orderBy(internalNCs.createdAt),
+    db.select({ id: partNCs.id, pncNumber: partNCs.pncNumber, title: partNCs.title })
+      .from(partNCs)
+      .where(eq(partNCs.orgId, orgId))
+      .orderBy(partNCs.createdAt),
     db.select({ id: customerComplaints.id, complaintNumber: customerComplaints.complaintNumber, title: customerComplaints.title })
       .from(customerComplaints)
       .where(eq(customerComplaints.orgId, orgId))
@@ -76,6 +89,7 @@ export default async function NewCAPAPage({
       initialTitle={sourceTitle}
       initialProblemStatement={sourceDescription}
       ncList={ncList}
+      partNcList={partNcList}
       complaintList={complaintList}
     />
   );

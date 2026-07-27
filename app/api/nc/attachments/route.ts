@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     .where(
       and(
         eq(ncAttachments.orgId, session.user.organizationId),
-        eq(ncAttachments.entityType, entityType as "internal_nc" | "customer_complaint" | "capa" | "q_alert"),
+        eq(ncAttachments.entityType, entityType as "internal_nc" | "part_nc" | "customer_complaint" | "capa" | "q_alert"),
         eq(ncAttachments.entityId, entityId),
       )
     )
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
     .insert(ncAttachments)
     .values({
       orgId: session.user.organizationId,
-      entityType: entityType as "internal_nc" | "customer_complaint" | "capa" | "q_alert",
+      entityType: entityType as "internal_nc" | "part_nc" | "customer_complaint" | "capa" | "q_alert",
       entityId,
       uploadedById: session.user.id,
       filename,

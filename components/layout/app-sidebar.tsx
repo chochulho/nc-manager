@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Link, useRouter, usePathname } from "@/lib/i18n/navigation";
 import {
-  LayoutDashboard, AlertTriangle, MessageSquareWarning, ClipboardCheck,
+  LayoutDashboard, AlertTriangle, PackageX, MessageSquareWarning, ClipboardCheck,
   Database, Users, Shield, LogOut, ChevronDown,
   PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb, ExternalLink, Bell, Building2,
 } from "lucide-react";
@@ -68,6 +68,7 @@ export function AppSidebar({ session, sites = [], currentSiteId = null }: AppSid
   const navItems = [
     { href: "/dashboard", label: t("dashboard"), icon: LayoutDashboard },
     { href: "/internal-nc", label: t("internalNc"), icon: AlertTriangle },
+    { href: "/part-nc", label: t("partNc"), icon: PackageX },
     { href: "/complaints", label: t("complaints"), icon: MessageSquareWarning },
     { href: "/field-analysis", label: t("fieldAnalysis"), icon: MapPin },
     { href: "/capa", label: t("capa"), icon: ClipboardCheck },

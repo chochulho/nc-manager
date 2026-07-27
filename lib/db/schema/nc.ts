@@ -70,6 +70,69 @@ export const internalNCs = pgTable("nc_internal_ncs", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+// ── Part NC (부품 부적합) ───────────────────────────────────────────────────────
+
+export const partNCs = pgTable("nc_part_ncs", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull(),
+  pncNumber: text("pnc_number").notNull(),
+
+  discoveredAt: timestamp("discovered_at", { mode: "date" }).notNull(),
+  discoveryStage: text("discovery_stage", {
+    enum: ["incoming", "in_process", "outgoing", "internal_audit", "msa", "other"],
+  }).notNull(),
+  discoveredBySiteId: text("discovered_by_site_id").references(() => ncSites.id),
+  discoveredByProcessId: text("discovered_by_process_id").references(() => ncProcesses.id),
+  discoveredByUserId: text("discovered_by_user_id").notNull(),
+
+  occurrenceSiteId: text("occurrence_site_id").references(() => ncSites.id),
+  occurrenceProcessId: text("occurrence_process_id").references(() => ncProcesses.id),
+  occurrenceSupplierId: text("occurrence_supplier_id").references(() => ncSuppliers.id),
+
+  partId: text("part_id").references(() => ncParts.id),
+  lotNumber: text("lot_number"),
+  quantityInspected: numeric("quantity_inspected"),
+  quantityNc: numeric("quantity_nc"),
+
+  categoryL2Id: text("category_l2_id").references(() => ncCategoriesL2.id),
+  categoryL3Id: text("category_l3_id").references(() => ncCategoriesL3.id),
+  tags: text("tags").array(),
+
+  title: text("title").notNull(),
+  description: text("description"),
+
+  severity: text("severity", { enum: ["critical", "major", "minor"] }).notNull(),
+  safetyRelated: boolean("safety_related").default(false).notNull(),
+  regulatoryRelated: boolean("regulatory_related").default(false).notNull(),
+
+  status: text("status", {
+    enum: ["open", "contained", "disposition_decided", "capa_in_progress", "closed"],
+  }).default("open").notNull(),
+
+  containmentLocation: text("containment_location"),
+  containmentQuantity: numeric("containment_quantity"),
+  containedAt: timestamp("contained_at", { mode: "date" }),
+  containedByUserId: text("contained_by_user_id"),
+
+  dispositionType: text("disposition_type", {
+    enum: ["rework", "deviation", "scrap", "return_to_supplier", "use_as_is"],
+  }),
+  dispositionApprovedByUserId: text("disposition_approved_by_user_id"),
+  dispositionApprovedAt: timestamp("disposition_approved_at", { mode: "date" }),
+  dispositionNotes: text("disposition_notes"),
+
+  capaId: text("capa_id"),
+  capaRequired: boolean("capa_required").default(false).notNull(),
+
+  costScrap: numeric("cost_scrap"),
+  costRework: numeric("cost_rework"),
+  costOther: numeric("cost_other"),
+
+  closedAt: timestamp("closed_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
 // ── Customer Complaint ────────────────────────────────────────────────────────
 
 export const customerComplaints = pgTable("nc_customer_complaints", {
@@ -148,7 +211,7 @@ export const capas = pgTable("nc_capas", {
 
   siteId: text("site_id").references(() => ncSites.id),  // 상위 NC/Complaint에서 복사 (접근 제어 기준)
   sourceType: text("source_type", {
-    enum: ["internal_nc", "customer_complaint", "audit", "change", "gauge", "other"],
+    enum: ["internal_nc", "part_nc", "customer_complaint", "audit", "change", "gauge", "other"],
   }).notNull(),
   sourceId: text("source_id").notNull(),
 
@@ -266,7 +329,7 @@ export const approvalActions = pgTable("nc_approval_actions", {
 export const ncAttachments = pgTable("nc_attachments", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "part_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
   entityId: text("entity_id").notNull(),
   uploadedById: text("uploaded_by_id").notNull(),
   filename: text("filename").notNull(),
@@ -279,7 +342,7 @@ export const ncAttachments = pgTable("nc_attachments", {
 export const ncActivities = pgTable("nc_activities", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "part_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
   entityId: text("entity_id").notNull(),
   userId: text("user_id"),
   action: text("action").notNull(),
@@ -334,7 +397,7 @@ export const ncAnalysisReports = pgTable("nc_analysis_reports", {
 export const ncDefectNotifications = pgTable("nc_defect_notifications", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "part_nc", "customer_complaint"] }).notNull(),
   entityId: text("entity_id").notNull(),
   subject: text("subject").notNull(),
   body: text("body").notNull(),
@@ -370,7 +433,7 @@ export const qAlerts = pgTable("nc_q_alerts", {
   targetProcess: text("target_process"),
 
   sourceType: text("source_type", {
-    enum: ["capa", "internal_nc", "customer_complaint", "standalone"],
+    enum: ["capa", "internal_nc", "part_nc", "customer_complaint", "standalone"],
   }),
   sourceId: text("source_id"),
   sourceNumber: text("source_number"),
@@ -396,7 +459,7 @@ export const qAlerts = pgTable("nc_q_alerts", {
 
 export const ncSequences = pgTable("nc_sequences", {
   orgId: text("org_id").notNull(),
-  entityType: text("entity_type", { enum: ["internal_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
+  entityType: text("entity_type", { enum: ["internal_nc", "part_nc", "customer_complaint", "capa", "lessons_learned", "q_alert"] }).notNull(),
   year: integer("year").notNull(),
   lastSeq: integer("last_seq").default(0).notNull(),
 }, (t) => [
@@ -414,6 +477,7 @@ export const lessonsLearned = pgTable("nc_lessons_learned", {
 
   // 소스 연결 (옵션)
   sourceInternalNcId: text("source_internal_nc_id").references(() => internalNCs.id, { onDelete: "set null" }),
+  sourcePartNcId: text("source_part_nc_id").references(() => partNCs.id, { onDelete: "set null" }),
   sourceComplaintId: text("source_complaint_id").references(() => customerComplaints.id, { onDelete: "set null" }),
 
   // 본문 섹션
@@ -441,6 +505,10 @@ export const internalNCsRelations = relations(internalNCs, ({ one }) => ({
   part: one(ncParts, { fields: [internalNCs.partId], references: [ncParts.id] }),
 }));
 
+export const partNCsRelations = relations(partNCs, ({ one }) => ({
+  part: one(ncParts, { fields: [partNCs.partId], references: [ncParts.id] }),
+}));
+
 export const customerComplaintsRelations = relations(customerComplaints, ({ one }) => ({
   customer: one(ncCustomers, { fields: [customerComplaints.customerId], references: [ncCustomers.id] }),
   part: one(ncParts, { fields: [customerComplaints.partId], references: [ncParts.id] }),
@@ -453,5 +521,6 @@ export const capaRelations = relations(capas, ({ many }) => ({
 
 export const lessonsLearnedRelations = relations(lessonsLearned, ({ one }) => ({
   sourceInternalNc: one(internalNCs, { fields: [lessonsLearned.sourceInternalNcId], references: [internalNCs.id] }),
+  sourcePartNc: one(partNCs, { fields: [lessonsLearned.sourcePartNcId], references: [partNCs.id] }),
   sourceComplaint: one(customerComplaints, { fields: [lessonsLearned.sourceComplaintId], references: [customerComplaints.id] }),
 }));

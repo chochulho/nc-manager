@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface NcItem { id: string; ncNumber: string; title: string }
+interface PartNcItem { id: string; pncNumber: string; title: string }
 interface ComplaintItem { id: string; complaintNumber: string; title: string }
 
 interface Props {
@@ -24,10 +25,11 @@ interface Props {
   initialTitle?: string;
   initialProblemStatement?: string;
   ncList: NcItem[];
+  partNcList: PartNcItem[];
   complaintList: ComplaintItem[];
 }
 
-export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, initialTitle, initialProblemStatement, ncList, complaintList }: Props) {
+export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, initialTitle, initialProblemStatement, ncList, partNcList, complaintList }: Props) {
   const t = useTranslations("capa");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -125,6 +127,7 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="internal_nc">{t("sourceTypes.internal_nc")}</SelectItem>
+                    <SelectItem value="part_nc">{t("sourceTypes.part_nc")}</SelectItem>
                     <SelectItem value="customer_complaint">{t("sourceTypes.customer_complaint")}</SelectItem>
                     <SelectItem value="audit">{t("sourceTypes.audit")}</SelectItem>
                     <SelectItem value="change">{t("sourceTypes.change")}</SelectItem>
@@ -146,6 +149,15 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
                     <SelectContent>
                       {ncList.map((nc) => (
                         <SelectItem key={nc.id} value={nc.id}>[{nc.ncNumber}] {nc.title}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : form.sourceType === "part_nc" ? (
+                  <Select value={form.sourceId} onValueChange={(v) => set("sourceId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={t("selectPartNc")} /></SelectTrigger>
+                    <SelectContent>
+                      {partNcList.map((pnc) => (
+                        <SelectItem key={pnc.id} value={pnc.id}>[{pnc.pncNumber}] {pnc.title}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

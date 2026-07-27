@@ -55,6 +55,7 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
 const SOURCE_HREF: Record<string, (id: string) => string> = {
   capa: (id) => `/capa/${id}`,
   internal_nc: (id) => `/internal-nc/${id}`,
+  part_nc: (id) => `/part-nc/${id}`,
   customer_complaint: (id) => `/complaints/${id}`,
 };
 

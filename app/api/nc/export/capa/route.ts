@@ -7,7 +7,7 @@ import { parsePeriodParams, periodToDateRange, periodLabel } from "@/lib/period-
 import * as XLSX from "xlsx";
 
 const SOURCE_LABELS: Record<string, string> = {
-  internal_nc: "내부부적합", customer_complaint: "고객클레임",
+  internal_nc: "공정부적합", part_nc: "부품부적합", customer_complaint: "고객클레임",
   audit: "심사", change: "변경관리", gauge: "게이지", other: "기타",
 };
 const METHODOLOGY_LABELS: Record<string, string> = {

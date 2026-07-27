@@ -22,6 +22,14 @@ interface NCOption {
   severity: string;
 }
 
+interface PNCOption {
+  id: string;
+  pncNumber: string;
+  title: string;
+  description: string | null;
+  severity: string;
+}
+
 interface ComplaintOption {
   id: string;
   complaintNumber: string;
@@ -33,18 +41,21 @@ interface ComplaintOption {
 
 interface Props {
   ncs: NCOption[];
+  pncs: PNCOption[];
   complaints: ComplaintOption[];
 }
 
-export function NewLLForm({ ncs, complaints }: Props) {
+export function NewLLForm({ ncs, pncs, complaints }: Props) {
   const t = useTranslations("ll");
   const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const [includeNc, setIncludeNc] = useState(false);
+  const [includePnc, setIncludePnc] = useState(false);
   const [includeComplaint, setIncludeComplaint] = useState(true);
   const [selectedNcId, setSelectedNcId] = useState("");
+  const [selectedPncId, setSelectedPncId] = useState("");
   const [selectedComplaintId, setSelectedComplaintId] = useState("");
 
   const [form, setForm] = useState({
@@ -65,6 +76,7 @@ export function NewLLForm({ ncs, complaints }: Props) {
 
   function handleAutoDraft() {
     const nc = ncs.find((n) => n.id === selectedNcId);
+    const pnc = pncs.find((p) => p.id === selectedPncId);
     const complaint = complaints.find((c) => c.id === selectedComplaintId);
 
     let title = "";
@@ -76,6 +88,17 @@ export function NewLLForm({ ncs, complaints }: Props) {
       title = title || nc.title;
       problemSummary = `[NC ${nc.ncNumber}] ${nc.title}`;
       if (nc.description) problemSummary += `\n\n${nc.description}`;
+    }
+
+    if (pnc && includePnc) {
+      const prefix = `[PNC ${pnc.pncNumber}] ${pnc.title}`;
+      if (problemSummary) {
+        problemSummary = problemSummary + `\n\n${prefix}`;
+      } else {
+        title = title || pnc.title;
+        problemSummary = prefix;
+      }
+      if (pnc.description) problemSummary += `\n\n${pnc.description}`;
     }
 
     if (complaint && includeComplaint) {
@@ -123,6 +146,7 @@ export function NewLLForm({ ncs, complaints }: Props) {
         body: JSON.stringify({
           title: form.title.trim(),
           sourceInternalNcId: includeNc && selectedNcId ? selectedNcId : null,
+          sourcePartNcId: includePnc && selectedPncId ? selectedPncId : null,
           sourceComplaintId: includeComplaint && selectedComplaintId ? selectedComplaintId : null,
           problemSummary: form.problemSummary || null,
           rootCause: form.rootCause || null,
@@ -147,7 +171,7 @@ export function NewLLForm({ ncs, complaints }: Props) {
   }
 
   const canAutoDraft =
-    (includeNc && selectedNcId) || (includeComplaint && selectedComplaintId);
+    (includeNc && selectedNcId) || (includePnc && selectedPncId) || (includeComplaint && selectedComplaintId);
 
   return (
     <div className="flex gap-4 items-start">
@@ -200,6 +224,41 @@ export function NewLLForm({ ncs, complaints }: Props) {
                               {nc.ncNumber}
                             </span>
                             {nc.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {/* Part NC */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includePnc}
+                    onChange={(e) => {
+                      setIncludePnc(e.target.checked);
+                      if (!e.target.checked) setSelectedPncId("");
+                    }}
+                    className="h-4 w-4 rounded"
+                  />
+                  <span className="text-sm font-medium text-gray-700">{t("sourcePncCheck")}</span>
+                </label>
+                {includePnc && (
+                  <div className="mt-2 ml-6">
+                    <Select value={selectedPncId} onValueChange={setSelectedPncId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={tc("select")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pncs.map((pnc) => (
+                          <SelectItem key={pnc.id} value={pnc.id}>
+                            <span className="font-mono text-xs mr-2" style={{ color: "#2B4B8C" }}>
+                              {pnc.pncNumber}
+                            </span>
+                            {pnc.title}
                           </SelectItem>
                         ))}
                       </SelectContent>

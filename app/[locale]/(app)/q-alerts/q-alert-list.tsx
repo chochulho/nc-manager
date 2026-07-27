@@ -30,7 +30,8 @@ const STATUS_CONFIG: Record<string, { label: string; className: string; icon: Re
 
 const SOURCE_LABELS: Record<string, string> = {
   capa: "CAPA",
-  internal_nc: "내부 부적합",
+  internal_nc: "공정 부적합",
+  part_nc: "부품 부적합",
   customer_complaint: "고객 클레임",
   standalone: "독립",
 };

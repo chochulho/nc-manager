@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     .where(
       and(
         eq(ncDefectNotifications.orgId, session.user.organizationId),
-        eq(ncDefectNotifications.entityType, entityType as "internal_nc" | "customer_complaint"),
+        eq(ncDefectNotifications.entityType, entityType as "internal_nc" | "part_nc" | "customer_complaint"),
         eq(ncDefectNotifications.entityId, entityId),
       )
     )
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const { entityType, entityId, subject, body: msgBody, recipientEmails } = body as {
-    entityType: "internal_nc" | "customer_complaint";
+    entityType: "internal_nc" | "part_nc" | "customer_complaint";
     entityId: string;
     subject: string;
     body: string;

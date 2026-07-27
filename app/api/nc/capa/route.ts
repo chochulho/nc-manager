@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { capas, ncSequences, internalNCs, customerComplaints } from "@/lib/db/schema";
+import { capas, ncSequences, internalNCs, partNCs, customerComplaints } from "@/lib/db/schema";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
@@ -77,6 +77,10 @@ export async function POST(req: NextRequest) {
     const [src] = await db.select({ siteId: internalNCs.occurrenceSiteId }).from(internalNCs)
       .where(and(eq(internalNCs.id, sourceId), eq(internalNCs.orgId, session.user.organizationId))).limit(1);
     sourceSiteId = src?.siteId ?? null;
+  } else if (sourceType === "part_nc") {
+    const [src] = await db.select({ siteId: partNCs.occurrenceSiteId }).from(partNCs)
+      .where(and(eq(partNCs.id, sourceId), eq(partNCs.orgId, session.user.organizationId))).limit(1);
+    sourceSiteId = src?.siteId ?? null;
   } else if (sourceType === "customer_complaint") {
     const [src] = await db.select({ siteId: customerComplaints.siteId }).from(customerComplaints)
       .where(and(eq(customerComplaints.id, sourceId), eq(customerComplaints.orgId, session.user.organizationId))).limit(1);
@@ -105,6 +109,11 @@ export async function POST(req: NextRequest) {
       .update(internalNCs)
       .set({ capaId: capa.id, status: "capa_in_progress" })
       .where(and(eq(internalNCs.id, sourceId), eq(internalNCs.orgId, session.user.organizationId)));
+  } else if (sourceType === "part_nc") {
+    await db
+      .update(partNCs)
+      .set({ capaId: capa.id, status: "capa_in_progress" })
+      .where(and(eq(partNCs.id, sourceId), eq(partNCs.orgId, session.user.organizationId)));
   } else if (sourceType === "customer_complaint") {
     await db
       .update(customerComplaints)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { lessonsLearned, ncSequences, internalNCs, customerComplaints } from "@/lib/db/schema";
+import { lessonsLearned, ncSequences, internalNCs, partNCs, customerComplaints } from "@/lib/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
       llNumber: lessonsLearned.llNumber,
       title: lessonsLearned.title,
       sourceInternalNcId: lessonsLearned.sourceInternalNcId,
+      sourcePartNcId: lessonsLearned.sourcePartNcId,
       sourceComplaintId: lessonsLearned.sourceComplaintId,
       problemSummary: lessonsLearned.problemSummary,
       rootCause: lessonsLearned.rootCause,
@@ -47,11 +48,14 @@ export async function GET(req: NextRequest) {
       updatedAt: lessonsLearned.updatedAt,
       // joined NC info
       ncNumber: internalNCs.ncNumber,
+      // joined part NC info
+      pncNumber: partNCs.pncNumber,
       // joined complaint info
       complaintNumber: customerComplaints.complaintNumber,
     })
     .from(lessonsLearned)
     .leftJoin(internalNCs, eq(lessonsLearned.sourceInternalNcId, internalNCs.id))
+    .leftJoin(partNCs, eq(lessonsLearned.sourcePartNcId, partNCs.id))
     .leftJoin(customerComplaints, eq(lessonsLearned.sourceComplaintId, customerComplaints.id))
     .where(eq(lessonsLearned.orgId, session.user.organizationId))
     .orderBy(desc(lessonsLearned.createdAt));
@@ -69,6 +73,7 @@ export async function POST(req: NextRequest) {
   const {
     title,
     sourceInternalNcId,
+    sourcePartNcId,
     sourceComplaintId,
     problemSummary,
     rootCause,
@@ -93,6 +98,7 @@ export async function POST(req: NextRequest) {
       llNumber,
       title: title.trim(),
       sourceInternalNcId: sourceInternalNcId || null,
+      sourcePartNcId: sourcePartNcId || null,
       sourceComplaintId: sourceComplaintId || null,
       problemSummary: problemSummary || null,
       rootCause: rootCause || null,

@@ -22,7 +22,7 @@ function viewUrl(id: string) {
 }
 
 interface Props {
-  entityType: "internal_nc" | "customer_complaint" | "capa" | "q_alert";
+  entityType: "internal_nc" | "part_nc" | "customer_complaint" | "capa" | "q_alert";
   entityId: string;
 }
 

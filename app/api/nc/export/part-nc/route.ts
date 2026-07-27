@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { internalNCs, ncParts, ncCategoriesL2, ncSuppliers } from "@/lib/db/schema";
+import { partNCs, ncParts, ncCategoriesL2, ncSuppliers } from "@/lib/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { parsePeriodParams, periodToDateRange, periodLabel } from "@/lib/period-utils";
 import * as XLSX from "xlsx";
@@ -28,43 +28,43 @@ export async function GET(req: NextRequest) {
   const { year, period } = parsePeriodParams(sp.get("year") ?? undefined, sp.get("period") ?? undefined);
   const range = periodToDateRange(year, period);
 
-  const conditions = [eq(internalNCs.orgId, session.user.organizationId)];
+  const conditions = [eq(partNCs.orgId, session.user.organizationId)];
   if (range) {
-    conditions.push(gte(internalNCs.discoveredAt, range.gte));
-    conditions.push(lte(internalNCs.discoveredAt, range.lte));
+    conditions.push(gte(partNCs.discoveredAt, range.gte));
+    conditions.push(lte(partNCs.discoveredAt, range.lte));
   }
 
   const rows = await db
     .select({
-      ncNumber: internalNCs.ncNumber,
-      title: internalNCs.title,
-      discoveredAt: internalNCs.discoveredAt,
-      discoveryStage: internalNCs.discoveryStage,
-      severity: internalNCs.severity,
-      status: internalNCs.status,
-      safetyRelated: internalNCs.safetyRelated,
-      lotNumber: internalNCs.lotNumber,
-      quantityInspected: internalNCs.quantityInspected,
-      quantityNc: internalNCs.quantityNc,
-      description: internalNCs.description,
-      dispositionType: internalNCs.dispositionType,
-      capaRequired: internalNCs.capaRequired,
-      createdAt: internalNCs.createdAt,
+      pncNumber: partNCs.pncNumber,
+      title: partNCs.title,
+      discoveredAt: partNCs.discoveredAt,
+      discoveryStage: partNCs.discoveryStage,
+      severity: partNCs.severity,
+      status: partNCs.status,
+      safetyRelated: partNCs.safetyRelated,
+      lotNumber: partNCs.lotNumber,
+      quantityInspected: partNCs.quantityInspected,
+      quantityNc: partNCs.quantityNc,
+      description: partNCs.description,
+      dispositionType: partNCs.dispositionType,
+      capaRequired: partNCs.capaRequired,
+      createdAt: partNCs.createdAt,
       partName: ncParts.partName,
       categoryCode: ncCategoriesL2.code,
       supplierName: ncSuppliers.name,
-      discoveredByUserId: internalNCs.discoveredByUserId,
+      discoveredByUserId: partNCs.discoveredByUserId,
     })
-    .from(internalNCs)
-    .leftJoin(ncParts, eq(internalNCs.partId, ncParts.id))
-    .leftJoin(ncCategoriesL2, eq(internalNCs.categoryL2Id, ncCategoriesL2.id))
-    .leftJoin(ncSuppliers, eq(internalNCs.occurrenceSupplierId, ncSuppliers.id))
+    .from(partNCs)
+    .leftJoin(ncParts, eq(partNCs.partId, ncParts.id))
+    .leftJoin(ncCategoriesL2, eq(partNCs.categoryL2Id, ncCategoriesL2.id))
+    .leftJoin(ncSuppliers, eq(partNCs.occurrenceSupplierId, ncSuppliers.id))
     .where(and(...conditions))
-    .orderBy(desc(internalNCs.discoveredAt))
+    .orderBy(desc(partNCs.discoveredAt))
     .limit(5000);
 
   const data = rows.map((r) => ({
-    "NC번호": r.ncNumber,
+    "PNC번호": r.pncNumber,
     "제목": r.title,
     "발견일": r.discoveredAt ? new Date(r.discoveredAt).toLocaleDateString("ko-KR") : "",
     "발견단계": DISCOVERY_STAGE_LABELS[r.discoveryStage] ?? r.discoveryStage,
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
 
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "공정부적합");
+  XLSX.utils.book_append_sheet(wb, ws, "부품부적합");
 
   // Column widths
   ws["!cols"] = [
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
 
   const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   const label = periodLabel(year, period).replace(/\s/g, "_");
-  const filename = `공정부적합_${label}.xlsx`;
+  const filename = `부품부적합_${label}.xlsx`;
 
   return new NextResponse(buf, {
     headers: {

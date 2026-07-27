@@ -19,7 +19,7 @@ interface Notification {
 }
 
 interface Props {
-  entityType: "internal_nc" | "customer_complaint";
+  entityType: "internal_nc" | "part_nc" | "customer_complaint";
   entityId: string;
 }
 

@@ -1,11 +1,11 @@
 import { db } from "@/lib/db";
 import type { AppSession } from "@/lib/auth";
 import {
-  internalNCs, customerComplaints, capas, qAlerts, lessonsLearned, ncSequences, ncActivities,
+  internalNCs, partNCs, customerComplaints, capas, qAlerts, lessonsLearned, ncSequences, ncActivities,
 } from "@/lib/db/schema";
 import { eq, and, ne, sql } from "drizzle-orm";
 
-export type EntityKind = "internal_nc" | "customer_complaint" | "capa" | "q_alert" | "lessons_learned";
+export type EntityKind = "internal_nc" | "part_nc" | "customer_complaint" | "capa" | "q_alert" | "lessons_learned";
 
 /** 등록번호 변경/삭제 등 관리자 전용 작업을 수행할 권한이 있는지 확인한다. */
 export function isRecordAdmin(session: AppSession): boolean {
@@ -14,6 +14,7 @@ export function isRecordAdmin(session: AppSession): boolean {
 
 const PREFIX: Record<EntityKind, string> = {
   internal_nc: "NC",
+  part_nc: "PNC",
   customer_complaint: "CC",
   capa: "CAPA",
   q_alert: "QA",
@@ -31,7 +32,7 @@ export function formatNumber(kind: EntityKind, year: number, seq: number): strin
 export async function findBlockingLinks(kind: EntityKind, id: string, orgId: string): Promise<string[]> {
   const blockers: string[] = [];
 
-  async function capaBlockerBySourceId(sourceType: "internal_nc" | "customer_complaint") {
+  async function capaBlockerBySourceId(sourceType: "internal_nc" | "part_nc" | "customer_complaint") {
     const rows = await db
       .select({ n: capas.capaNumber })
       .from(capas)
@@ -39,7 +40,7 @@ export async function findBlockingLinks(kind: EntityKind, id: string, orgId: str
     rows.forEach((r) => blockers.push(`연결된 CAPA(${r.n})가 있어 삭제할 수 없습니다`));
   }
 
-  async function qAlertBlockers(sourceType: "internal_nc" | "customer_complaint" | "capa") {
+  async function qAlertBlockers(sourceType: "internal_nc" | "part_nc" | "customer_complaint" | "capa") {
     const rows = await db
       .select({ n: qAlerts.alertNumber })
       .from(qAlerts)
@@ -65,6 +66,18 @@ export async function findBlockingLinks(kind: EntityKind, id: string, orgId: str
     llRows.forEach((r) => blockers.push(`연결된 레슨런(${r.n})이 있어 삭제할 수 없습니다`));
   }
 
+  if (kind === "part_nc") {
+    const [pnc] = await db.select({ capaId: partNCs.capaId }).from(partNCs)
+      .where(and(eq(partNCs.id, id), eq(partNCs.orgId, orgId)));
+    const capaNumber = await capaNumberById(pnc?.capaId ?? null);
+    if (capaNumber) blockers.push(`연결된 CAPA(${capaNumber})가 있어 삭제할 수 없습니다`);
+    await capaBlockerBySourceId("part_nc");
+    await qAlertBlockers("part_nc");
+    const llRows = await db.select({ n: lessonsLearned.llNumber }).from(lessonsLearned)
+      .where(and(eq(lessonsLearned.orgId, orgId), eq(lessonsLearned.sourcePartNcId, id)));
+    llRows.forEach((r) => blockers.push(`연결된 레슨런(${r.n})이 있어 삭제할 수 없습니다`));
+  }
+
   if (kind === "customer_complaint") {
     const [c] = await db.select({ capaId: customerComplaints.capaId }).from(customerComplaints)
       .where(and(eq(customerComplaints.id, id), eq(customerComplaints.orgId, orgId)));
@@ -80,7 +93,10 @@ export async function findBlockingLinks(kind: EntityKind, id: string, orgId: str
   if (kind === "capa") {
     const [nc] = await db.select({ n: internalNCs.ncNumber }).from(internalNCs)
       .where(and(eq(internalNCs.orgId, orgId), eq(internalNCs.capaId, id)));
-    if (nc) blockers.push(`연결된 내부 부적합(${nc.n})이 있어 삭제할 수 없습니다`);
+    if (nc) blockers.push(`연결된 공정 부적합(${nc.n})이 있어 삭제할 수 없습니다`);
+    const [pnc] = await db.select({ n: partNCs.pncNumber }).from(partNCs)
+      .where(and(eq(partNCs.orgId, orgId), eq(partNCs.capaId, id)));
+    if (pnc) blockers.push(`연결된 부품 부적합(${pnc.n})이 있어 삭제할 수 없습니다`);
     const [cc] = await db.select({ n: customerComplaints.complaintNumber }).from(customerComplaints)
       .where(and(eq(customerComplaints.orgId, orgId), eq(customerComplaints.capaId, id)));
     if (cc) blockers.push(`연결된 고객 클레임(${cc.n})이 있어 삭제할 수 없습니다`);
@@ -93,7 +109,7 @@ export async function findBlockingLinks(kind: EntityKind, id: string, orgId: str
 }
 
 /**
- * CAPA를 가리키는 내부 부적합/고객 클레임의 capaId 역참조를 해제한다.
+ * CAPA를 가리키는 공정 부적합/부품 부적합/고객 클레임의 capaId 역참조를 해제한다.
  * CAPA 삭제를 막는 역참조 링크를 끊기 위한 용도 (Q-Alert 등 실제 자식 레코드는 대상이 아님).
  */
 export async function unlinkCapaBackReferences(
@@ -106,6 +122,12 @@ export async function unlinkCapaBackReferences(
     .where(and(eq(internalNCs.orgId, orgId), eq(internalNCs.capaId, capaId)))
     .returning({ n: internalNCs.ncNumber });
 
+  const pncRows = await db
+    .update(partNCs)
+    .set({ capaId: null })
+    .where(and(eq(partNCs.orgId, orgId), eq(partNCs.capaId, capaId)))
+    .returning({ n: partNCs.pncNumber });
+
   const ccRows = await db
     .update(customerComplaints)
     .set({ capaId: null })
@@ -113,7 +135,8 @@ export async function unlinkCapaBackReferences(
     .returning({ n: customerComplaints.complaintNumber });
 
   const unlinked = [
-    ...ncRows.map((r) => `내부 부적합(${r.n})`),
+    ...ncRows.map((r) => `공정 부적합(${r.n})`),
+    ...pncRows.map((r) => `부품 부적합(${r.n})`),
     ...ccRows.map((r) => `고객 클레임(${r.n})`),
   ];
 
@@ -139,6 +162,11 @@ export async function renumberEntity(
       case "internal_nc": {
         const rows = await db.select({ id: internalNCs.id }).from(internalNCs)
           .where(and(eq(internalNCs.orgId, orgId), eq(internalNCs.ncNumber, newNumber), ne(internalNCs.id, id)));
+        return rows.length > 0;
+      }
+      case "part_nc": {
+        const rows = await db.select({ id: partNCs.id }).from(partNCs)
+          .where(and(eq(partNCs.orgId, orgId), eq(partNCs.pncNumber, newNumber), ne(partNCs.id, id)));
         return rows.length > 0;
       }
       case "customer_complaint": {
@@ -172,6 +200,9 @@ export async function renumberEntity(
     case "internal_nc":
       await db.update(internalNCs).set({ ncNumber: newNumber }).where(and(eq(internalNCs.id, id), eq(internalNCs.orgId, orgId)));
       break;
+    case "part_nc":
+      await db.update(partNCs).set({ pncNumber: newNumber }).where(and(eq(partNCs.id, id), eq(partNCs.orgId, orgId)));
+      break;
     case "customer_complaint":
       await db.update(customerComplaints).set({ complaintNumber: newNumber }).where(and(eq(customerComplaints.id, id), eq(customerComplaints.orgId, orgId)));
       break;
@@ -186,7 +217,7 @@ export async function renumberEntity(
       break;
   }
 
-  if (kind === "internal_nc" || kind === "customer_complaint" || kind === "capa") {
+  if (kind === "internal_nc" || kind === "part_nc" || kind === "customer_complaint" || kind === "capa") {
     await db.update(qAlerts).set({ sourceNumber: newNumber })
       .where(and(eq(qAlerts.orgId, orgId), eq(qAlerts.sourceType, kind), eq(qAlerts.sourceId, id)));
   }

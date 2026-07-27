@@ -151,7 +151,7 @@ export function AdminRecordPanel({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            이 기록을 가리키는 다른 기록(내부 부적합/고객 클레임)의 연결만 끊습니다. 삭제를 막는 상호 참조를 풀 때 사용하세요.
+            이 기록을 가리키는 다른 기록(공정 부적합/부품 부적합/고객 클레임)의 연결만 끊습니다. 삭제를 막는 상호 참조를 풀 때 사용하세요.
           </p>
         </div>
       )}

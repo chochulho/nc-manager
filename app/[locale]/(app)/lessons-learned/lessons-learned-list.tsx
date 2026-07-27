@@ -16,8 +16,10 @@ interface LLItem {
   status: string;
   createdAt: Date;
   sourceInternalNcId: string | null;
+  sourcePartNcId: string | null;
   sourceComplaintId: string | null;
   ncNumber: string | null;
+  pncNumber: string | null;
   complaintNumber: string | null;
 }
 
@@ -76,6 +78,7 @@ export function LessonsLearnedList({ items }: { items: LLItem[] }) {
                 const st = statusConfig[item.status] ?? statusConfig.draft;
                 const sources: string[] = [];
                 if (item.ncNumber) sources.push(item.ncNumber);
+                if (item.pncNumber) sources.push(item.pncNumber);
                 if (item.complaintNumber) sources.push(item.complaintNumber);
 
                 return (
@@ -122,6 +125,15 @@ export function LessonsLearnedList({ items }: { items: LLItem[] }) {
                               style={{ color: "#F26B3A" }}
                             >
                               {item.ncNumber}
+                            </Link>
+                          )}
+                          {item.pncNumber && (
+                            <Link
+                              href={`/part-nc/${item.sourcePartNcId}`}
+                              className="text-xs hover:underline"
+                              style={{ color: "#F26B3A" }}
+                            >
+                              {item.pncNumber}
                             </Link>
                           )}
                           {item.complaintNumber && (

@@ -1,14 +1,14 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { capas, internalNCs, customerComplaints } from "@/lib/db/schema";
+import { capas, internalNCs, partNCs, customerComplaints } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NewQAlertForm } from "./new-q-alert-form";
 
 export default async function NewQAlertPage({
   searchParams,
 }: {
-  searchParams: Promise<{ capaId?: string; ncId?: string; complaintId?: string }>;
+  searchParams: Promise<{ capaId?: string; ncId?: string; pncId?: string; complaintId?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.organizationId) redirect("/dashboard");
@@ -49,6 +49,18 @@ export default async function NewQAlertPage({
         sourceType: "internal_nc",
         sourceId: nc.id,
         sourceNumber: nc.ncNumber,
+      };
+    }
+  } else if (sp.pncId) {
+    const [pnc] = await db.select().from(partNCs)
+      .where(and(eq(partNCs.id, sp.pncId), eq(partNCs.orgId, session.user.organizationId)));
+    if (pnc) {
+      prefill = {
+        title: `Q-Alert: ${pnc.title}`,
+        problemSummary: pnc.description ?? "",
+        sourceType: "part_nc",
+        sourceId: pnc.id,
+        sourceNumber: pnc.pncNumber,
       };
     }
   } else if (sp.complaintId) {
