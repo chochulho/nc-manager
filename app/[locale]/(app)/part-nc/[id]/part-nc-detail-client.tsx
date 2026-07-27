@@ -58,6 +58,9 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [discoveredLocationType, setDiscoveredLocationType] = useState<"site" | "supplier">(
+    pnc.occurrenceSupplierId ? "supplier" : "site"
+  );
   const [form, setForm] = useState({
     title: pnc.title,
     description: pnc.description ?? "",
@@ -352,20 +355,39 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
                   </Select>
                 </div>
                 <div>
-                  <Label>{t("discoveredBySite")}</Label>
-                  <Select value={form.discoveredBySiteId} onValueChange={(v: string) => set("discoveredBySiteId", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
-                    <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
+                  <Label>{t("discoveredByType")}</Label>
+                  <div className="mt-1 inline-flex rounded-lg border border-gray-200 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscoveredLocationType("site");
+                        set("occurrenceSupplierId", "");
+                      }}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${discoveredLocationType === "site" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-gray-50"}`}
+                    >
+                      {t("site")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscoveredLocationType("supplier");
+                        set("discoveredBySiteId", "");
+                      }}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${discoveredLocationType === "supplier" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-gray-50"}`}
+                    >
+                      {t("supplier")}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <Label>{t("discoveredByProcess")}</Label>
-                  <Select value={form.discoveredByProcessId} onValueChange={(v: string) => set("discoveredByProcessId", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
-                    <SelectContent>{processes.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                {form.discoveryStage === "incoming" && (
+                {discoveredLocationType === "site" ? (
+                  <div>
+                    <Label>{t("discoveredBySite")}</Label>
+                    <Select value={form.discoveredBySiteId} onValueChange={(v: string) => set("discoveredBySiteId", v)}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                      <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                ) : (
                   <div>
                     <Label>{t("supplier")}</Label>
                     <Select value={form.occurrenceSupplierId} onValueChange={(v: string) => set("occurrenceSupplierId", v)}>
@@ -374,13 +396,23 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
                     </Select>
                   </div>
                 )}
+                <div>
+                  <Label>{t("discoveredByProcess")}</Label>
+                  <Select value={form.discoveredByProcessId} onValueChange={(v: string) => set("discoveredByProcessId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>{processes.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </div>
             ) : (
               <dl className="space-y-3 text-sm">
                 <div><dt className="text-muted-foreground">{t("site")}</dt><dd className="font-medium mt-0.5">{pnc.occurrenceSiteId ? siteMap[pnc.occurrenceSiteId] ?? "-" : "-"}</dd></div>
-                <div><dt className="text-muted-foreground">{t("discoveredBySite")}</dt><dd className="font-medium mt-0.5">{pnc.discoveredBySiteId ? siteMap[pnc.discoveredBySiteId] ?? "-" : "-"}</dd></div>
+                {pnc.occurrenceSupplierId ? (
+                  <div><dt className="text-muted-foreground">{t("supplier")}</dt><dd className="font-medium mt-0.5">{supplierMap[pnc.occurrenceSupplierId] ?? "-"}</dd></div>
+                ) : (
+                  <div><dt className="text-muted-foreground">{t("discoveredBySite")}</dt><dd className="font-medium mt-0.5">{pnc.discoveredBySiteId ? siteMap[pnc.discoveredBySiteId] ?? "-" : "-"}</dd></div>
+                )}
                 <div><dt className="text-muted-foreground">{t("discoveredByProcess")}</dt><dd className="font-medium mt-0.5">{pnc.discoveredByProcessId ? processMap[pnc.discoveredByProcessId] ?? "-" : "-"}</dd></div>
-                {pnc.occurrenceSupplierId && <div><dt className="text-muted-foreground">{t("supplier")}</dt><dd className="font-medium mt-0.5">{supplierMap[pnc.occurrenceSupplierId] ?? "-"}</dd></div>}
               </dl>
             )}
           </div>

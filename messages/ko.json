@@ -201,6 +201,7 @@
     "new": "신규 등록",
     "newForm": "부품 부적합 신규 등록",
     "ncNumber": "PNC 번호",
+    "discoveredByType": "발견 위치 유형",
     "discoveredAt": "발견일",
     "discoveryStage": "발견 단계",
     "severity": "심각도",

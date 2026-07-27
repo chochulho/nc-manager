@@ -201,6 +201,7 @@
     "new": "New NC",
     "newForm": "New Part Nonconformance",
     "ncNumber": "PNC Number",
+    "discoveredByType": "Discovery Location Type",
     "discoveredAt": "Discovered At",
     "discoveryStage": "Discovery Stage",
     "severity": "Severity",

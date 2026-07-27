@@ -34,6 +34,7 @@ export function NewPartNCForm({ sites, processes, parts, suppliers, categoriesL2
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [discoveredLocationType, setDiscoveredLocationType] = useState<"site" | "supplier">("site");
 
   const [form, setForm] = useState({
     title: "",
@@ -287,32 +288,45 @@ export function NewPartNCForm({ sites, processes, parts, suppliers, categoriesL2
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
               <h2 className="section-title">{t("occurrenceLocation")}</h2>
               <div>
-                <Label>{t("discoveredBySite")}</Label>
-                <Select value={form.discoveredBySiteId} onValueChange={(v: string) => set("discoveredBySiteId", v)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={tc("select")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sites.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>{t("discoveredByType")}</Label>
+                <div className="mt-1 inline-flex rounded-lg border border-gray-200 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDiscoveredLocationType("site");
+                      set("occurrenceSupplierId", "");
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${discoveredLocationType === "site" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-gray-50"}`}
+                  >
+                    {t("site")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDiscoveredLocationType("supplier");
+                      set("discoveredBySiteId", "");
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${discoveredLocationType === "supplier" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-gray-50"}`}
+                  >
+                    {t("supplier")}
+                  </button>
+                </div>
               </div>
-              <div>
-                <Label>{t("discoveredByProcess")}</Label>
-                <Select value={form.discoveredByProcessId} onValueChange={(v: string) => set("discoveredByProcessId", v)}>
-                  <SelectTrigger className="mt-1">
-                    <SelectValue placeholder={tc("select")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {processes.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {form.discoveryStage === "incoming" && (
+              {discoveredLocationType === "site" ? (
+                <div>
+                  <Label>{t("discoveredBySite")}</Label>
+                  <Select value={form.discoveredBySiteId} onValueChange={(v: string) => set("discoveredBySiteId", v)}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder={tc("select")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sites.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
                 <div>
                   <Label>{t("supplier")}</Label>
                   <Select value={form.occurrenceSupplierId} onValueChange={(v: string) => set("occurrenceSupplierId", v)}>
@@ -327,6 +341,19 @@ export function NewPartNCForm({ sites, processes, parts, suppliers, categoriesL2
                   </Select>
                 </div>
               )}
+              <div>
+                <Label>{t("discoveredByProcess")}</Label>
+                <Select value={form.discoveredByProcessId} onValueChange={(v: string) => set("discoveredByProcessId", v)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={tc("select")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {processes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
