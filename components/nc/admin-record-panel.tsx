@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { ShieldAlert, Trash2 } from "lucide-react";
+import { ShieldAlert, Trash2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,20 +23,25 @@ export function AdminRecordPanel({
   currentNumber,
   deleteApiUrl,
   renumberApiUrl,
+  unlinkApiUrl,
   listHref,
   onRenumbered,
+  onUnlinked,
 }: {
   currentNumber: string;
   deleteApiUrl: string;
   renumberApiUrl: string;
+  unlinkApiUrl?: string;
   listHref: string;
   onRenumbered: (newNumber: string) => void;
+  onUnlinked?: () => void;
 }) {
   const initial = parseNumber(currentNumber);
   const [year, setYear] = useState(String(initial.year));
   const [seq, setSeq] = useState(String(initial.seq));
   const [renumbering, setRenumbering] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
 
   const thisYear = new Date().getFullYear();
   const yearOptions = [thisYear - 1, thisYear, thisYear + 1];
@@ -63,6 +68,24 @@ export function AdminRecordPanel({
       toast.success(`번호가 ${data.number}(으)로 변경됐습니다.`);
     } finally {
       setRenumbering(false);
+    }
+  }
+
+  async function handleUnlink() {
+    if (!unlinkApiUrl) return;
+    if (!confirm("이 기록을 가리키는 다른 기록들의 연결을 해제하시겠습니까?\n(연결된 다른 기록 자체는 삭제되지 않습니다)")) return;
+    setUnlinking(true);
+    try {
+      const res = await fetch(unlinkApiUrl, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error === "해제할 연결이 없습니다" ? data.error : "연결 해제에 실패했습니다.");
+        return;
+      }
+      toast.success(`연결이 해제됐습니다: ${(data.unlinked as string[] ?? []).join(", ")}`);
+      onUnlinked?.();
+    } finally {
+      setUnlinking(false);
     }
   }
 
@@ -118,6 +141,20 @@ export function AdminRecordPanel({
         </div>
         <p className="text-xs text-muted-foreground mt-1">현재 번호: {currentNumber}</p>
       </div>
+
+      {unlinkApiUrl && (
+        <div>
+          <Label>연결 해제</Label>
+          <div className="mt-1">
+            <Button variant="outline" size="sm" onClick={handleUnlink} disabled={unlinking}>
+              <Unlink className="h-4 w-4 mr-1" /> {unlinking ? "해제 중..." : "연결 해제"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            이 기록을 가리키는 다른 기록(내부 부적합/고객 클레임)의 연결만 끊습니다. 삭제를 막는 상호 참조를 풀 때 사용하세요.
+          </p>
+        </div>
+      )}
 
       <div>
         <Label>레코드 삭제</Label>

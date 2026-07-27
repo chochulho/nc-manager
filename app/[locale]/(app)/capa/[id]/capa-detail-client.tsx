@@ -1084,8 +1084,10 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
               currentNumber={capa.capaNumber}
               deleteApiUrl={`/api/nc/capa/${capa.id}`}
               renumberApiUrl={`/api/nc/capa/${capa.id}/renumber`}
+              unlinkApiUrl={`/api/nc/capa/${capa.id}/unlink`}
               listHref="/capa"
               onRenumbered={(newNumber) => setCapa((prev) => ({ ...prev, capaNumber: newNumber }))}
+              onUnlinked={() => router.refresh()}
             />
           )}
         </div>

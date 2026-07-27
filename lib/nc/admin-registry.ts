@@ -93,6 +93,35 @@ export async function findBlockingLinks(kind: EntityKind, id: string, orgId: str
 }
 
 /**
+ * CAPA를 가리키는 내부 부적합/고객 클레임의 capaId 역참조를 해제한다.
+ * CAPA 삭제를 막는 역참조 링크를 끊기 위한 용도 (Q-Alert 등 실제 자식 레코드는 대상이 아님).
+ */
+export async function unlinkCapaBackReferences(
+  capaId: string,
+  orgId: string
+): Promise<{ ok: true; unlinked: string[] } | { ok: false; error: string }> {
+  const ncRows = await db
+    .update(internalNCs)
+    .set({ capaId: null })
+    .where(and(eq(internalNCs.orgId, orgId), eq(internalNCs.capaId, capaId)))
+    .returning({ n: internalNCs.ncNumber });
+
+  const ccRows = await db
+    .update(customerComplaints)
+    .set({ capaId: null })
+    .where(and(eq(customerComplaints.orgId, orgId), eq(customerComplaints.capaId, capaId)))
+    .returning({ n: customerComplaints.complaintNumber });
+
+  const unlinked = [
+    ...ncRows.map((r) => `내부 부적합(${r.n})`),
+    ...ccRows.map((r) => `고객 클레임(${r.n})`),
+  ];
+
+  if (unlinked.length === 0) return { ok: false, error: "해제할 연결이 없습니다" };
+  return { ok: true, unlinked };
+}
+
+/**
  * 등록번호를 변경한다. 유일성 검사 → 번호 컬럼 갱신 → qAlerts.sourceNumber 동기화 →
  * ncSequences 보정(향후 자동 채번과 충돌 방지) 순으로 처리한다.
  */
@@ -178,7 +207,7 @@ export async function logAdminAction(
   kind: EntityKind,
   entityId: string,
   userId: string,
-  action: "deleted" | "renumbered",
+  action: "deleted" | "renumbered" | "unlinked",
   payload: unknown
 ): Promise<void> {
   await db.insert(ncActivities).values({ orgId, entityType: kind, entityId, userId, action, payload: payload as object });
