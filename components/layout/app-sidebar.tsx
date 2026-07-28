@@ -6,7 +6,7 @@ import { Link, useRouter, usePathname } from "@/lib/i18n/navigation";
 import {
   LayoutDashboard, AlertTriangle, PackageX, MessageSquareWarning, ClipboardCheck,
   Database, Users, Shield, LogOut, ChevronDown,
-  PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb, ExternalLink, Bell, Building2,
+  PanelLeftClose, PanelLeftOpen, MapPin, Lightbulb, ExternalLink, Bell, Building2, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -75,6 +75,7 @@ export function AppSidebar({ session, sites = [], currentSiteId = null }: AppSid
     { href: "/q-alerts", label: t("qAlerts"), icon: Bell },
     { href: "/lessons-learned", label: t("lessonsLearned"), icon: Lightbulb },
     { href: "/masters", label: t("masters"), icon: Database },
+    { href: "/manual", label: t("manual"), icon: BookOpen },
     ...(isOrgAdmin ? [{ href: "/settings/members", label: t("orgMembers"), icon: Users }] : []),
     ...(isAdmin ? [{ href: "/admin", label: t("admin"), icon: Shield }] : []),
   ];
