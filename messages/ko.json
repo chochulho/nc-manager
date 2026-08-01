@@ -84,13 +84,16 @@
     "targetInfo": "대상 정보",
     "lotNumber": "LOT 번호",
     "safetyRelated": "안전 관련 (Safety)",
-    "attachmentsHint": "첨부파일 (등록 시 함께 업로드)",
+    "attachmentsHint": "불량 사진 (등록 시 함께 업로드)",
     "dropzoneHint": "클릭하거나 파일을 끌어다 놓으세요",
     "pasteHint": "캡처하거나 복사한 이미지가 있다면, 클릭하지 않고 이 화면에서 바로 Ctrl+V를 누르세요",
     "printReport": "보고서 출력",
     "registeredSuccess": "{number} 등록 완료",
     "registeredSuccessAttachments": "{number} 등록 완료 (첨부 {count}개)",
-    "eg": "예:"
+    "eg": "예:",
+    "prevPage": "이전 페이지",
+    "nextPage": "다음 페이지",
+    "pageOf": "{page} / {totalPages} 페이지"
   },
   "language": {
     "ko": "한국어",

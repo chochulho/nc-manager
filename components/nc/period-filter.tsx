@@ -19,6 +19,7 @@ export function PeriodFilter({ year, period }: { year: number; period: string })
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [k, v] of Object.entries(updates)) params.set(k, v);
+      params.delete("page");
       router.push(`${pathname}?${params.toString()}`);
     },
     [router, pathname, searchParams]

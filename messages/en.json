@@ -84,13 +84,16 @@
     "targetInfo": "Subject Information",
     "lotNumber": "LOT Number",
     "safetyRelated": "Safety Related",
-    "attachmentsHint": "Attachments (Upload on Registration)",
+    "attachmentsHint": "Defect Photos (Upload on Registration)",
     "dropzoneHint": "Click or drag & drop files here",
     "pasteHint": "If you've copied or captured an image, just press Ctrl+V anywhere on this page (no click needed)",
     "printReport": "Print Report",
     "registeredSuccess": "{number} registered",
     "registeredSuccessAttachments": "{number} registered ({count} attachments)",
-    "eg": "e.g."
+    "eg": "e.g.",
+    "prevPage": "Previous page",
+    "nextPage": "Next page",
+    "pageOf": "Page {page} of {totalPages}"
   },
   "language": {
     "ko": "한국어",

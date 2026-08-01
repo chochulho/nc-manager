@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { PeriodFilter } from "@/components/nc/period-filter";
+import { Pagination } from "@/components/nc/pagination";
 
 interface NCItem {
   id: string;
@@ -40,10 +41,16 @@ export function InternalNCList({
   items,
   year,
   period,
+  page,
+  totalPages,
+  totalCount,
 }: {
   items: NCItem[];
   year: number;
   period: string;
+  page: number;
+  totalPages: number;
+  totalCount: number;
 }) {
   const t = useTranslations("nc");
   const tCommon = useTranslations("common");
@@ -89,7 +96,7 @@ export function InternalNCList({
         ) : (
           <>
             <div className="px-4 py-2 bg-gray-50 border-b text-xs text-muted-foreground">
-              <span className="font-semibold text-gray-700">{tCommon("totalCount", { count: items.length })}</span>
+              <span className="font-semibold text-gray-700">{tCommon("totalCount", { count: totalCount })}</span>
             </div>
             <table className="w-full text-sm">
               <thead className="border-b bg-gray-50">
@@ -145,6 +152,7 @@ export function InternalNCList({
                 ))}
               </tbody>
             </table>
+            <Pagination page={page} totalPages={totalPages} />
           </>
         )}
       </div>

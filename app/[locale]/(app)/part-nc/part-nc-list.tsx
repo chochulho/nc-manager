@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { PeriodFilter } from "@/components/nc/period-filter";
+import { Pagination } from "@/components/nc/pagination";
 
 interface PNCItem {
   id: string;
@@ -19,6 +20,8 @@ interface PNCItem {
   status: string;
   safetyRelated: boolean;
   partName: string | null;
+  partNumber: string | null;
+  supplierName: string | null;
   categoryCode: string | null;
 }
 
@@ -40,10 +43,16 @@ export function PartNCList({
   items,
   year,
   period,
+  page,
+  totalPages,
+  totalCount,
 }: {
   items: PNCItem[];
   year: number;
   period: string;
+  page: number;
+  totalPages: number;
+  totalCount: number;
 }) {
   const t = useTranslations("partNc");
   const tCommon = useTranslations("common");
@@ -89,13 +98,15 @@ export function PartNCList({
         ) : (
           <>
             <div className="px-4 py-2 bg-gray-50 border-b text-xs text-muted-foreground">
-              <span className="font-semibold text-gray-700">{tCommon("totalCount", { count: items.length })}</span>
+              <span className="font-semibold text-gray-700">{tCommon("totalCount", { count: totalCount })}</span>
             </div>
             <table className="w-full text-sm">
               <thead className="border-b bg-gray-50">
                 <tr>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("ncNumber")}</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{tCommon("title")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("part")}</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("supplier")}</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("discoveryStage")}</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("severity")}</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("status")}</th>
@@ -118,10 +129,20 @@ export function PartNCList({
                         <Link href={`/part-nc/${pnc.id}`} className="hover:underline font-medium">
                           {pnc.title}
                         </Link>
-                        {pnc.partName && (
-                          <span className="text-xs text-muted-foreground">— {pnc.partName}</span>
-                        )}
                       </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {pnc.partName ? (
+                        <div className="text-xs">
+                          <div className="text-gray-700">{pnc.partName}</div>
+                          {pnc.partNumber && <div className="text-muted-foreground font-mono">{pnc.partNumber}</div>}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {pnc.supplierName ?? "—"}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-xs text-muted-foreground">
@@ -145,6 +166,7 @@ export function PartNCList({
                 ))}
               </tbody>
             </table>
+            <Pagination page={page} totalPages={totalPages} />
           </>
         )}
       </div>

@@ -14,7 +14,6 @@ import {
 import { ArrowLeft, Save, Paperclip, X } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
-import { isEditableElement } from "@/lib/is-editable-element";
 
 interface Option { id: string; name: string; code?: string; number?: string }
 interface CategoryL2 { id: string; code: string; nameKo: string }
@@ -62,7 +61,6 @@ export function NewPartNCForm({ sites, processes, parts, suppliers, categoriesL2
 
   useEffect(() => {
     function handlePaste(e: ClipboardEvent) {
-      if (isEditableElement(document.activeElement)) return;
       const items = e.clipboardData?.items;
       if (!items) return;
       const images: File[] = [];
