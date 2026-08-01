@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ncDefectNotifications } from "@/lib/db/schema";
+import { ncDefectNotifications, ncAttachments } from "@/lib/db/schema";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { sendDefectNotificationEmail } from "@/lib/email";
 
 export async function GET(req: NextRequest) {
@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
       subject: ncDefectNotifications.subject,
       body: ncDefectNotifications.body,
       recipientEmails: ncDefectNotifications.recipientEmails,
+      attachmentFilenames: ncDefectNotifications.attachmentFilenames,
       sentAt: ncDefectNotifications.sentAt,
       sentByUserId: ncDefectNotifications.sentByUserId,
     })
@@ -63,12 +64,13 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { entityType, entityId, subject, body: msgBody, recipientEmails } = body as {
+  const { entityType, entityId, subject, body: msgBody, recipientEmails, attachmentIds } = body as {
     entityType: "internal_nc" | "part_nc" | "customer_complaint";
     entityId: string;
     subject: string;
     body: string;
     recipientEmails: string[];
+    attachmentIds?: string[];
   };
 
   if (!entityType || !entityId || !subject?.trim() || !msgBody?.trim() || !recipientEmails?.length) {
@@ -80,13 +82,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `올바르지 않은 이메일: ${invalidEmails.join(", ")}` }, { status: 400 });
   }
 
-  await sendDefectNotificationEmail({
-    to: recipientEmails,
-    subject,
-    body: msgBody,
-    senderName: session.user.name ?? session.user.email ?? "담당자",
-    orgName: session.user.organizationName ?? "",
-  });
+  let attachments: { filename: string; path: string }[] | undefined;
+  if (attachmentIds?.length) {
+    const rows = await db
+      .select({ filename: ncAttachments.filename, storageKey: ncAttachments.storageKey })
+      .from(ncAttachments)
+      .where(
+        and(
+          eq(ncAttachments.orgId, session.user.organizationId),
+          eq(ncAttachments.entityType, entityType),
+          eq(ncAttachments.entityId, entityId),
+          inArray(ncAttachments.id, attachmentIds),
+        )
+      );
+    attachments = rows.map((r) => ({ filename: r.filename, path: r.storageKey }));
+  }
+
+  try {
+    await sendDefectNotificationEmail({
+      to: recipientEmails,
+      subject,
+      body: msgBody,
+      senderName: session.user.name ?? session.user.email ?? "담당자",
+      orgName: session.user.organizationName ?? "",
+      attachments,
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "이메일 발송에 실패했습니다." },
+      { status: 502 }
+    );
+  }
 
   const [inserted] = await db
     .insert(ncDefectNotifications)
@@ -97,6 +123,7 @@ export async function POST(req: NextRequest) {
       subject,
       body: msgBody,
       recipientEmails,
+      attachmentFilenames: attachments?.map((a) => a.filename) ?? null,
       sentByUserId: session.user.id,
     })
     .returning();

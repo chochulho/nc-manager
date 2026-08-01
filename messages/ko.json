@@ -823,6 +823,7 @@
     "body": "내용",
     "subjectPlaceholder": "[부적합통보] 부품명 — 불량 현상",
     "bodyPlaceholder": "불량 내용을 입력하세요.",
+    "includeAttachments": "첨부파일 포함",
     "sending": "발송 중...",
     "sendEmail": "이메일 발송",
     "recipient": "수신",

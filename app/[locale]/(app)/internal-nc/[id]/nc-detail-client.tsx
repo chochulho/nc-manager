@@ -334,7 +334,11 @@ export function NCDetailClient({ nc, sites, processes, parts, suppliers, categor
             )}
           </div>
 
-          <NotificationSection entityType="internal_nc" entityId={nc.id} />
+          <NotificationSection
+            entityType="internal_nc"
+            entityId={nc.id}
+            defaultSubject={nc.occurrenceSupplierId && supplierMap[nc.occurrenceSupplierId] ? `${nc.title} — ${supplierMap[nc.occurrenceSupplierId]}` : nc.title}
+          />
           <AttachmentSection entityType="internal_nc" entityId={nc.id} />
         </div>
 

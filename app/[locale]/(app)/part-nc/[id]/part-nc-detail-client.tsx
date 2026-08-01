@@ -337,7 +337,11 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
             )}
           </div>
 
-          <NotificationSection entityType="part_nc" entityId={pnc.id} />
+          <NotificationSection
+            entityType="part_nc"
+            entityId={pnc.id}
+            defaultSubject={pnc.occurrenceSupplierId && supplierMap[pnc.occurrenceSupplierId] ? `${pnc.title} — ${supplierMap[pnc.occurrenceSupplierId]}` : pnc.title}
+          />
           <AttachmentSection entityType="part_nc" entityId={pnc.id} />
         </div>
 

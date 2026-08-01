@@ -9,14 +9,16 @@ export async function sendDefectNotificationEmail({
   body,
   senderName,
   orgName,
+  attachments,
 }: {
   to: string[];
   subject: string;
   body: string;
   senderName: string;
   orgName: string;
+  attachments?: { filename: string; path: string }[];
 }) {
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: FROM,
     to,
     subject,
@@ -26,7 +28,12 @@ export async function sendDefectNotificationEmail({
       <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb;"/>
       <p style="color:#9ca3af;font-size:11px;">이 이메일은 NC Manager에서 자동 발송되었습니다.</p>
     `,
+    attachments,
   });
+
+  if (error) {
+    throw new Error(`이메일 발송 실패: ${error.message}`);
+  }
 }
 
 export async function sendSlaReminderEmail({

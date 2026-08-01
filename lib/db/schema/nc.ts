@@ -402,6 +402,7 @@ export const ncDefectNotifications = pgTable("nc_defect_notifications", {
   subject: text("subject").notNull(),
   body: text("body").notNull(),
   recipientEmails: text("recipient_emails").array().notNull(),
+  attachmentFilenames: text("attachment_filenames").array(),
   sentByUserId: text("sent_by_user_id").notNull(),
   sentAt: timestamp("sent_at", { mode: "date" }).defaultNow().notNull(),
 });

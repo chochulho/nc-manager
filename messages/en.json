@@ -736,6 +736,7 @@
     "body": "Body",
     "subjectPlaceholder": "[NC Notice] Part Name — Defect Mode",
     "bodyPlaceholder": "Describe the defect.",
+    "includeAttachments": "Include attachments",
     "sending": "Sending...",
     "sendEmail": "Send Email",
     "recipient": "To",

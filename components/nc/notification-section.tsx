@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Send, Mail, X, Plus, Loader2 } from "lucide-react";
+import { Send, Mail, X, Plus, Loader2, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,31 +14,55 @@ interface Notification {
   subject: string;
   body: string;
   recipientEmails: string[];
+  attachmentFilenames: string[] | null;
   sentAt: string;
   sentByUser: { id: string; name: string | null; email: string | null };
+}
+
+interface Attachment {
+  id: string;
+  filename: string;
+  mimeType: string | null;
 }
 
 interface Props {
   entityType: "internal_nc" | "part_nc" | "customer_complaint";
   entityId: string;
+  defaultSubject?: string;
 }
 
-export function NotificationSection({ entityType, entityId }: Props) {
+export function NotificationSection({ entityType, entityId, defaultSubject = "" }: Props) {
   const tc = useTranslations("common");
   const tn = useTranslations("notifications");
 
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
   const [emailInput, setEmailInput] = useState("");
-  const [form, setForm] = useState({ subject: "", body: "", recipientEmails: [] as string[] });
+  const [form, setForm] = useState({ subject: defaultSubject, body: "", recipientEmails: [] as string[], attachmentIds: [] as string[] });
 
   async function load() {
     const res = await fetch(`/api/nc/notifications?entityType=${entityType}&entityId=${entityId}`);
     if (res.ok) setNotifications(await res.json());
   }
 
-  useEffect(() => { load(); }, [entityType, entityId]);
+  async function loadAttachments() {
+    const res = await fetch(`/api/nc/attachments?entityType=${entityType}&entityId=${entityId}`);
+    if (res.ok) setAttachments(await res.json());
+  }
+
+  useEffect(() => { load(); loadAttachments(); }, [entityType, entityId]);
+  useEffect(() => { setForm((prev) => ({ ...prev, subject: defaultSubject })); }, [entityId]);
+
+  function toggleAttachment(id: string) {
+    setForm((prev) => ({
+      ...prev,
+      attachmentIds: prev.attachmentIds.includes(id)
+        ? prev.attachmentIds.filter((a) => a !== id)
+        : [...prev.attachmentIds, id],
+    }));
+  }
 
   function addEmail() {
     const trimmed = emailInput.trim();
@@ -78,7 +102,7 @@ export function NotificationSection({ entityType, entityId }: Props) {
       }
       toast.success(tn("sendSuccess"));
       setOpen(false);
-      setForm({ subject: "", body: "", recipientEmails: [] });
+      setForm({ subject: defaultSubject, body: "", recipientEmails: [], attachmentIds: [] });
       setEmailInput("");
       load();
     } finally {
@@ -151,6 +175,32 @@ export function NotificationSection({ entityType, entityId }: Props) {
             />
           </div>
 
+          {attachments.length > 0 && (
+            <div>
+              <Label className="text-xs">{tn("includeAttachments")}</Label>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {attachments.map((a) => {
+                  const selected = form.attachmentIds.includes(a.id);
+                  return (
+                    <button
+                      type="button"
+                      key={a.id}
+                      onClick={() => toggleAttachment(a.id)}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-colors ${
+                        selected
+                          ? "bg-primary text-white border-primary"
+                          : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Paperclip className="h-3 w-3" />
+                      <span className="max-w-[10rem] truncate">{a.filename}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>{tc("cancel")}</Button>
             <Button size="sm" onClick={handleSend} disabled={sending}>
@@ -178,6 +228,11 @@ export function NotificationSection({ entityType, entityId }: Props) {
               <p className="text-xs text-muted-foreground">
                 {tn("sender")}: {n.sentByUser.name ?? n.sentByUser.email}
               </p>
+              {n.attachmentFilenames && n.attachmentFilenames.length > 0 && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Paperclip className="h-3 w-3" /> {n.attachmentFilenames.join(", ")}
+                </p>
+              )}
             </div>
           ))}
         </div>
