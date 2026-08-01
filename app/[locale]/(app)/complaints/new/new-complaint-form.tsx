@@ -433,23 +433,42 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
               </label>
               <p className="text-xs text-muted-foreground text-center">{tc("pasteHint")}</p>
               {pendingFiles.length > 0 && (
-                <div className="space-y-1">
-                  {pendingFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 text-sm">
-                      {f.type.startsWith("image/") ? (
-                        <img src={URL.createObjectURL(f)} alt={f.name} className="h-8 w-8 rounded object-cover shrink-0" />
-                      ) : (
-                        <Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
-                      )}
-                      <span className="flex-1 truncate">{f.name}</span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        {f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(0)}KB` : `${(f.size / 1024 / 1024).toFixed(1)}MB`}
-                      </span>
-                      <button type="button" onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}>
-                        <X className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
-                      </button>
+                <div className="space-y-2">
+                  {pendingFiles.some((f) => f.type.startsWith("image/")) && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {pendingFiles.map((f, i) => f.type.startsWith("image/") ? (
+                        <div key={i} className="relative group rounded-xl overflow-hidden border border-gray-200 aspect-square bg-gray-50">
+                          <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
+                            className="absolute top-1.5 right-1.5 p-1 bg-black/50 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="absolute inset-x-0 bottom-0 bg-black/50 text-white text-[10px] px-1.5 py-1 truncate">
+                            {f.name}
+                          </div>
+                        </div>
+                      ) : null)}
                     </div>
-                  ))}
+                  )}
+                  {pendingFiles.some((f) => !f.type.startsWith("image/")) && (
+                    <div className="space-y-1">
+                      {pendingFiles.map((f, i) => !f.type.startsWith("image/") ? (
+                        <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 text-sm">
+                          <Paperclip className="h-4 w-4 text-gray-400 shrink-0" />
+                          <span className="flex-1 truncate">{f.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {f.size < 1024 * 1024 ? `${(f.size / 1024).toFixed(0)}KB` : `${(f.size / 1024 / 1024).toFixed(1)}MB`}
+                          </span>
+                          <button type="button" onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}>
+                            <X className="h-3.5 w-3.5 text-gray-400 hover:text-red-500" />
+                          </button>
+                        </div>
+                      ) : null)}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
