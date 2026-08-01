@@ -435,10 +435,10 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
               {pendingFiles.length > 0 && (
                 <div className="space-y-2">
                   {pendingFiles.some((f) => f.type.startsWith("image/")) && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <div className="space-y-2">
                       {pendingFiles.map((f, i) => f.type.startsWith("image/") ? (
-                        <div key={i} className="relative group rounded-xl overflow-hidden border border-gray-200 aspect-square bg-gray-50">
-                          <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                        <div key={i} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                          <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-64 object-cover" />
                           <button
                             type="button"
                             onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
