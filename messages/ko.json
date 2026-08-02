@@ -93,7 +93,8 @@
     "eg": "예:",
     "prevPage": "이전 페이지",
     "nextPage": "다음 페이지",
-    "pageOf": "{page} / {totalPages} 페이지"
+    "pageOf": "{page} / {totalPages} 페이지",
+    "refreshMasterData": "목록 새로고침"
   },
   "language": {
     "ko": "한국어",
@@ -476,6 +477,7 @@
     "newForm": "CAPA 신규 등록",
     "sourceInfo": "출처 정보",
     "capaNumber": "CAPA 번호",
+    "previewNumberHint": "예상 번호 (저장 시 확정)",
     "methodology": "방법론",
     "source": "출처",
     "sourceType": "출처 유형",

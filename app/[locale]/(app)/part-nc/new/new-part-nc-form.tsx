@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n/navigation";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Paperclip, X } from "lucide-react";
+import { ArrowLeft, Save, Paperclip, X, RefreshCw } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 
@@ -32,6 +32,7 @@ export function NewPartNCForm({ sites, processes, parts, suppliers, categoriesL2
   const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, startRefresh] = useTransition();
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [discoveredLocationType, setDiscoveredLocationType] = useState<"site" | "supplier">("site");
 
@@ -130,6 +131,16 @@ export function NewPartNCForm({ sites, processes, parts, suppliers, categoriesL2
           </Link>
           <h1 className="page-title">{t("newForm")}</h1>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isRefreshing}
+          onClick={() => startRefresh(() => router.refresh())}
+        >
+          <RefreshCw className={`h-4 w-4 mr-1.5 ${isRefreshing ? "animate-spin" : ""}`} />
+          {tc("refreshMasterData")}
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit}>

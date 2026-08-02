@@ -24,12 +24,13 @@ interface Props {
   sourceNumber: string;
   initialTitle?: string;
   initialProblemStatement?: string;
+  previewCapaNumber?: string;
   ncList: NcItem[];
   partNcList: PartNcItem[];
   complaintList: ComplaintItem[];
 }
 
-export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, initialTitle, initialProblemStatement, ncList, partNcList, complaintList }: Props) {
+export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId, sourceLabel, initialTitle, initialProblemStatement, previewCapaNumber, ncList, partNcList, complaintList }: Props) {
   const t = useTranslations("capa");
   const tc = useTranslations("common");
   const router = useRouter();
@@ -76,6 +77,12 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
           <Link href="/capa"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
           <h1 className="page-title">{t("newForm")}</h1>
         </div>
+        {previewCapaNumber && (
+          <div className="text-right">
+            <div className="font-mono text-sm font-bold text-muted-foreground">{previewCapaNumber}</div>
+            <div className="text-xs text-muted-foreground">{t("previewNumberHint")}</div>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit}>

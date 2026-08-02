@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { internalNCs, partNCs, customerComplaints, ncAnalysisReports } from "@/lib/db/schema";
+import { internalNCs, partNCs, customerComplaints, ncAnalysisReports, ncSequences } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { NewCAPAForm } from "./new-capa-form";
 
@@ -24,21 +24,25 @@ export default async function NewCAPAPage({
 
   if (sourceType === "internal_nc" && sourceId) {
     const [nc] = await db
-      .select({ ncNumber: internalNCs.ncNumber, title: internalNCs.title })
+      .select({ ncNumber: internalNCs.ncNumber, title: internalNCs.title, description: internalNCs.description })
       .from(internalNCs)
       .where(and(eq(internalNCs.id, sourceId), eq(internalNCs.orgId, orgId)));
     if (nc) {
       sourceNumber = nc.ncNumber;
       sourceLabel = `[${nc.ncNumber}] ${nc.title}`;
+      sourceTitle = nc.title;
+      sourceDescription = nc.description ?? "";
     }
   } else if (sourceType === "part_nc" && sourceId) {
     const [pnc] = await db
-      .select({ pncNumber: partNCs.pncNumber, title: partNCs.title })
+      .select({ pncNumber: partNCs.pncNumber, title: partNCs.title, description: partNCs.description })
       .from(partNCs)
       .where(and(eq(partNCs.id, sourceId), eq(partNCs.orgId, orgId)));
     if (pnc) {
       sourceNumber = pnc.pncNumber;
       sourceLabel = `[${pnc.pncNumber}] ${pnc.title}`;
+      sourceTitle = pnc.title;
+      sourceDescription = pnc.description ?? "";
     }
   } else if (sourceType === "customer_complaint" && sourceId) {
     const [cc] = await db
@@ -65,6 +69,13 @@ export default async function NewCAPAPage({
     }
   }
 
+  const currentYear = new Date().getFullYear();
+  const [seqRow] = await db
+    .select({ lastSeq: ncSequences.lastSeq })
+    .from(ncSequences)
+    .where(and(eq(ncSequences.orgId, orgId), eq(ncSequences.entityType, "capa"), eq(ncSequences.year, currentYear)));
+  const previewCapaNumber = `CAPA-${currentYear}-${String((seqRow?.lastSeq ?? 0) + 1).padStart(4, "0")}`;
+
   const [ncList, partNcList, complaintList] = await Promise.all([
     db.select({ id: internalNCs.id, ncNumber: internalNCs.ncNumber, title: internalNCs.title })
       .from(internalNCs)
@@ -88,6 +99,7 @@ export default async function NewCAPAPage({
       sourceNumber={sourceNumber}
       initialTitle={sourceTitle}
       initialProblemStatement={sourceDescription}
+      previewCapaNumber={previewCapaNumber}
       ncList={ncList}
       partNcList={partNcList}
       complaintList={complaintList}
