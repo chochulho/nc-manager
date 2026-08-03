@@ -61,7 +61,6 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 const STATUS_KEYS = ["received", "acknowledged", "contained", "investigating", "8d_in_progress", "final_reported", "closed", "closed_ntf"] as const;
-const RESOLUTION_TYPE_KEYS = ["confirmed_nc", "ntf", "customer_misuse", "partial"] as const;
 
 function SlaIndicator({
   label, due, sent, completedLabel,
@@ -123,7 +122,6 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
     categoryL2Id: complaint.categoryL2Id ?? "",
     safetyRelated: complaint.safetyRelated,
     recallRisk: complaint.recallRisk,
-    resolutionType: complaint.resolutionType ?? "",
     initialResponseSentAt: complaint.initialResponseSentAt ? new Date(complaint.initialResponseSentAt).toISOString().slice(0, 10) : "",
     containedAt: complaint.containedAt ? new Date(complaint.containedAt).toISOString().slice(0, 10) : "",
     finalReportSentAt: complaint.finalReportSentAt ? new Date(complaint.finalReportSentAt).toISOString().slice(0, 10) : "",
@@ -250,17 +248,6 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
                     </Select>
                   </div>
                   <div>
-                    <Label>{t("resolutionType")}</Label>
-                    <Select value={form.resolutionType} onValueChange={(v: string) => set("resolutionType", v)}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
-                      <SelectContent>
-                        {RESOLUTION_TYPE_KEYS.map((v) => (
-                          <SelectItem key={v} value={v}>{t(`resolutionTypes.${v}` as Parameters<typeof t>[0])}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
                     <Label>{t("part")}</Label>
                     <Select value={form.partId} onValueChange={(v: string) => set("partId", v)}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
@@ -373,14 +360,6 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
                     {complaint.costOther && <span>{t("costOther")}: {Number(complaint.costOther).toLocaleString()}</span>}
                   </div>
                 )}
-                {complaint.resolutionType && (
-                  <div>
-                    <dt className="text-muted-foreground">{t("resolutionType")}</dt>
-                    <dd className="font-medium mt-0.5">
-                      {t(`resolutionTypes.${complaint.resolutionType}` as Parameters<typeof t>[0]) ?? complaint.resolutionType}
-                    </dd>
-                  </div>
-                )}
               </dl>
             )}
           </div>
@@ -391,13 +370,14 @@ export function ComplaintDetailClient({ complaint, customers, parts, categoriesL
             complaintInfo={{
               complaintNumber: complaint.complaintNumber,
               title: complaint.title,
+              customerId: complaint.customerId,
               customerName: customers.find((c) => c.id === complaint.customerId)?.name ?? "-",
               partName: complaint.partId ? (parts.find((p) => p.id === complaint.partId)?.name ?? "-") : "-",
               receivedAt: complaint.receivedAt,
               severity: complaint.severity,
               resolutionType: complaint.resolutionType,
             }}
-            onComplaintClosed={() => router.refresh()}
+            onComplaintUpdated={() => router.refresh()}
           />
 
           {/* CAPA Link */}

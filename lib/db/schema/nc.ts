@@ -370,7 +370,38 @@ export const ncFieldClaimDetails = pgTable("nc_field_claim_details", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+// ── Analysis Report Templates ───────────────────────────────────────────────
+// 고객사별 분석보고서 양식(텍스트/표/사진 블록 구성). templateId가 null인 보고서는
+// 레거시 고정 4필드 양식(문제현상/원인분석/결론/후속조치)을 그대로 사용한다.
+
+export type ReportTemplateBlock =
+  | { key: string; type: "text"; label: string; placeholder?: string }
+  | { key: string; type: "table"; label: string; columns: string[] }
+  | { key: string; type: "photo"; label: string };
+
+export const ncReportTemplates = pgTable("nc_report_templates", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  orgId: text("org_id").notNull(),
+  name: text("name").notNull(),
+  customerId: text("customer_id").references(() => ncCustomers.id), // null = 공통(기본) 양식
+  isDefault: boolean("is_default").default(false).notNull(),        // 고객사 미매칭 시 org 기본값
+  accentColor: text("accent_color").default("1E40AF").notNull(),
+  blocks: jsonb("blocks").notNull().$type<ReportTemplateBlock[]>(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
+
+export const ncReportTemplatesRelations = relations(ncReportTemplates, ({ one }) => ({
+  customer: one(ncCustomers, { fields: [ncReportTemplates.customerId], references: [ncCustomers.id] }),
+}));
+
 // ── Analysis Reports ──────────────────────────────────────────────────────────
+
+export type ReportBlockValue =
+  | { type: "text"; value: string }
+  | { type: "table"; rows: string[][] }
+  | { type: "photo"; url: string };
 
 export const ncAnalysisReports = pgTable("nc_analysis_reports", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -387,10 +418,16 @@ export const ncAnalysisReports = pgTable("nc_analysis_reports", {
     permanentActions?: string;
     prevention?: string;
   }>(),
+  templateId: text("template_id").references(() => ncReportTemplates.id),
+  blockData: jsonb("block_data").$type<Record<string, ReportBlockValue>>(),
   createdByUserId: text("created_by_user_id").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
+
+export const ncAnalysisReportsRelations = relations(ncAnalysisReports, ({ one }) => ({
+  template: one(ncReportTemplates, { fields: [ncAnalysisReports.templateId], references: [ncReportTemplates.id] }),
+}));
 
 // ── Defect Notifications ──────────────────────────────────────────────────────
 

@@ -424,6 +424,9 @@
       "closeNtfSuccess": "Report finalized and complaint closed (NTF).",
       "closeFailedMsg": "Report finalized but complaint close failed.",
       "downloadPpt": "Downloading PPT file.",
+      "autoTemplate": "Template: Auto-match",
+      "legacyTemplate": "Template: Standard format",
+      "uploadPhoto": "Upload photo",
       "resolutionLabels": {
         "ntf": "NTF (No Trouble Found)",
         "customer_misuse": "Customer Fault",
@@ -931,6 +934,22 @@
       "colEnglish": "English",
       "colType": "Type",
       "systemBadge": "System"
+    },
+    "reportTemplates": {
+      "label": "Report Templates",
+      "desc": "Manage customer-specific analysis report templates (text/table/photo blocks)",
+      "pageTitle": "Analysis Report Templates",
+      "editTitle": "Edit Template",
+      "newTitle": "New Template",
+      "name": "Template Name",
+      "namePlaceholder": "e.g. Acme Motors Standard Format",
+      "commonTemplate": "Common (default) template",
+      "accentColor": "Accent Color",
+      "isDefault": "Use as org default when no customer match",
+      "blocksSection": "Block Layout",
+      "blockCount": "Blocks",
+      "empty": "No report templates registered.",
+      "requiredFields": "Name and at least one block are required."
     }
   },
   "settings": {

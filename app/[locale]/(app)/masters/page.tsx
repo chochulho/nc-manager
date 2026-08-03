@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Database, MapPin, Users, Package, Wrench, Tag } from "lucide-react";
+import { Database, MapPin, Users, Package, Wrench, Tag, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getTranslations } from "next-intl/server";
 
@@ -13,6 +13,7 @@ export default async function MastersPage() {
     { href: "/masters/sites", label: t("sites.label"), icon: MapPin, desc: t("sites.desc") },
     { href: "/masters/processes", label: t("processes.label"), icon: Database, desc: t("processes.desc") },
     { href: "/masters/categories", label: t("categories.label"), icon: Tag, desc: t("categories.desc") },
+    { href: "/masters/report-templates", label: t("reportTemplates.label"), icon: FileText, desc: t("reportTemplates.desc") },
   ];
 
   return (

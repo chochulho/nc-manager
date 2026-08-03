@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ncAnalysisReports, customerComplaints, capas } from "@/lib/db/schema";
+import { ncAnalysisReports, customerComplaints, capas, ncReportTemplates, type ReportBlockValue } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 function extractRootCause(d4: unknown): string {
@@ -68,7 +68,20 @@ export async function GET(req: NextRequest) {
       )
     );
 
-  return NextResponse.json(report ?? null);
+  if (!report) return NextResponse.json(null);
+
+  if (!report.templateId) return NextResponse.json({ ...report, template: null });
+
+  const [template] = await db.select().from(ncReportTemplates).where(eq(ncReportTemplates.id, report.templateId));
+  return NextResponse.json({ ...report, template: template ?? null });
+}
+
+function initBlockData(blocks: Array<{ key: string; type: "text" | "table" | "photo" }>): Record<string, ReportBlockValue> {
+  return Object.fromEntries(blocks.map((b) => {
+    if (b.type === "table") return [b.key, { type: "table", rows: [] } satisfies ReportBlockValue];
+    if (b.type === "photo") return [b.key, { type: "photo", url: "" } satisfies ReportBlockValue];
+    return [b.key, { type: "text", value: "" } satisfies ReportBlockValue];
+  }));
 }
 
 export async function POST(req: NextRequest) {
@@ -77,8 +90,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json() as { complaintId: string; importFromCapa?: boolean };
-  const { complaintId, importFromCapa } = body;
+  const body = await req.json() as { complaintId: string; importFromCapa?: boolean; templateId?: string | null };
+  const { complaintId, importFromCapa, templateId: explicitTemplateId } = body;
 
   const [complaint] = await db
     .select()
@@ -97,6 +110,32 @@ export async function POST(req: NextRequest) {
     .where(eq(ncAnalysisReports.complaintId, complaintId))
     .then((r) => r[0] ?? null);
   if (existing) return NextResponse.json({ error: "이미 분석보고서가 존재합니다." }, { status: 409 });
+
+  // 템플릿 매칭: 명시 지정 > 고객사 매칭 > 조직 기본값 > 없음(레거시)
+  let template: typeof ncReportTemplates.$inferSelect | null = null;
+  if (explicitTemplateId) {
+    const [t] = await db.select().from(ncReportTemplates)
+      .where(and(eq(ncReportTemplates.id, explicitTemplateId), eq(ncReportTemplates.orgId, session.user.organizationId)));
+    template = t ?? null;
+  } else {
+    const [byCustomer] = await db.select().from(ncReportTemplates)
+      .where(and(
+        eq(ncReportTemplates.orgId, session.user.organizationId),
+        eq(ncReportTemplates.customerId, complaint.customerId),
+        eq(ncReportTemplates.isActive, true),
+      ));
+    if (byCustomer) {
+      template = byCustomer;
+    } else {
+      const [byDefault] = await db.select().from(ncReportTemplates)
+        .where(and(
+          eq(ncReportTemplates.orgId, session.user.organizationId),
+          eq(ncReportTemplates.isDefault, true),
+          eq(ncReportTemplates.isActive, true),
+        ));
+      template = byDefault ?? null;
+    }
+  }
 
   let sections = { ...EMPTY_SECTIONS };
 
@@ -118,9 +157,11 @@ export async function POST(req: NextRequest) {
       orgId: session.user.organizationId,
       complaintId,
       sections,
+      templateId: template?.id ?? null,
+      blockData: template ? initBlockData(template.blocks) : null,
       createdByUserId: session.user.id,
     })
     .returning();
 
-  return NextResponse.json(inserted, { status: 201 });
+  return NextResponse.json({ ...inserted, template }, { status: 201 });
 }

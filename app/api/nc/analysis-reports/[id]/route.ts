@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ncAnalysisReports, capas } from "@/lib/db/schema";
+import { ncAnalysisReports, capas, type ReportBlockValue } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 function extractRootCause(d4: unknown): string {
@@ -37,12 +37,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!session?.user?.organizationId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const body = await req.json() as { sections?: Record<string, string>; status?: "draft" | "final" };
+  const body = await req.json() as {
+    sections?: Record<string, string>;
+    blockData?: Record<string, ReportBlockValue>;
+    status?: "draft" | "final";
+  };
 
   const [updated] = await db
     .update(ncAnalysisReports)
     .set({
       ...(body.sections && { sections: body.sections as typeof ncAnalysisReports.$inferInsert["sections"] }),
+      ...(body.blockData && { blockData: body.blockData }),
       ...(body.status && { status: body.status }),
       updatedAt: new Date(),
     })

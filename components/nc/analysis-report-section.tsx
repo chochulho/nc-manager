@@ -5,12 +5,18 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   FileText, ChevronDown, ChevronUp, Save, Loader2,
-  Download, Printer, RefreshCw, Trash2, CheckCircle2, PenLine, XCircle,
+  Download, Printer, RefreshCw, Trash2, CheckCircle2, PenLine, XCircle, Upload, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { upload } from "@vercel/blob/client";
 import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
+import { ReportTableBlock } from "@/components/nc/report-table-block";
+import type { ReportTemplateBlock, ReportBlockValue } from "@/lib/db/schema";
+
+const RESOLUTION_TYPE_KEYS = ["confirmed_nc", "ntf", "customer_misuse", "partial"] as const;
 
 interface Sections {
   problemDescription: string;
@@ -29,10 +35,27 @@ const LEGACY_FIELDS: Array<{ key: "immediateContainment" | "permanentActions" | 
   { key: "prevention", labelKey: "sections.prevention" },
 ];
 
+interface ReportTemplateFull {
+  id: string;
+  name: string;
+  accentColor: string;
+  blocks: ReportTemplateBlock[];
+}
+
+interface TemplateOption {
+  id: string;
+  name: string;
+  customerId: string | null;
+  isDefault: boolean;
+}
+
 interface Report {
   id: string;
   status: "draft" | "final";
   sections: Sections;
+  templateId: string | null;
+  blockData: Record<string, ReportBlockValue> | null;
+  template: ReportTemplateFull | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,6 +63,7 @@ interface Report {
 interface ComplaintInfo {
   complaintNumber: string;
   title: string;
+  customerId: string;
   customerName: string;
   partName: string;
   receivedAt: Date | string;
@@ -51,23 +75,26 @@ interface Props {
   complaintId: string;
   capaId: string | null;
   complaintInfo: ComplaintInfo;
-  onComplaintClosed?: () => void;
+  onComplaintUpdated?: () => void;
 }
 
 type SectionKey = "problemDescription" | "rootCause" | "conclusion" | "followUp";
 type SectionDef = { key: SectionKey; label: string; placeholder: string };
 
-export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onComplaintClosed }: Props) {
+export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onComplaintUpdated }: Props) {
   const t = useTranslations("complaint");
   const tc = useTranslations("common");
   const tr = useTranslations("complaint.report" as "complaint");
 
-  const resolutionType = complaintInfo.resolutionType;
+  const [resolutionType, setResolutionType] = useState<string | null>(complaintInfo.resolutionType);
+  const [savingResolution, setSavingResolution] = useState(false);
+  useEffect(() => setResolutionType(complaintInfo.resolutionType), [complaintInfo.resolutionType]);
+
   const isNtf = resolutionType === "ntf";
   const isCustomerFault = resolutionType === "customer_misuse";
   const isClosureByReport = isNtf || isCustomerFault;
 
-  // Build section definitions using translations
+  // Build section definitions using translations (legacy fixed format)
   function getSectionDefs(): SectionDef[] {
     return [
       {
@@ -107,10 +134,15 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   const [creating, setCreating] = useState(false);
   const [importingCapa, setImportingCapa] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const [sections, setSections] = useState<Sections>({
     problemDescription: "", rootCause: "", conclusion: "", followUp: "",
   });
+  const [blockData, setBlockData] = useState<Record<string, ReportBlockValue>>({});
+
+  const [availableTemplates, setAvailableTemplates] = useState<TemplateOption[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("auto");
 
   const sectionDefs = getSectionDefs();
 
@@ -119,25 +151,57 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     if (res.ok) {
       const data = await res.json();
       setReport(data);
-      if (data) setSections(data.sections);
+      if (data) {
+        setSections(data.sections);
+        setBlockData(data.blockData ?? {});
+      }
     }
     setLoading(false);
   }
 
   useEffect(() => { load(); }, [complaintId]);
 
+  useEffect(() => {
+    fetch(`/api/nc/masters/report-templates?customerId=${complaintInfo.customerId}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: TemplateOption[]) => setAvailableTemplates(data))
+      .catch(() => setAvailableTemplates([]));
+  }, [complaintInfo.customerId]);
+
+  async function handleResolutionTypeChange(value: string) {
+    const prev = resolutionType;
+    setResolutionType(value);
+    setSavingResolution(true);
+    try {
+      const res = await fetch(`/api/nc/complaints/${complaintId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolutionType: value }),
+      });
+      if (!res.ok) { toast.error(tc("error")); setResolutionType(prev); return; }
+      onComplaintUpdated?.();
+    } finally {
+      setSavingResolution(false);
+    }
+  }
+
   async function handleCreate(importFromCapa = false) {
     setCreating(true);
     try {
+      const body: Record<string, unknown> = { complaintId, importFromCapa };
+      if (selectedTemplateId === "none") body.templateId = null;
+      else if (selectedTemplateId !== "auto") body.templateId = selectedTemplateId;
+
       const res = await fetch("/api/nc/analysis-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ complaintId, importFromCapa }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) { toast.error(tc("error")); return; }
       const data = await res.json();
       setReport(data);
       setSections(data.sections);
+      setBlockData(data.blockData ?? {});
       setExpanded(true);
       setEditing(true);
       toast.success(importFromCapa
@@ -155,11 +219,11 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       const res = await fetch(`/api/nc/analysis-reports/${report.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections, ...(finalise && { status: "final" }) }),
+        body: JSON.stringify({ sections, blockData, ...(finalise && { status: "final" }) }),
       });
       if (!res.ok) { toast.error(tc("error")); return; }
       const updated = await res.json();
-      setReport(updated);
+      setReport((prev) => (prev ? { ...prev, ...updated } : updated));
       setEditing(false);
 
       if (closeComplaint) {
@@ -175,7 +239,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
           toast.success(isNtf
             ? tr("closeNtfSuccess" as Parameters<typeof tr>[0])
             : tr("closeSuccess" as Parameters<typeof tr>[0]));
-          onComplaintClosed?.();
+          onComplaintUpdated?.();
         }
       } else {
         toast.success(finalise ? tc("success") : tc("success"));
@@ -197,7 +261,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       });
       if (!res.ok) { toast.error(tc("error")); return; }
       const updated = await res.json();
-      setReport(updated);
+      setReport((prev) => (prev ? { ...prev, ...updated } : updated));
       setSections(updated.sections);
       toast.success(tr("importedCapa" as Parameters<typeof tr>[0]));
     } finally {
@@ -211,9 +275,25 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     await fetch(`/api/nc/analysis-reports/${report.id}`, { method: "DELETE" });
     setReport(null);
     setSections({ problemDescription: "", rootCause: "", conclusion: "", followUp: "" });
+    setBlockData({});
     setEditing(false);
     setExpanded(false);
     toast.success(tc("success"));
+  }
+
+  async function handlePhotoUpload(key: string, file: File | undefined) {
+    if (!file || !report) return;
+    setUploadingPhoto(key);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `nc/analysis_report/${report.id}/${key}-${Date.now()}.${ext}`;
+      const blob = await upload(path, file, { access: "public", handleUploadUrl: "/api/nc/attachments/client-token" });
+      setBlockData((p) => ({ ...p, [key]: { type: "photo", url: blob.url } }));
+    } catch {
+      toast.error(tc("error"));
+    } finally {
+      setUploadingPhoto(null);
+    }
   }
 
   async function handleDownloadPdf() {
@@ -235,11 +315,12 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   }
 
   async function handleDownloadPptx() {
+    if (!report) return;
     const PptxGenJS = (await import("pptxgenjs")).default;
     const prs = new PptxGenJS();
     prs.layout = "LAYOUT_WIDE";
 
-    const ACCENT = isNtf ? "374151" : isCustomerFault ? "7C3AED" : "1E40AF";
+    const ACCENT = report.template?.accentColor || (isNtf ? "374151" : isCustomerFault ? "7C3AED" : "1E40AF");
 
     const resolutionLabels: Record<string, string> = {
       ntf: tr("resolutionLabels.ntf" as Parameters<typeof tr>[0]),
@@ -266,15 +347,55 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     cover.addText(meta, { x: 0.8, y: 3.8, w: 11.5, h: 0.4, fontSize: 11, color: "9CA3AF" });
     cover.addText(new Date().toLocaleDateString(), { x: 0.8, y: 5.5, w: 11.5, h: 0.3, fontSize: 10, color: "9CA3AF" });
 
-    // Section slides
-    for (const def of sectionDefs) {
-      const content = sections[def.key];
-      if (!content?.trim()) continue;
-      const slide = prs.addSlide();
-      slide.background = { color: "FFFFFF" };
-      slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-      slide.addText(def.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
-      slide.addText(content, { x: 0.4, y: 1.1, w: 12.5, h: 4.7, fontSize: 13, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 6 });
+    if (report.template) {
+      // Template-driven slides (text / table / photo blocks)
+      for (const block of report.template.blocks) {
+        const value = blockData[block.key];
+
+        if (block.type === "text") {
+          const content = value?.type === "text" ? value.value : "";
+          if (!content?.trim()) continue;
+          const slide = prs.addSlide();
+          slide.background = { color: "FFFFFF" };
+          slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
+          slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+          slide.addText(content, { x: 0.4, y: 1.1, w: 12.5, h: 4.7, fontSize: 13, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 6 });
+        } else if (block.type === "table") {
+          const rows = value?.type === "table" ? value.rows : [];
+          if (!rows.length) continue;
+          const slide = prs.addSlide();
+          slide.background = { color: "FFFFFF" };
+          slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
+          slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+          const tableRows = [
+            block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" } } })),
+            ...rows.map((row) => row.map((cell) => ({ text: cell }))),
+          ];
+          slide.addTable(tableRows, {
+            x: 0.4, y: 1.1, w: 12.5, fontSize: 11,
+            border: { type: "solid", color: "E5E7EB", pt: 0.5 },
+          });
+        } else if (block.type === "photo") {
+          const url = value?.type === "photo" ? value.url : "";
+          if (!url) continue;
+          const slide = prs.addSlide();
+          slide.background = { color: "FFFFFF" };
+          slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
+          slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+          slide.addImage({ path: url, x: 2.5, y: 1.3, w: 8.33, h: 4.5 });
+        }
+      }
+    } else {
+      // Legacy fixed section slides
+      for (const def of sectionDefs) {
+        const content = sections[def.key];
+        if (!content?.trim()) continue;
+        const slide = prs.addSlide();
+        slide.background = { color: "FFFFFF" };
+        slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
+        slide.addText(def.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+        slide.addText(content, { x: 0.4, y: 1.1, w: 12.5, h: 4.7, fontSize: 13, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 6 });
+      }
     }
 
     prs.writeFile({ fileName: `report_${complaintInfo.complaintNumber}.pptx` });
@@ -294,6 +415,85 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   const bannerClass = isNtf
     ? "bg-gray-50 border-gray-200 text-gray-700"
     : "bg-purple-50 border-purple-200 text-purple-700";
+
+  function renderTextBlock(block: Extract<ReportTemplateBlock, { type: "text" }>) {
+    const value = blockData[block.key];
+    const v = value?.type === "text" ? value.value : "";
+    return (
+      <div key={block.key} className="space-y-1.5">
+        <Label className="text-sm font-semibold">{block.label}</Label>
+        {editing ? (
+          <Textarea
+            value={v}
+            onChange={(e) => setBlockData((p) => ({ ...p, [block.key]: { type: "text", value: e.target.value } }))}
+            rows={4}
+            placeholder={block.placeholder}
+            className="text-sm"
+          />
+        ) : (
+          <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm whitespace-pre-wrap min-h-[60px]">
+            {v || <span className="text-muted-foreground italic">{tr("notEntered" as Parameters<typeof tr>[0])}</span>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function renderTableBlock(block: Extract<ReportTemplateBlock, { type: "table" }>) {
+    const value = blockData[block.key];
+    const rows = value?.type === "table" ? value.rows : [];
+    return (
+      <div key={block.key} className="space-y-1.5">
+        <Label className="text-sm font-semibold">{block.label}</Label>
+        <ReportTableBlock
+          columns={block.columns}
+          rows={rows}
+          editing={editing}
+          onChange={(nextRows) => setBlockData((p) => ({ ...p, [block.key]: { type: "table", rows: nextRows } }))}
+        />
+      </div>
+    );
+  }
+
+  function renderPhotoBlock(block: Extract<ReportTemplateBlock, { type: "photo" }>) {
+    const value = blockData[block.key];
+    const url = value?.type === "photo" ? value.url : "";
+    return (
+      <div key={block.key} className="space-y-1.5">
+        <Label className="text-sm font-semibold">{block.label}</Label>
+        {url ? (
+          <div className="relative inline-block">
+            <img src={url} alt={block.label} className="max-h-64 rounded-xl border border-gray-200" />
+            {editing && (
+              <Button
+                type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6"
+                onClick={() => setBlockData((p) => ({ ...p, [block.key]: { type: "photo", url: "" } }))}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        ) : editing ? (
+          <label className="flex items-center justify-center gap-2 h-24 rounded-xl border border-dashed border-gray-300 text-sm text-muted-foreground cursor-pointer hover:bg-gray-50">
+            {uploadingPhoto === block.key ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <><Upload className="h-4 w-4" />{tr("uploadPhoto" as Parameters<typeof tr>[0])}</>
+            )}
+            <input
+              type="file" accept="image/*" className="hidden"
+              onChange={(e) => handlePhotoUpload(block.key, e.target.files?.[0])}
+              disabled={uploadingPhoto === block.key}
+            />
+          </label>
+        ) : (
+          <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-muted-foreground italic min-h-[60px] flex items-center">
+            {tr("notEntered" as Parameters<typeof tr>[0])}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
@@ -343,7 +543,19 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             </button>
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {availableTemplates.length > 0 && (
+              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger className="h-8 text-xs w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">{tr("autoTemplate" as Parameters<typeof tr>[0])}</SelectItem>
+                  <SelectItem value="none">{tr("legacyTemplate" as Parameters<typeof tr>[0])}</SelectItem>
+                  {availableTemplates.map((tpl) => (
+                    <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {capaId && (
               <Button variant="outline" size="sm" onClick={() => handleCreate(true)} disabled={creating}>
                 {creating ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
@@ -356,6 +568,23 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             </Button>
           </div>
         )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Label className="text-xs text-muted-foreground shrink-0">{tr("judgment" as Parameters<typeof tr>[0])}</Label>
+        <Select
+          value={resolutionType ?? ""}
+          onValueChange={handleResolutionTypeChange}
+          disabled={savingResolution || report?.status === "final"}
+        >
+          <SelectTrigger className="h-8 text-xs w-56"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+          <SelectContent>
+            {RESOLUTION_TYPE_KEYS.map((v) => (
+              <SelectItem key={v} value={v}>{t(`resolutionTypes.${v}` as Parameters<typeof t>[0])}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {savingResolution && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
       </div>
 
       {/* NTF / fault banner */}
@@ -388,33 +617,40 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             </div>
           </div>
 
-          {/* Sections */}
-          {sectionDefs.map((def) => (
-            <div key={def.key} className="space-y-1.5">
-              <Label className="text-sm font-semibold">
-                {def.label}
-                {def.key === "followUp" && <span className="ml-1.5 font-normal text-xs text-muted-foreground">{tr("optional" as Parameters<typeof tr>[0])}</span>}
-              </Label>
-              {editing ? (
-                <Textarea
-                  value={sections[def.key]}
-                  onChange={(e) => setSections((p) => ({ ...p, [def.key]: e.target.value }))}
-                  rows={4}
-                  placeholder={def.placeholder}
-                  className="text-sm"
-                />
-              ) : (
-                <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm whitespace-pre-wrap min-h-[60px]">
-                  {sections[def.key] || <span className="text-muted-foreground italic">
-                    {def.key === "followUp" && capaId ? tr("sections.followUpCapaHint" as Parameters<typeof tr>[0]) : tr("notEntered" as Parameters<typeof tr>[0])}
-                  </span>}
+          {/* Blocks: template-driven, or legacy fixed sections */}
+          {report.template
+            ? report.template.blocks.map((block) => (
+                block.type === "text" ? renderTextBlock(block)
+                : block.type === "table" ? renderTableBlock(block)
+                : renderPhotoBlock(block)
+              ))
+            : sectionDefs.map((def) => (
+                <div key={def.key} className="space-y-1.5">
+                  <Label className="text-sm font-semibold">
+                    {def.label}
+                    {def.key === "followUp" && <span className="ml-1.5 font-normal text-xs text-muted-foreground">{tr("optional" as Parameters<typeof tr>[0])}</span>}
+                  </Label>
+                  {editing ? (
+                    <Textarea
+                      value={sections[def.key]}
+                      onChange={(e) => setSections((p) => ({ ...p, [def.key]: e.target.value }))}
+                      rows={4}
+                      placeholder={def.placeholder}
+                      className="text-sm"
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm whitespace-pre-wrap min-h-[60px]">
+                      {sections[def.key] || <span className="text-muted-foreground italic">
+                        {def.key === "followUp" && capaId ? tr("sections.followUpCapaHint" as Parameters<typeof tr>[0]) : tr("notEntered" as Parameters<typeof tr>[0])}
+                      </span>}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+              ))
+          }
 
           {/* 레거시 8D 항목 (구버전 보고서에 데이터가 남아있는 경우에만 읽기 전용으로 표시) */}
-          {LEGACY_FIELDS.some((f) => report.sections[f.key]?.trim()) && (
+          {!report.template && LEGACY_FIELDS.some((f) => report.sections[f.key]?.trim()) && (
             <div className="pt-2 border-t border-dashed border-gray-200 space-y-3">
               <p className="text-xs font-medium text-muted-foreground">{tr("legacyFieldsTitle" as Parameters<typeof tr>[0])}</p>
               {LEGACY_FIELDS.filter((f) => report.sections[f.key]?.trim()).map((f) => (
@@ -434,7 +670,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
                 <Trash2 className="h-3.5 w-3.5 mr-1" />{tc("delete")}
               </Button>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setSections(report.sections); }}>{tc("cancel")}</Button>
+                <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setSections(report.sections); setBlockData(report.blockData ?? {}); }}>{tc("cancel")}</Button>
                 <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving}>
                   {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
                   {tr("tempSave" as Parameters<typeof tr>[0])}
