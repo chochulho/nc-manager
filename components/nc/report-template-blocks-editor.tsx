@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trash2, ChevronUp, ChevronDown, Type, Table2, Image } from "lucide-react";
+import { Plus, Trash2, ChevronUp, ChevronDown, Type, Table2, Image, Columns2, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { ReportTemplateBlock } from "@/lib/db/schema";
+import { ReportTableBlock } from "@/components/nc/report-table-block";
+import type { ReportTemplateBlock, BlockWidth } from "@/lib/db/schema";
 
 const TYPE_ICONS: Record<ReportTemplateBlock["type"], typeof Type> = {
   text: Type, table: Table2, photo: Image,
@@ -17,9 +18,9 @@ const TYPE_LABELS: Record<ReportTemplateBlock["type"], string> = {
 
 function makeBlock(type: ReportTemplateBlock["type"]): ReportTemplateBlock {
   const key = `block_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-  if (type === "table") return { key, type, label: "", columns: ["항목", "내용"] };
-  if (type === "photo") return { key, type, label: "" };
-  return { key, type, label: "" };
+  if (type === "table") return { key, type, label: "", columns: ["항목", "내용"], defaultRows: [], width: "full" };
+  if (type === "photo") return { key, type, label: "", width: "full" };
+  return { key, type, label: "", width: "full" };
 }
 
 interface Props {
@@ -37,6 +38,10 @@ export function ReportTemplateBlocksEditor({ blocks, onChange }: Props) {
   function updateColumns(index: number, raw: string) {
     const columns = raw.split(",").map((c) => c.trim()).filter(Boolean);
     onChange(blocks.map((b, i) => (i === index && b.type === "table" ? { ...b, columns } : b)));
+  }
+
+  function updateDefaultRows(index: number, rows: string[][]) {
+    onChange(blocks.map((b, i) => (i === index && b.type === "table" ? { ...b, defaultRows: rows } : b)));
   }
 
   function removeBlock(index: number) {
@@ -63,6 +68,7 @@ export function ReportTemplateBlocksEditor({ blocks, onChange }: Props) {
 
       {blocks.map((block, index) => {
         const Icon = TYPE_ICONS[block.type];
+        const width: BlockWidth = block.width ?? "full";
         return (
           <div key={block.key} className="rounded-xl border border-gray-200 p-3 space-y-2">
             <div className="flex items-center gap-2">
@@ -75,7 +81,19 @@ export function ReportTemplateBlocksEditor({ blocks, onChange }: Props) {
                 placeholder="블록 제목 (예: 문제 현상 및 조사 내용)"
                 className="h-8 text-sm flex-1"
               />
-              <div className="flex items-center shrink-0">
+              <div className="flex items-center shrink-0 gap-0.5">
+                <Button
+                  type="button" variant={width === "half" ? "default" : "ghost"} size="icon" className="h-7 w-7"
+                  onClick={() => updateBlock(index, { width: "half" })} title="절반 너비 (좌우 배치)"
+                >
+                  <Columns2 className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  type="button" variant={width === "full" ? "default" : "ghost"} size="icon" className="h-7 w-7"
+                  onClick={() => updateBlock(index, { width: "full" })} title="전체 너비"
+                >
+                  <Square className="h-3.5 w-3.5" />
+                </Button>
                 <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => moveBlock(index, -1)} disabled={index === 0}>
                   <ChevronUp className="h-3.5 w-3.5" />
                 </Button>
@@ -88,12 +106,25 @@ export function ReportTemplateBlocksEditor({ blocks, onChange }: Props) {
               </div>
             </div>
             {block.type === "table" && (
-              <Input
-                value={block.columns.join(", ")}
-                onChange={(e) => updateColumns(index, e.target.value)}
-                placeholder="표 컬럼명 (콤마로 구분, 예: No, 검사항목, 검사SPEC, 결과, 비고)"
-                className="h-8 text-xs"
-              />
+              <div className="space-y-2 pt-1">
+                <Input
+                  value={block.columns.join(", ")}
+                  onChange={(e) => updateColumns(index, e.target.value)}
+                  placeholder="표 컬럼명 (콤마로 구분, 예: No, 검사항목, 검사SPEC, 결과, 비고)"
+                  className="h-8 text-xs"
+                />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    기본 행 (보고서 작성 시 미리 채워질 행 — 검사항목처럼 고정된 행을 여기서 만들어두면 편합니다)
+                  </p>
+                  <ReportTableBlock
+                    columns={block.columns}
+                    rows={block.defaultRows ?? []}
+                    editing
+                    onChange={(rows) => updateDefaultRows(index, rows)}
+                  />
+                </div>
+              </div>
             )}
           </div>
         );

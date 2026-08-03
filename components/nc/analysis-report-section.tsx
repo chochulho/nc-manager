@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   FileText, ChevronDown, ChevronUp, Save, Loader2,
-  Download, Printer, RefreshCw, Trash2, CheckCircle2, PenLine, XCircle, Upload, X,
+  Download, Printer, RefreshCw, Trash2, CheckCircle2, PenLine, XCircle, Upload, X, Paperclip, Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { upload } from "@vercel/blob/client";
 import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
 import { ReportTableBlock } from "@/components/nc/report-table-block";
-import type { ReportTemplateBlock, ReportBlockValue } from "@/lib/db/schema";
+import type { ReportTemplateBlock, ReportBlockValue, BlockAttachment } from "@/lib/db/schema";
 
 const RESOLUTION_TYPE_KEYS = ["confirmed_nc", "ntf", "customer_misuse", "partial"] as const;
 
@@ -66,9 +66,29 @@ interface ComplaintInfo {
   customerId: string;
   customerName: string;
   partName: string;
+  partNumberDetail: string | null;
+  lotNumber: string | null;
+  quantityClaimed: string | null;
+  quantityConfirmed: string | null;
+  customerSiteName: string | null;
+  customerReference: string | null;
+  occurredAt: Date | string | null;
   receivedAt: Date | string;
   severity: string;
   resolutionType: string | null;
+}
+
+interface FieldClaimInfo {
+  vehicleModel: string | null;
+  vehicleVin: string | null;
+  manufacturedAt: string | null;
+  region: string | null;
+  dealerName: string | null;
+  mileageKm: string | null;
+  usageMonths: number | null;
+  dtcCodes: string[] | null;
+  symptomDescription: string | null;
+  extraData: { soldAt?: string | null; repairedAt?: string | null; incidentLocationType?: string | null } | null;
 }
 
 interface Props {
@@ -80,6 +100,23 @@ interface Props {
 
 type SectionKey = "problemDescription" | "rootCause" | "conclusion" | "followUp";
 type SectionDef = { key: SectionKey; label: string; placeholder: string };
+
+function groupBlocksIntoRows(blocks: ReportTemplateBlock[]): ReportTemplateBlock[][] {
+  const rows: ReportTemplateBlock[][] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const b = blocks[i];
+    const next = blocks[i + 1];
+    if ((b.width ?? "full") === "half" && next && (next.width ?? "full") === "half") {
+      rows.push([b, next]);
+      i += 2;
+    } else {
+      rows.push([b]);
+      i += 1;
+    }
+  }
+  return rows;
+}
 
 export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onComplaintUpdated }: Props) {
   const t = useTranslations("complaint");
@@ -135,6 +172,8 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   const [importingCapa, setImportingCapa] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState<string | null>(null);
+  const [fieldClaim, setFieldClaim] = useState<FieldClaimInfo | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const [sections, setSections] = useState<Sections>({
     problemDescription: "", rootCause: "", conclusion: "", followUp: "",
@@ -167,6 +206,52 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       .then((data: TemplateOption[]) => setAvailableTemplates(data))
       .catch(() => setAvailableTemplates([]));
   }, [complaintInfo.customerId]);
+
+  useEffect(() => {
+    fetch(`/api/nc/field-claim-details?complaintId=${complaintId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: FieldClaimInfo | null) => setFieldClaim(data))
+      .catch(() => setFieldClaim(null));
+  }, [complaintId]);
+
+  // 클레임 기본정보 + 필드클레임정보를 보고서 텍스트 블록에 삽입 가능한 형태로 요약
+  function buildClaimInfoSnippet(): string {
+    const lines: string[] = [];
+    if (complaintInfo.partNumberDetail) lines.push(`◆ 품번: ${complaintInfo.partNumberDetail}`);
+    if (complaintInfo.lotNumber) lines.push(`◆ LOT 번호: ${complaintInfo.lotNumber}`);
+    if (complaintInfo.quantityClaimed) {
+      lines.push(`◆ 클레임 수량: ${complaintInfo.quantityClaimed}${complaintInfo.quantityConfirmed ? ` (확인수량: ${complaintInfo.quantityConfirmed})` : ""}`);
+    }
+    if (complaintInfo.customerSiteName) lines.push(`◆ 고객사 공장: ${complaintInfo.customerSiteName}`);
+    if (complaintInfo.customerReference) lines.push(`◆ 고객사 참조번호: ${complaintInfo.customerReference}`);
+    if (complaintInfo.occurredAt) lines.push(`◆ 발생일: ${new Date(complaintInfo.occurredAt).toLocaleDateString()}`);
+    if (fieldClaim) {
+      if (fieldClaim.vehicleModel) lines.push(`◆ 차종: ${fieldClaim.vehicleModel}`);
+      if (fieldClaim.vehicleVin) lines.push(`◆ VIN: ${fieldClaim.vehicleVin}`);
+      if (fieldClaim.manufacturedAt) lines.push(`◆ 제조일: ${new Date(fieldClaim.manufacturedAt).toLocaleDateString()}`);
+      if (fieldClaim.extraData?.soldAt) lines.push(`◆ 판매일: ${new Date(fieldClaim.extraData.soldAt).toLocaleDateString()}`);
+      if (fieldClaim.extraData?.repairedAt) lines.push(`◆ 수리일: ${new Date(fieldClaim.extraData.repairedAt).toLocaleDateString()}`);
+      if (fieldClaim.mileageKm) lines.push(`◆ 주행거리: ${Number(fieldClaim.mileageKm).toLocaleString()}km`);
+      if (fieldClaim.usageMonths != null) lines.push(`◆ 사용기간: ${fieldClaim.usageMonths}개월`);
+      if (fieldClaim.region) lines.push(`◆ 발생 지역: ${fieldClaim.region}`);
+      if (fieldClaim.dealerName) lines.push(`◆ 딜러/사업소: ${fieldClaim.dealerName}`);
+      if (fieldClaim.dtcCodes?.length) lines.push(`◆ DTC: ${fieldClaim.dtcCodes.join(", ")}`);
+      if (fieldClaim.symptomDescription) lines.push(`◆ 증상: ${fieldClaim.symptomDescription}`);
+    }
+    return lines.join("\n");
+  }
+
+  function insertClaimInfoInto(key: string) {
+    const snippet = buildClaimInfoSnippet();
+    if (!snippet) { toast.error(tr("noClaimInfo" as Parameters<typeof tr>[0])); return; }
+    setBlockData((p) => {
+      const current = p[key];
+      const existingValue = current?.type === "text" ? current.value : "";
+      const nextValue = existingValue ? `${existingValue}\n\n${snippet}` : snippet;
+      const attachments = current?.type === "text" ? current.attachments : undefined;
+      return { ...p, [key]: { type: "text", value: nextValue, attachments } };
+    });
+  }
 
   async function handleResolutionTypeChange(value: string) {
     const prev = resolutionType;
@@ -296,6 +381,59 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     }
   }
 
+  function handlePhotoPaste(key: string, e: React.ClipboardEvent) {
+    if (!editing) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          e.preventDefault();
+          const ext = file.type.split("/")[1] || "png";
+          handlePhotoUpload(key, new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type }));
+        }
+        break;
+      }
+    }
+  }
+
+  async function handleBlockAttachmentUpload(key: string, kind: "text" | "table", files: FileList | null) {
+    if (!files?.length || !report) return;
+    setUploadingAttachment(key);
+    try {
+      const uploaded: BlockAttachment[] = [];
+      for (const file of Array.from(files)) {
+        const safeName = `nc/analysis_report/${report.id}/${key}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${file.name}`;
+        const blob = await upload(safeName, file, { access: "public", handleUploadUrl: "/api/nc/attachments/client-token" });
+        uploaded.push({ filename: file.name, url: blob.url });
+      }
+      setBlockData((p) => {
+        const current = p[key];
+        if (kind === "text") {
+          const value = current?.type === "text" ? current.value : "";
+          const existing = current?.type === "text" ? current.attachments ?? [] : [];
+          return { ...p, [key]: { type: "text", value, attachments: [...existing, ...uploaded] } };
+        }
+        const rows = current?.type === "table" ? current.rows : [];
+        const existing = current?.type === "table" ? current.attachments ?? [] : [];
+        return { ...p, [key]: { type: "table", rows, attachments: [...existing, ...uploaded] } };
+      });
+    } catch {
+      toast.error(tc("error"));
+    } finally {
+      setUploadingAttachment(null);
+    }
+  }
+
+  function removeBlockAttachment(key: string, kind: "text" | "table", url: string) {
+    setBlockData((p) => {
+      const current = p[key];
+      if (!current || current.type !== kind) return p;
+      return { ...p, [key]: { ...current, attachments: (current.attachments ?? []).filter((a) => a.url !== url) } };
+    });
+  }
+
   async function handleDownloadPdf() {
     if (!report) return;
     setExportingPdf(true);
@@ -319,6 +457,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     const PptxGenJS = (await import("pptxgenjs")).default;
     const prs = new PptxGenJS();
     prs.layout = "LAYOUT_WIDE";
+    type PptxSlide = ReturnType<typeof prs.addSlide>;
 
     const ACCENT = report.template?.accentColor || (isNtf ? "374151" : isCustomerFault ? "7C3AED" : "1E40AF");
 
@@ -347,42 +486,90 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     cover.addText(meta, { x: 0.8, y: 3.8, w: 11.5, h: 0.4, fontSize: 11, color: "9CA3AF" });
     cover.addText(new Date().toLocaleDateString(), { x: 0.8, y: 5.5, w: 11.5, h: 0.3, fontSize: 10, color: "9CA3AF" });
 
-    if (report.template) {
-      // Template-driven slides (text / table / photo blocks)
-      for (const block of report.template.blocks) {
-        const value = blockData[block.key];
+    function addAttachmentLinks(slide: PptxSlide, attachments: BlockAttachment[] | undefined, x: number, y: number, w: number) {
+      if (!attachments?.length) return;
+      slide.addText(
+        attachments.map((a, i) => ({
+          text: `${i > 0 ? "   " : ""}📎 ${a.filename}`,
+          options: { hyperlink: { url: a.url }, color: "2563EB", underline: { style: "sng" as const }, fontSize: 9 },
+        })),
+        { x, y, w, h: 0.3, valign: "top" }
+      );
+    }
 
-        if (block.type === "text") {
-          const content = value?.type === "text" ? value.value : "";
-          if (!content?.trim()) continue;
-          const slide = prs.addSlide();
-          slide.background = { color: "FFFFFF" };
-          slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-          slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
-          slide.addText(content, { x: 0.4, y: 1.1, w: 12.5, h: 4.7, fontSize: 13, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 6 });
-        } else if (block.type === "table") {
-          const rows = value?.type === "table" ? value.rows : [];
-          if (!rows.length) continue;
-          const slide = prs.addSlide();
-          slide.background = { color: "FFFFFF" };
-          slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-          slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+    function addFullBlockSlide(block: ReportTemplateBlock) {
+      const value = blockData[block.key];
+      if (block.type === "text") {
+        const content = value?.type === "text" ? value.value : "";
+        const attachments = value?.type === "text" ? value.attachments : undefined;
+        if (!content?.trim() && !attachments?.length) return;
+        const slide = prs.addSlide();
+        slide.background = { color: "FFFFFF" };
+        slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
+        slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+        slide.addText(content, { x: 0.4, y: 1.1, w: 12.5, h: 4.6, fontSize: 13, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 6 });
+        addAttachmentLinks(slide, attachments, 0.4, 6.0, 12.5);
+      } else if (block.type === "table") {
+        const rows = value?.type === "table" ? value.rows : [];
+        const attachments = value?.type === "table" ? value.attachments : undefined;
+        if (!rows.length && !attachments?.length) return;
+        const slide = prs.addSlide();
+        slide.background = { color: "FFFFFF" };
+        slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
+        slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+        if (rows.length) {
           const tableRows = [
             block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" } } })),
             ...rows.map((row) => row.map((cell) => ({ text: cell }))),
           ];
-          slide.addTable(tableRows, {
-            x: 0.4, y: 1.1, w: 12.5, fontSize: 11,
-            border: { type: "solid", color: "E5E7EB", pt: 0.5 },
-          });
-        } else if (block.type === "photo") {
-          const url = value?.type === "photo" ? value.url : "";
-          if (!url) continue;
+          slide.addTable(tableRows, { x: 0.4, y: 1.1, w: 12.5, fontSize: 11, border: { type: "solid", color: "E5E7EB", pt: 0.5 } });
+        }
+        addAttachmentLinks(slide, attachments, 0.4, 6.0, 12.5);
+      } else if (block.type === "photo") {
+        const url = value?.type === "photo" ? value.url : "";
+        if (!url) return;
+        const slide = prs.addSlide();
+        slide.background = { color: "FFFFFF" };
+        slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
+        slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
+        slide.addImage({ path: url, x: 2.5, y: 1.3, w: 8.33, h: 4.5 });
+      }
+    }
+
+    function addHalfBlockToSlide(slide: PptxSlide, block: ReportTemplateBlock, x: number, w: number) {
+      const value = blockData[block.key];
+      slide.addShape(prs.ShapeType.rect, { x, y: 0.3, w, h: 0.5, fill: { color: ACCENT } });
+      slide.addText(block.label, { x: x + 0.1, y: 0.3, w: w - 0.2, h: 0.5, fontSize: 14, bold: true, color: "FFFFFF", valign: "middle" });
+      const contentY = 0.95;
+      if (block.type === "text") {
+        const content = value?.type === "text" ? value.value : "";
+        slide.addText(content, { x, y: contentY, w, h: 5.6, fontSize: 11, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 4 });
+        addAttachmentLinks(slide, value?.type === "text" ? value.attachments : undefined, x, 6.7, w);
+      } else if (block.type === "table") {
+        const rows = value?.type === "table" ? value.rows : [];
+        if (rows.length) {
+          const tableRows = [
+            block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" } } })),
+            ...rows.map((row) => row.map((cell) => ({ text: cell }))),
+          ];
+          slide.addTable(tableRows, { x, y: contentY, w, fontSize: 9, border: { type: "solid", color: "E5E7EB", pt: 0.5 } });
+        }
+        addAttachmentLinks(slide, value?.type === "table" ? value.attachments : undefined, x, 6.7, w);
+      } else if (block.type === "photo") {
+        const url = value?.type === "photo" ? value.url : "";
+        if (url) slide.addImage({ path: url, x: x + w / 2 - 2, y: contentY, w: 4, h: 4.2 });
+      }
+    }
+
+    if (report.template) {
+      for (const row of groupBlocksIntoRows(report.template.blocks)) {
+        if (row.length === 2) {
           const slide = prs.addSlide();
           slide.background = { color: "FFFFFF" };
-          slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-          slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
-          slide.addImage({ path: url, x: 2.5, y: 1.3, w: 8.33, h: 4.5 });
+          addHalfBlockToSlide(slide, row[0], 0.4, 6.0);
+          addHalfBlockToSlide(slide, row[1], 6.93, 6.0);
+        } else {
+          addFullBlockSlide(row[0]);
         }
       }
     } else {
@@ -416,16 +603,60 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     ? "bg-gray-50 border-gray-200 text-gray-700"
     : "bg-purple-50 border-purple-200 text-purple-700";
 
+  function renderAttachments(key: string, kind: "text" | "table", attachments: BlockAttachment[] | undefined) {
+    const list = attachments ?? [];
+    if (!list.length && !editing) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        {list.map((a) => (
+          <a
+            key={a.url} href={a.url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
+          >
+            <Paperclip className="h-3 w-3" />{a.filename}
+            {editing && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeBlockAttachment(key, kind, a.url); }}
+                className="ml-0.5 text-blue-400 hover:text-red-500"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </a>
+        ))}
+        {editing && (
+          <label className="flex items-center gap-1 text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 text-muted-foreground cursor-pointer hover:bg-gray-50">
+            {uploadingAttachment === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Paperclip className="h-3 w-3" />}
+            {tr("attachFile" as Parameters<typeof tr>[0])}
+            <input
+              type="file" multiple className="hidden"
+              onChange={(e) => handleBlockAttachmentUpload(key, kind, e.target.files)}
+              disabled={uploadingAttachment === key}
+            />
+          </label>
+        )}
+      </div>
+    );
+  }
+
   function renderTextBlock(block: Extract<ReportTemplateBlock, { type: "text" }>) {
     const value = blockData[block.key];
     const v = value?.type === "text" ? value.value : "";
     return (
       <div key={block.key} className="space-y-1.5">
-        <Label className="text-sm font-semibold">{block.label}</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold">{block.label}</Label>
+          {editing && (
+            <Button type="button" variant="ghost" size="sm" className="h-6 text-xs px-2 text-muted-foreground" onClick={() => insertClaimInfoInto(block.key)}>
+              <Wand2 className="h-3 w-3 mr-1" />{tr("insertClaimInfo" as Parameters<typeof tr>[0])}
+            </Button>
+          )}
+        </div>
         {editing ? (
           <Textarea
             value={v}
-            onChange={(e) => setBlockData((p) => ({ ...p, [block.key]: { type: "text", value: e.target.value } }))}
+            onChange={(e) => setBlockData((p) => ({ ...p, [block.key]: { type: "text", value: e.target.value, attachments: value?.type === "text" ? value.attachments : undefined } }))}
             rows={4}
             placeholder={block.placeholder}
             className="text-sm"
@@ -435,6 +666,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             {v || <span className="text-muted-foreground italic">{tr("notEntered" as Parameters<typeof tr>[0])}</span>}
           </div>
         )}
+        {renderAttachments(block.key, "text", value?.type === "text" ? value.attachments : undefined)}
       </div>
     );
   }
@@ -449,8 +681,9 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
           columns={block.columns}
           rows={rows}
           editing={editing}
-          onChange={(nextRows) => setBlockData((p) => ({ ...p, [block.key]: { type: "table", rows: nextRows } }))}
+          onChange={(nextRows) => setBlockData((p) => ({ ...p, [block.key]: { type: "table", rows: nextRows, attachments: value?.type === "table" ? value.attachments : undefined } }))}
         />
+        {renderAttachments(block.key, "table", value?.type === "table" ? value.attachments : undefined)}
       </div>
     );
   }
@@ -459,7 +692,12 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     const value = blockData[block.key];
     const url = value?.type === "photo" ? value.url : "";
     return (
-      <div key={block.key} className="space-y-1.5">
+      <div
+        key={block.key}
+        className={`space-y-1.5 rounded-xl outline-none ${editing ? "focus:ring-2 focus:ring-blue-200" : ""}`}
+        tabIndex={editing ? 0 : undefined}
+        onPaste={editing ? (e) => handlePhotoPaste(block.key, e) : undefined}
+      >
         <Label className="text-sm font-semibold">{block.label}</Label>
         {url ? (
           <div className="relative inline-block">
@@ -474,11 +712,14 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             )}
           </div>
         ) : editing ? (
-          <label className="flex items-center justify-center gap-2 h-24 rounded-xl border border-dashed border-gray-300 text-sm text-muted-foreground cursor-pointer hover:bg-gray-50">
+          <label className="flex flex-col items-center justify-center gap-1 h-24 rounded-xl border border-dashed border-gray-300 text-sm text-muted-foreground cursor-pointer hover:bg-gray-50">
             {uploadingPhoto === block.key ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <><Upload className="h-4 w-4" />{tr("uploadPhoto" as Parameters<typeof tr>[0])}</>
+              <>
+                <span className="flex items-center gap-2"><Upload className="h-4 w-4" />{tr("uploadPhoto" as Parameters<typeof tr>[0])}</span>
+                <span className="text-xs text-gray-400">{tr("pastePhotoHint" as Parameters<typeof tr>[0])}</span>
+              </>
             )}
             <input
               type="file" accept="image/*" className="hidden"
@@ -493,6 +734,12 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
         )}
       </div>
     );
+  }
+
+  function renderBlock(block: ReportTemplateBlock) {
+    return block.type === "text" ? renderTextBlock(block)
+      : block.type === "table" ? renderTableBlock(block)
+      : renderPhotoBlock(block);
   }
 
   return (
@@ -617,12 +864,14 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             </div>
           </div>
 
-          {/* Blocks: template-driven, or legacy fixed sections */}
+          {/* Blocks: template-driven (width-grouped), or legacy fixed sections */}
           {report.template
-            ? report.template.blocks.map((block) => (
-                block.type === "text" ? renderTextBlock(block)
-                : block.type === "table" ? renderTableBlock(block)
-                : renderPhotoBlock(block)
+            ? groupBlocksIntoRows(report.template.blocks).map((row, idx) => (
+                row.length === 2 ? (
+                  <div key={idx} className="grid grid-cols-2 gap-4">
+                    {row.map((block) => renderBlock(block))}
+                  </div>
+                ) : renderBlock(row[0])
               ))
             : sectionDefs.map((def) => (
                 <div key={def.key} className="space-y-1.5">

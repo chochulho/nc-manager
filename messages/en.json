@@ -427,6 +427,10 @@
       "autoTemplate": "Template: Auto-match",
       "legacyTemplate": "Template: Standard format",
       "uploadPhoto": "Upload photo",
+      "pastePhotoHint": "Click, then paste with Ctrl+V",
+      "attachFile": "Attach file",
+      "insertClaimInfo": "Insert claim info",
+      "noClaimInfo": "No claim info available to insert.",
       "resolutionLabels": {
         "ntf": "NTF (No Trouble Found)",
         "customer_misuse": "Customer Fault",

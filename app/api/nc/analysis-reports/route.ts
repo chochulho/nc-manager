@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ncAnalysisReports, customerComplaints, capas, ncReportTemplates, type ReportBlockValue } from "@/lib/db/schema";
+import { ncAnalysisReports, customerComplaints, capas, ncReportTemplates, type ReportBlockValue, type ReportTemplateBlock } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 
 function extractRootCause(d4: unknown): string {
@@ -76,11 +76,14 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ ...report, template: template ?? null });
 }
 
-function initBlockData(blocks: Array<{ key: string; type: "text" | "table" | "photo" }>): Record<string, ReportBlockValue> {
+function initBlockData(blocks: ReportTemplateBlock[]): Record<string, ReportBlockValue> {
   return Object.fromEntries(blocks.map((b) => {
-    if (b.type === "table") return [b.key, { type: "table", rows: [] } satisfies ReportBlockValue];
+    if (b.type === "table") {
+      const rows = (b.defaultRows ?? []).map((row) => [...row]);
+      return [b.key, { type: "table", rows, attachments: [] } satisfies ReportBlockValue];
+    }
     if (b.type === "photo") return [b.key, { type: "photo", url: "" } satisfies ReportBlockValue];
-    return [b.key, { type: "text", value: "" } satisfies ReportBlockValue];
+    return [b.key, { type: "text", value: "", attachments: [] } satisfies ReportBlockValue];
   }));
 }
 
