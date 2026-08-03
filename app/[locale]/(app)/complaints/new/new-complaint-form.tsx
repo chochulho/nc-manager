@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Save, Paperclip, X, Plus, MapPin, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, Paperclip, X, Plus, MapPin } from "lucide-react";
 import { Link } from "@/lib/i18n/navigation";
 import { WriteGuidePanel } from "@/components/write-guide-panel";
 
@@ -30,8 +30,6 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
   const tn = useTranslations("nc");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [awaitingAiPaste, setAwaitingAiPaste] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [dtcInput, setDtcInput] = useState("");
   const [fieldClaim, setFieldClaim] = useState({
@@ -84,163 +82,28 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
     setFieldClaim((prev) => ({ ...prev, dtcCodes: prev.dtcCodes.filter((c) => c !== code) }));
   }
 
-  function fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve((reader.result as string).split(",")[1] ?? "");
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function findCustomerId(name: string | null | undefined): string {
-    const needle = name?.trim().toLowerCase();
-    if (!needle) return "";
-    const match = customers.find((c) => c.name.toLowerCase().includes(needle) || needle.includes(c.name.toLowerCase()));
-    return match?.id ?? "";
-  }
-
-  function findPartId(numberRaw: string | null | undefined): string {
-    const needle = numberRaw?.trim().toLowerCase();
-    if (!needle) return "";
-    const match = parts.find((p) => p.number.toLowerCase() === needle || p.number.toLowerCase().includes(needle));
-    return match?.id ?? "";
-  }
-
-  function applyExtracted(extracted: Record<string, unknown>): number {
-    let filled = 0;
-
-    setForm((prev) => {
-      const next = { ...prev };
-      const setIfEmpty = (key: keyof typeof next, value: unknown) => {
-        if (value !== null && value !== undefined && value !== "" && !next[key]) {
-          (next as Record<string, unknown>)[key] = value;
-          filled++;
-        }
-      };
-      setIfEmpty("title", extracted.title);
-      setIfEmpty("customerDescription", extracted.customerDescription);
-      setIfEmpty("occurredAt", extracted.occurredAt);
-      setIfEmpty("receivedChannel", extracted.receivedChannel);
-      setIfEmpty("discoveryStage", extracted.discoveryStage);
-      setIfEmpty("severity", extracted.severity);
-      setIfEmpty("recurrenceType", extracted.recurrenceType);
-      setIfEmpty("customerSiteName", extracted.customerSiteName);
-      setIfEmpty("customerReference", extracted.customerReference);
-      setIfEmpty("partNumberDetail", extracted.partNumberRaw);
-      setIfEmpty("lotNumber", extracted.lotNumber);
-      if (typeof extracted.quantityClaimed === "number") setIfEmpty("quantityClaimed", String(extracted.quantityClaimed));
-      if (extracted.safetyRelated === true && !next.safetyRelated) { next.safetyRelated = true; filled++; }
-      if (extracted.recallRisk === true && !next.recallRisk) { next.recallRisk = true; filled++; }
-      const customerId = findCustomerId(extracted.customerName as string | null | undefined);
-      if (customerId && !next.customerId) { next.customerId = customerId; filled++; }
-      const partId = findPartId(extracted.partNumberRaw as string | null | undefined);
-      if (partId && !next.partId) { next.partId = partId; filled++; }
-      return next;
-    });
-
-    const fc = extracted.fieldClaim as Record<string, unknown> | null | undefined;
-    if (fc) {
-      setFieldClaim((prev) => {
-        const next = { ...prev };
-        const setIfEmpty = (key: keyof typeof next, value: unknown) => {
-          if (value !== null && value !== undefined && value !== "" && !next[key]) {
-            (next as Record<string, unknown>)[key] = String(value);
-            filled++;
-          }
-        };
-        setIfEmpty("vehicleModel", fc.vehicleModel);
-        setIfEmpty("vehicleVin", fc.vehicleVin);
-        setIfEmpty("manufacturedAt", fc.manufacturedAt);
-        setIfEmpty("usageMonths", fc.usageMonths);
-        setIfEmpty("soldAt", fc.soldAt);
-        setIfEmpty("repairedAt", fc.repairedAt);
-        setIfEmpty("incidentLocationType", fc.incidentLocationType);
-        setIfEmpty("region", fc.region);
-        setIfEmpty("dealerName", fc.dealerName);
-        setIfEmpty("mileageKm", fc.mileageKm);
-        setIfEmpty("symptomDescription", fc.symptomDescription);
-        if (Array.isArray(fc.dtcCodes) && fc.dtcCodes.length > 0 && next.dtcCodes.length === 0) {
-          next.dtcCodes = fc.dtcCodes.map((c: string) => c.toUpperCase());
-          filled++;
-        }
-        return next;
-      });
-    }
-
-    return filled;
-  }
-
-  async function analyzeImage(file: File) {
-    setAnalyzing(true);
-    try {
-      const imageBase64 = await fileToBase64(file);
-      const res = await fetch("/api/nc/complaints/parse-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64, mediaType: file.type }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data.error ?? t("aiParseFailed"));
-        return;
-      }
-      const filled = applyExtracted(data.extracted);
-      if (filled > 0) toast.success(t("aiParseSuccess", { count: filled }));
-      else toast.message(t("aiParseEmpty"));
-    } catch {
-      toast.error(t("aiParseFailed"));
-    } finally {
-      setAnalyzing(false);
-    }
-  }
-
-  function extractImageFromClipboard(clipboardData: DataTransfer | null): File | null {
-    const items = clipboardData?.items;
-    if (!items) return null;
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) {
-          const ext = file.type.split("/")[1] || "png";
-          return new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type });
-        }
-      }
-    }
-    return null;
-  }
-
-  function handleDropzonePaste(e: React.ClipboardEvent) {
-    if (awaitingAiPaste) return; // AI 자동 입력 대기 중에는 전역 리스너가 처리
-    const image = extractImageFromClipboard(e.clipboardData);
-    if (image) {
-      e.preventDefault();
-      setPendingFiles((prev) => [...prev, image]);
-    }
-  }
-
-  // "필드 발생정보 자동 입력" 버튼을 누른 뒤에만 화면 전체에서 Ctrl+V를 감지
   useEffect(() => {
-    if (!awaitingAiPaste) return;
-
-    function handleAiPaste(e: ClipboardEvent) {
-      const image = extractImageFromClipboard(e.clipboardData);
-      if (image) {
+    function handlePaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const images: File[] = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            const ext = file.type.split("/")[1] || "png";
+            images.push(new File([file], `pasted-${Date.now()}.${ext}`, { type: file.type }));
+          }
+        }
+      }
+      if (images.length > 0) {
         e.preventDefault();
-        setAwaitingAiPaste(false);
-        analyzeImage(image);
+        setPendingFiles((prev) => [...prev, ...images]);
       }
     }
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setAwaitingAiPaste(false);
-    }
-    window.addEventListener("paste", handleAiPaste);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("paste", handleAiPaste);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [awaitingAiPaste]);
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   const isFieldClaim = form.discoveryStage === "field" || form.discoveryStage === "warranty";
 
@@ -304,32 +167,6 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-start gap-3">
-            <Sparkles className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-blue-900">{t("aiAutoFillTitle")}</p>
-              <p className="text-xs text-blue-700 mt-0.5">
-                {awaitingAiPaste ? t("aiAwaitingPasteDesc") : t("aiAutoFillDesc")}
-              </p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant={awaitingAiPaste ? "default" : "outline"}
-            onClick={() => setAwaitingAiPaste((v) => !v)}
-            disabled={analyzing}
-            className="shrink-0"
-          >
-            {analyzing ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t("aiParsing")}</>
-            ) : awaitingAiPaste ? (
-              t("aiAwaitingPaste")
-            ) : (
-              <><Sparkles className="h-4 w-4 mr-2" />{t("aiAutoFillButton")}</>
-            )}
-          </Button>
-        </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-5">
             {/* 기본 정보 */}
@@ -581,22 +418,20 @@ export function NewComplaintForm({ customers, parts, categoriesL2, sites, defaul
                 {tc("attachmentsHint")}
               </h2>
               <label
-                tabIndex={0}
-                className="block border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="block border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
                   const dropped = Array.from(e.dataTransfer.files);
                   setPendingFiles((prev) => [...prev, ...dropped]);
                 }}
-                onPaste={handleDropzonePaste}
               >
                 <input type="file" multiple className="hidden"
                   onChange={(e) => { if (e.target.files) setPendingFiles((prev) => [...prev, ...Array.from(e.target.files!)]); }} />
                 <Paperclip className="h-5 w-5 mx-auto mb-1.5 text-gray-400" />
                 <p className="text-sm text-muted-foreground">{tc("dropzoneHint")}</p>
               </label>
-              <p className="text-xs text-muted-foreground text-center">{t("photoPasteHint")}</p>
+              <p className="text-xs text-muted-foreground text-center">{tc("pasteHint")}</p>
               {pendingFiles.length > 0 && (
                 <div className="space-y-2">
                   {pendingFiles.some((f) => f.type.startsWith("image/")) && (

@@ -91,12 +91,12 @@ export function NewCAPAForm({ sourceType: initSourceType, sourceId: initSourceId
             <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
               <h2 className="section-title">{t("basicInfo")}</h2>
               <div>
-                <Label>{t("title")} *</Label>
+                <Label>{tc("title")} *</Label>
                 <Input
                   value={form.title}
                   onChange={(e) => set("title", e.target.value)}
                   required
-                  placeholder={t("title")}
+                  placeholder={tc("title")}
                   className="mt-1"
                 />
               </div>

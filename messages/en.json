@@ -469,17 +469,7 @@
     "customerSitePlaceholder": "e.g. Hwaseong Plant",
     "customerRefPlaceholder": "Customer internal reference number",
     "emptyState": "No customer complaints found for the selected period.",
-    "registerFirst": "Register your first complaint",
-    "aiParsing": "Analyzing image...",
-    "aiParseSuccess": "Auto-filled {count} field(s) from the image.",
-    "aiParseEmpty": "No recognizable information found in the image.",
-    "aiParseFailed": "Failed to analyze the image.",
-    "aiAutoFillTitle": "AI Auto-fill",
-    "aiAutoFillDesc": "If you've captured a defect-notification email, customer portal screen, etc., click the button and paste it with Ctrl+V — we'll auto-fill the fields.",
-    "aiAutoFillButton": "Auto-fill occurrence info",
-    "aiAwaitingPaste": "Paste image with Ctrl+V (click again to cancel)",
-    "aiAwaitingPasteDesc": "Press Ctrl+V anywhere on the page to start analysis. Click the button again to cancel.",
-    "photoPasteHint": "Click this area, then press Ctrl+V to attach a photo."
+    "registerFirst": "Register your first complaint"
   },
   "capa": {
     "title": "CAPA",
