@@ -435,6 +435,7 @@
       "reloadDefaultsConfirm": "This fills empty blocks with the template's default content/rows. Already-entered content is left unchanged. Continue?",
       "noDefaultsToApply": "No template defaults to apply, or all blocks are already filled.",
       "reloadedDefaults": "Template defaults loaded.",
+      "uploadInProgress": "File upload in progress. Please wait before saving.",
       "resolutionLabels": {
         "ntf": "NTF (No Trouble Found)",
         "customer_misuse": "Customer Fault",

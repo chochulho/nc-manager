@@ -320,6 +320,12 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
 
   async function handleSave(finalise = false, closeComplaint = false) {
     if (!report) return;
+    // 사진/파일 업로드가 아직 끝나지 않은 상태에서 저장하면, 업로드 완료 전의 blockData가
+    // 서버에 그대로 저장되어 방금 올린 사진이 누락될 수 있으므로 업로드 완료를 기다린다.
+    if (uploadingPhoto || uploadingAttachment) {
+      toast.error(tr("uploadInProgress" as Parameters<typeof tr>[0]));
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/nc/analysis-reports/${report.id}`, {
@@ -708,6 +714,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   const bannerClass = isNtf
     ? "bg-gray-50 border-gray-200 text-gray-700"
     : "bg-purple-50 border-purple-200 text-purple-700";
+  const uploadBusy = uploadingPhoto !== null || uploadingAttachment !== null;
 
   function renderAttachments(key: string, kind: "text" | "table", attachments: BlockAttachment[] | undefined) {
     const list = attachments ?? [];
@@ -1037,25 +1044,30 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
               <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600" onClick={handleDelete}>
                 <Trash2 className="h-3.5 w-3.5 mr-1" />{tc("delete")}
               </Button>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                {uploadBusy && (
+                  <span className="flex items-center gap-1 text-xs text-amber-600">
+                    <Loader2 className="h-3 w-3 animate-spin" />{tr("uploadInProgress" as Parameters<typeof tr>[0])}
+                  </span>
+                )}
                 <Button variant="ghost" size="sm" onClick={() => { setEditing(false); setSections(report.sections); setBlockData(report.blockData ?? {}); }}>{tc("cancel")}</Button>
-                <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving}>
+                <Button variant="outline" size="sm" onClick={() => handleSave(false)} disabled={saving || uploadBusy}>
                   {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
                   {tr("tempSave" as Parameters<typeof tr>[0])}
                 </Button>
                 {isClosureByReport ? (
                   <>
-                    <Button variant="outline" size="sm" onClick={() => handleSave(true, false)} disabled={saving}>
+                    <Button variant="outline" size="sm" onClick={() => handleSave(true, false)} disabled={saving || uploadBusy}>
                       <CheckCircle2 className="h-3.5 w-3.5 mr-1" />{tr("finalizeOnly" as Parameters<typeof tr>[0])}
                     </Button>
-                    <Button size="sm" onClick={() => handleSave(true, true)} disabled={saving}
+                    <Button size="sm" onClick={() => handleSave(true, true)} disabled={saving || uploadBusy}
                       className={isNtf ? "bg-gray-700 hover:bg-gray-800" : "bg-purple-600 hover:bg-purple-700"}>
                       {saving ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <XCircle className="h-3.5 w-3.5 mr-1" />}
                       {tr("finalizeAndClose" as Parameters<typeof tr>[0])}
                     </Button>
                   </>
                 ) : (
-                  <Button size="sm" onClick={() => handleSave(true, false)} disabled={saving}>
+                  <Button size="sm" onClick={() => handleSave(true, false)} disabled={saving || uploadBusy}>
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1" />{tr("finalize" as Parameters<typeof tr>[0])}
                   </Button>
                 )}
