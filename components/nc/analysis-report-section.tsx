@@ -19,6 +19,42 @@ import type { ReportTemplateBlock, ReportBlockValue, BlockAttachment } from "@/l
 
 const RESOLUTION_TYPE_KEYS = ["confirmed_nc", "ntf", "customer_misuse", "partial"] as const;
 
+// pptxgenjs의 원격 path 임베딩은 CORS/네트워크 상황에 따라 조용히 실패할 수 있어,
+// 브라우저에서 직접 fetch한 뒤 base64로 변환해 안정적으로 삽입한다.
+async function fetchImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+// 텍스트/표 블록이 실제로 차지할 세로 공간(인치)을 대략 추정한다.
+// 한글이 섞인 텍스트의 줄바꿈을 정확히 계산할 수는 없어 넉넉하게(보수적으로) 잡아 겹침을 방지한다.
+function estimateBlockHeight(block: ReportTemplateBlock, value: ReportBlockValue | undefined, widthIn: number): number {
+  const LABEL_H = 0.45;
+  if (block.type === "photo") return LABEL_H + 4.4;
+  if (block.type === "table") {
+    const rowCount = value?.type === "table" ? Math.max(1, value.rows.length) : 1;
+    return LABEL_H + 0.35 + rowCount * 0.3 + (value?.type === "table" && value.attachments?.length ? 0.25 : 0);
+  }
+  const content = value?.type === "text" ? value.value : "";
+  const attachExtra = value?.type === "text" && value.attachments?.length ? 0.3 : 0;
+  const charsPerLine = Math.max(15, widthIn * 7); // 보수적 추정치 (한글 폭 고려)
+  const wrapLines = Math.max(1, Math.ceil(content.length / charsPerLine));
+  const explicitBreaks = (content.match(/\n/g) ?? []).length;
+  const lines = Math.max(1, wrapLines + explicitBreaks);
+  return LABEL_H + 0.15 + lines * 0.24 + attachExtra;
+}
+
 interface Sections {
   problemDescription: string;
   rootCause: string;
@@ -496,6 +532,19 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       partial: tr("resolutionLabels.partial" as Parameters<typeof tr>[0]),
     };
 
+    // 사진 블록은 pptxgenjs의 원격 fetch에 의존하지 않도록 미리 base64로 받아온다.
+    const photoDataUrls: Record<string, string> = {};
+    if (report.template) {
+      const photoBlocks = report.template.blocks.filter((b): b is Extract<ReportTemplateBlock, { type: "photo" }> => b.type === "photo");
+      await Promise.all(photoBlocks.map(async (b) => {
+        const v = blockData[b.key];
+        const url = v?.type === "photo" ? v.url : "";
+        if (!url) return;
+        const dataUrl = await fetchImageAsDataUrl(url);
+        if (dataUrl) photoDataUrls[b.key] = dataUrl;
+      }));
+    }
+
     function addAttachmentLinks(slide: PptxSlide, attachments: BlockAttachment[] | undefined, x: number, y: number, w: number) {
       if (!attachments?.length) return;
       slide.addText(
@@ -508,7 +557,6 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
     }
 
     // 블록 내용을 슬라이드의 지정한 영역(region)에 그려 넣는다.
-    // 행(가로 배치) 단위로 슬라이드를 나누기 때문에 영역이 넉넉해 겹침 없이 렌더링된다.
     function addBlockRegion(slide: PptxSlide, block: ReportTemplateBlock, region: { x: number; y: number; w: number; h: number }, labelFontSize: number) {
       const { x, y, w, h } = region;
       const LABEL_H = 0.45;
@@ -541,9 +589,11 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
         addAttachmentLinks(slide, attachments, x, y + h - 0.22, w);
       } else if (block.type === "photo") {
         const url = value?.type === "photo" ? value.url : "";
-        if (url) {
+        const dataUrl = photoDataUrls[block.key];
+        if (dataUrl || url) {
           const imgH = Math.min(bodyH, w * 0.75);
-          slide.addImage({ path: url, x: x + (w - imgH) / 2, y: bodyY, w: imgH, h: imgH });
+          const imageProps = dataUrl ? { data: dataUrl } : { path: url };
+          slide.addImage({ ...imageProps, x: x + (w - imgH) / 2, y: bodyY, w: imgH, h: imgH });
         }
       }
     }
@@ -567,38 +617,49 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       cover.addText(coverMeta, { x: 0.8, y: 3.8, w: 11.5, h: 0.4, fontSize: 11, color: "9CA3AF" });
       cover.addText(new Date().toLocaleDateString(), { x: 0.8, y: 5.5, w: 11.5, h: 0.3, fontSize: 10, color: "9CA3AF" });
 
-      // 행(가로 배치 그룹) 단위로 한 슬라이드씩 — 겹침 없이 넉넉한 공간 확보
+      // 내용이 적으면 한 장에, 많으면 자연스럽게 다음 장으로 이어지는 빈패킹(bin-packing) 배치.
+      // 각 행의 예상 높이를 추정해 슬라이드 여유 공간에 들어갈 만큼 채우고, 넘치면 새 슬라이드를 시작한다.
       const SLIDE_X = 0.4;
       const SLIDE_Y = 0.35;
       const SLIDE_W = 13.33 - SLIDE_X * 2;
-      const SLIDE_H = 7.5 - SLIDE_Y - 0.35;
+      const SLIDE_H = 7.5 - SLIDE_Y * 2;
+      const ROW_GAP = 0.25;
       const COL_GAP = 0.3;
 
-      for (const row of groupBlocksIntoRows(report.template.blocks)) {
-        const hasAnyContent = row.some((b) => {
-          const v = blockData[b.key];
-          if (v?.type === "text") return !!v.value?.trim() || !!v.attachments?.length;
-          if (v?.type === "table") return v.rows.length > 0 || !!v.attachments?.length;
-          if (v?.type === "photo") return !!v.url;
-          return false;
-        });
-        if (!hasAnyContent) continue;
-
-        const slide = prs.addSlide();
-        slide.background = { color: "FFFFFF" };
-
-        if (row.length === 1) {
-          addBlockRegion(slide, row[0], { x: SLIDE_X, y: SLIDE_Y, w: SLIDE_W, h: SLIDE_H }, 18);
-        } else {
+      const contentRows = groupBlocksIntoRows(report.template.blocks)
+        .map((row) => {
+          const hasAnyContent = row.some((b) => {
+            const v = blockData[b.key];
+            if (v?.type === "text") return !!v.value?.trim() || !!v.attachments?.length;
+            if (v?.type === "table") return v.rows.length > 0 || !!v.attachments?.length;
+            if (v?.type === "photo") return !!v.url;
+            return false;
+          });
+          if (!hasAnyContent) return null;
           const fractions = rowFractions(row);
           const availW = SLIDE_W - COL_GAP * (row.length - 1);
-          let x = SLIDE_X;
-          row.forEach((block, i) => {
-            const w = availW * fractions[i];
-            addBlockRegion(slide, block, { x, y: SLIDE_Y, w, h: SLIDE_H }, 14);
-            x += w + COL_GAP;
-          });
+          const widths = row.map((_, i) => availW * fractions[i]);
+          const neededH = Math.max(...row.map((b, i) => estimateBlockHeight(b, blockData[b.key], widths[i])));
+          return { row, widths, neededH: Math.min(neededH, SLIDE_H) };
+        })
+        .filter((r): r is NonNullable<typeof r> => r !== null);
+
+      let slide: PptxSlide | null = null;
+      let usedH = 0;
+      for (const { row, widths, neededH } of contentRows) {
+        if (!slide || usedH + neededH > SLIDE_H) {
+          slide = prs.addSlide();
+          slide.background = { color: "FFFFFF" };
+          usedH = 0;
         }
+        const y = SLIDE_Y + usedH;
+        const labelFontSize = row.length === 1 ? 16 : 13;
+        let x = SLIDE_X;
+        row.forEach((block, i) => {
+          addBlockRegion(slide as PptxSlide, block, { x, y, w: widths[i], h: neededH }, labelFontSize);
+          x += widths[i] + COL_GAP;
+        });
+        usedH += neededH + ROW_GAP;
       }
     } else {
       // 레거시 고정 4필드 보고서: 표지 + 섹션별 슬라이드 (기존 방식 그대로)
