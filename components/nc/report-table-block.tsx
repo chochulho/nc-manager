@@ -16,17 +16,24 @@ const MIN_COL_PX = 64;
 const IDEAL_TOTAL_PX = 640;
 
 export function ReportTableBlock({ columns, columnWidths, rows, editing, onChange }: Props) {
+  // 과거 데이터(컬럼 추가 이전에 저장된 행 등)는 셀 수가 컬럼 수보다 적을 수 있다.
+  // 이 경우 짧은 배열에 map을 돌리면 없는 인덱스는 갱신되지 않아 "입력이 안 되는" 것처럼 보이므로,
+  // 사용 전에 항상 컬럼 수만큼 채워서(패딩) 정규화한다.
+  const normalizedRows = rows.map((row) =>
+    row.length >= columns.length ? row : [...row, ...Array(columns.length - row.length).fill("")]
+  );
+
   function updateCell(rowIdx: number, colIdx: number, value: string) {
-    const next = rows.map((row, i) => (i === rowIdx ? row.map((c, j) => (j === colIdx ? value : c)) : row));
+    const next = normalizedRows.map((row, i) => (i === rowIdx ? row.map((c, j) => (j === colIdx ? value : c)) : row));
     onChange(next);
   }
 
   function addRow() {
-    onChange([...rows, columns.map(() => "")]);
+    onChange([...normalizedRows, columns.map(() => "")]);
   }
 
   function removeRow(rowIdx: number) {
-    onChange(rows.filter((_, i) => i !== rowIdx));
+    onChange(normalizedRows.filter((_, i) => i !== rowIdx));
   }
 
   // 컬럼마다 최소 픽셀 폭을 보장해 좁은 레이아웃(좌우배치 등)에서도 입력칸이 눌리지 않도록 함.
@@ -52,10 +59,10 @@ export function ReportTableBlock({ columns, columnWidths, rows, editing, onChang
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {rows.length === 0 && (
+          {normalizedRows.length === 0 && (
             <tr><td colSpan={columns.length + 1} className="px-3 py-4 text-center text-muted-foreground">—</td></tr>
           )}
-          {rows.map((row, rowIdx) => (
+          {normalizedRows.map((row, rowIdx) => (
             <tr key={rowIdx}>
               {columns.map((_, colIdx) => (
                 <td key={colIdx} className="px-2 py-1.5">

@@ -534,7 +534,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
           const tableFontSize = rows.length > 10 ? 8 : 9.5;
           const tableRows = [
             block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" }, fontSize: tableFontSize } })),
-            ...rows.map((r) => r.map((cell) => ({ text: cell, options: { fontSize: tableFontSize } }))),
+            ...rows.map((r) => block.columns.map((_, colIdx) => ({ text: r[colIdx] ?? "", options: { fontSize: tableFontSize } }))),
           ];
           slide.addTable(tableRows, { x, y: bodyY, w, colW, fontSize: tableFontSize, border: { type: "solid", color: "E5E7EB", pt: 0.5 } });
         }
