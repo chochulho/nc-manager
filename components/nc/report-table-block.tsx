@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 
 interface Props {
   columns: string[];
+  columnWidths?: number[];
   rows: string[][];
   editing: boolean;
   onChange: (rows: string[][]) => void;
 }
 
-export function ReportTableBlock({ columns, rows, editing, onChange }: Props) {
+export function ReportTableBlock({ columns, columnWidths, rows, editing, onChange }: Props) {
   function updateCell(rowIdx: number, colIdx: number, value: string) {
     const next = rows.map((row, i) => (i === rowIdx ? row.map((c, j) => (j === colIdx ? value : c)) : row));
     onChange(next);
@@ -25,13 +26,23 @@ export function ReportTableBlock({ columns, rows, editing, onChange }: Props) {
     onChange(rows.filter((_, i) => i !== rowIdx));
   }
 
+  const widths = columnWidths?.length === columns.length ? columnWidths : null;
+  const widthSum = widths ? widths.reduce((a, b) => a + (b || 1), 0) : 0;
+  const widthPercents = widths ? widths.map((w) => `${((w || 1) / widthSum) * 100}%`) : null;
+
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden">
-      <table className="w-full text-xs">
+    <div className="rounded-xl border border-gray-200 overflow-x-auto">
+      <table className="w-full text-xs" style={{ tableLayout: widthPercents ? "fixed" : "auto" }}>
+        {widthPercents && (
+          <colgroup>
+            {widthPercents.map((w, i) => <col key={i} style={{ width: w }} />)}
+            {editing && <col style={{ width: "2rem" }} />}
+          </colgroup>
+        )}
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
             {columns.map((col, i) => (
-              <th key={i} className="text-left px-3 py-2 font-medium text-gray-600">{col}</th>
+              <th key={i} className="text-left px-3 py-2 font-medium text-gray-600 truncate">{col}</th>
             ))}
             {editing && <th className="w-8"></th>}
           </tr>

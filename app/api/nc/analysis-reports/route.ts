@@ -83,7 +83,7 @@ function initBlockData(blocks: ReportTemplateBlock[]): Record<string, ReportBloc
       return [b.key, { type: "table", rows, attachments: [] } satisfies ReportBlockValue];
     }
     if (b.type === "photo") return [b.key, { type: "photo", url: "" } satisfies ReportBlockValue];
-    return [b.key, { type: "text", value: "", attachments: [] } satisfies ReportBlockValue];
+    return [b.key, { type: "text", value: b.defaultValue ?? "", attachments: [] } satisfies ReportBlockValue];
   }));
 }
 

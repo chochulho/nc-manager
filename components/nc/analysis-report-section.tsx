@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { upload } from "@vercel/blob/client";
 import { exportNodeToPdf } from "@/lib/pdf/export-node-to-pdf";
 import { ReportTableBlock } from "@/components/nc/report-table-block";
+import { groupBlocksIntoRows, rowFractions } from "@/lib/nc/report-block-layout";
 import type { ReportTemplateBlock, ReportBlockValue, BlockAttachment } from "@/lib/db/schema";
 
 const RESOLUTION_TYPE_KEYS = ["confirmed_nc", "ntf", "customer_misuse", "partial"] as const;
@@ -100,23 +101,6 @@ interface Props {
 
 type SectionKey = "problemDescription" | "rootCause" | "conclusion" | "followUp";
 type SectionDef = { key: SectionKey; label: string; placeholder: string };
-
-function groupBlocksIntoRows(blocks: ReportTemplateBlock[]): ReportTemplateBlock[][] {
-  const rows: ReportTemplateBlock[][] = [];
-  let i = 0;
-  while (i < blocks.length) {
-    const b = blocks[i];
-    const next = blocks[i + 1];
-    if ((b.width ?? "full") === "half" && next && (next.width ?? "full") === "half") {
-      rows.push([b, next]);
-      i += 2;
-    } else {
-      rows.push([b]);
-      i += 1;
-    }
-  }
-  return rows;
-}
 
 export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onComplaintUpdated }: Props) {
   const t = useTranslations("complaint");
@@ -468,112 +452,118 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       partial: tr("resolutionLabels.partial" as Parameters<typeof tr>[0]),
     };
 
-    // Cover slide
-    const cover = prs.addSlide();
-    cover.background = { color: ACCENT };
-    const reportTitle = tr("title" as Parameters<typeof tr>[0]);
-    cover.addText(reportTitle, { x: 0.8, y: 1.5, w: 11.5, h: 1, fontSize: 36, bold: true, color: "FFFFFF" });
-    cover.addText(complaintInfo.title, { x: 0.8, y: 2.7, w: 11.5, h: 0.6, fontSize: 18, color: "D1D5DB" });
-    const meta = [
-      `${t("complaintNumber")}: ${complaintInfo.complaintNumber}`,
-      `${t("customer")}: ${complaintInfo.customerName}`,
-      `${t("part")}: ${complaintInfo.partName}`,
-      `${t("receivedAt")}: ${new Date(complaintInfo.receivedAt).toLocaleDateString()}`,
-      resolutionType
-        ? `${tr("judgment" as Parameters<typeof tr>[0])}: ${resolutionLabels[resolutionType] ?? resolutionType}`
-        : `${t("severity")}: ${t(`severities.${complaintInfo.severity}` as Parameters<typeof t>[0]) ?? complaintInfo.severity}`,
-    ].join("   |   ");
-    cover.addText(meta, { x: 0.8, y: 3.8, w: 11.5, h: 0.4, fontSize: 11, color: "9CA3AF" });
-    cover.addText(new Date().toLocaleDateString(), { x: 0.8, y: 5.5, w: 11.5, h: 0.3, fontSize: 10, color: "9CA3AF" });
-
     function addAttachmentLinks(slide: PptxSlide, attachments: BlockAttachment[] | undefined, x: number, y: number, w: number) {
       if (!attachments?.length) return;
       slide.addText(
         attachments.map((a, i) => ({
           text: `${i > 0 ? "   " : ""}📎 ${a.filename}`,
-          options: { hyperlink: { url: a.url }, color: "2563EB", underline: { style: "sng" as const }, fontSize: 9 },
+          options: { hyperlink: { url: a.url }, color: "2563EB", underline: { style: "sng" as const }, fontSize: 7 },
         })),
-        { x, y, w, h: 0.3, valign: "top" }
+        { x, y, w, h: 0.2, valign: "top" }
       );
     }
 
-    function addFullBlockSlide(block: ReportTemplateBlock) {
-      const value = blockData[block.key];
-      if (block.type === "text") {
-        const content = value?.type === "text" ? value.value : "";
-        const attachments = value?.type === "text" ? value.attachments : undefined;
-        if (!content?.trim() && !attachments?.length) return;
-        const slide = prs.addSlide();
-        slide.background = { color: "FFFFFF" };
-        slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-        slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
-        slide.addText(content, { x: 0.4, y: 1.1, w: 12.5, h: 4.6, fontSize: 13, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 6 });
-        addAttachmentLinks(slide, attachments, 0.4, 6.0, 12.5);
-      } else if (block.type === "table") {
-        const rows = value?.type === "table" ? value.rows : [];
-        const attachments = value?.type === "table" ? value.attachments : undefined;
-        if (!rows.length && !attachments?.length) return;
-        const slide = prs.addSlide();
-        slide.background = { color: "FFFFFF" };
-        slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-        slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
-        if (rows.length) {
-          const tableRows = [
-            block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" } } })),
-            ...rows.map((row) => row.map((cell) => ({ text: cell }))),
-          ];
-          slide.addTable(tableRows, { x: 0.4, y: 1.1, w: 12.5, fontSize: 11, border: { type: "solid", color: "E5E7EB", pt: 0.5 } });
-        }
-        addAttachmentLinks(slide, attachments, 0.4, 6.0, 12.5);
-      } else if (block.type === "photo") {
-        const url = value?.type === "photo" ? value.url : "";
-        if (!url) return;
-        const slide = prs.addSlide();
-        slide.background = { color: "FFFFFF" };
-        slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: 0.9, fill: { color: ACCENT } });
-        slide.addText(block.label, { x: 0.4, y: 0.1, w: 12, h: 0.7, fontSize: 20, bold: true, color: "FFFFFF" });
-        slide.addImage({ path: url, x: 2.5, y: 1.3, w: 8.33, h: 4.5 });
-      }
-    }
-
-    function addHalfBlockToSlide(slide: PptxSlide, block: ReportTemplateBlock, x: number, w: number) {
-      const value = blockData[block.key];
-      slide.addShape(prs.ShapeType.rect, { x, y: 0.3, w, h: 0.5, fill: { color: ACCENT } });
-      slide.addText(block.label, { x: x + 0.1, y: 0.3, w: w - 0.2, h: 0.5, fontSize: 14, bold: true, color: "FFFFFF", valign: "middle" });
-      const contentY = 0.95;
-      if (block.type === "text") {
-        const content = value?.type === "text" ? value.value : "";
-        slide.addText(content, { x, y: contentY, w, h: 5.6, fontSize: 11, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 4 });
-        addAttachmentLinks(slide, value?.type === "text" ? value.attachments : undefined, x, 6.7, w);
-      } else if (block.type === "table") {
-        const rows = value?.type === "table" ? value.rows : [];
-        if (rows.length) {
-          const tableRows = [
-            block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" } } })),
-            ...rows.map((row) => row.map((cell) => ({ text: cell }))),
-          ];
-          slide.addTable(tableRows, { x, y: contentY, w, fontSize: 9, border: { type: "solid", color: "E5E7EB", pt: 0.5 } });
-        }
-        addAttachmentLinks(slide, value?.type === "table" ? value.attachments : undefined, x, 6.7, w);
-      } else if (block.type === "photo") {
-        const url = value?.type === "photo" ? value.url : "";
-        if (url) slide.addImage({ path: url, x: x + w / 2 - 2, y: contentY, w: 4, h: 4.2 });
-      }
-    }
-
     if (report.template) {
-      for (const row of groupBlocksIntoRows(report.template.blocks)) {
-        if (row.length === 2) {
-          const slide = prs.addSlide();
-          slide.background = { color: "FFFFFF" };
-          addHalfBlockToSlide(slide, row[0], 0.4, 6.0);
-          addHalfBlockToSlide(slide, row[1], 6.93, 6.0);
-        } else {
-          addFullBlockSlide(row[0]);
+      // ── 템플릿 보고서: 헤더 + 모든 블록을 한 장에 배치 ──
+      const slide = prs.addSlide();
+      slide.background = { color: "FFFFFF" };
+
+      // 헤더 밴드 (표지 대신 상단에 축약된 정보를 배치)
+      const HEADER_H = 1.05;
+      slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: HEADER_H, fill: { color: ACCENT } });
+      slide.addText(tr("title" as Parameters<typeof tr>[0]), { x: 0.35, y: 0.08, w: 8.5, h: 0.5, fontSize: 22, bold: true, color: "FFFFFF" });
+      slide.addText(complaintInfo.title, { x: 0.35, y: 0.58, w: 8.5, h: 0.4, fontSize: 11, color: "E5E7EB" });
+      const meta = [
+        `${t("complaintNumber")}: ${complaintInfo.complaintNumber}`,
+        `${t("customer")}: ${complaintInfo.customerName}`,
+        `${t("part")}: ${complaintInfo.partName}`,
+        `${t("receivedAt")}: ${new Date(complaintInfo.receivedAt).toLocaleDateString()}`,
+        resolutionType
+          ? `${tr("judgment" as Parameters<typeof tr>[0])}: ${resolutionLabels[resolutionType] ?? resolutionType}`
+          : `${t("severity")}: ${t(`severities.${complaintInfo.severity}` as Parameters<typeof t>[0]) ?? complaintInfo.severity}`,
+      ];
+      slide.addText(meta.join("\n"), { x: 9.1, y: 0.08, w: 3.9, h: 0.9, fontSize: 8.5, color: "F3F4F6", valign: "top", lineSpacing: 12 });
+
+      const CONTENT_X = 0.35;
+      const CONTENT_Y = HEADER_H + 0.12;
+      const CONTENT_W = 13.33 - CONTENT_X * 2;
+      const CONTENT_H = 7.5 - CONTENT_Y - 0.15;
+      const ROW_GAP = 0.12;
+      const COL_GAP = 0.2;
+
+      const templateRows = groupBlocksIntoRows(report.template.blocks);
+      const rowH = templateRows.length
+        ? (CONTENT_H - ROW_GAP * (templateRows.length - 1)) / templateRows.length
+        : CONTENT_H;
+
+      let y = CONTENT_Y;
+      for (const row of templateRows) {
+        const fractions = rowFractions(row);
+        const availW = CONTENT_W - COL_GAP * (row.length - 1);
+        let x = CONTENT_X;
+        row.forEach((block, i) => {
+          const w = availW * fractions[i];
+          addBlockRegion(block, { x, y, w, h: rowH });
+          x += w + COL_GAP;
+        });
+        y += rowH + ROW_GAP;
+      }
+
+      function addBlockRegion(block: ReportTemplateBlock, region: { x: number; y: number; w: number; h: number }) {
+        const { x, y, w, h } = region;
+        const LABEL_H = 0.3;
+        slide.addShape(prs.ShapeType.rect, { x, y, w, h: LABEL_H, fill: { color: ACCENT } });
+        slide.addText(block.label, { x: x + 0.06, y, w: w - 0.12, h: LABEL_H, fontSize: 10, bold: true, color: "FFFFFF", valign: "middle" });
+        const bodyY = y + LABEL_H + 0.05;
+        const bodyH = h - LABEL_H - 0.05;
+        const value = blockData[block.key];
+
+        if (block.type === "text") {
+          const content = value?.type === "text" ? value.value : "";
+          const attachments = value?.type === "text" ? value.attachments : undefined;
+          slide.addText(content, { x, y: bodyY, w, h: bodyH, fontSize: 9, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 3 });
+          addAttachmentLinks(slide, attachments, x, y + h - 0.2, w);
+        } else if (block.type === "table") {
+          const rows = value?.type === "table" ? value.rows : [];
+          const attachments = value?.type === "table" ? value.attachments : undefined;
+          if (rows.length) {
+            const weights = block.columnWidths?.length === block.columns.length ? block.columnWidths : block.columns.map(() => 1);
+            const weightSum = weights.reduce((a, b) => a + (b || 1), 0) || 1;
+            const colW = weights.map((wt) => ((wt || 1) / weightSum) * w);
+            const tableRows = [
+              block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" }, fontSize: 8 } })),
+              ...rows.map((r) => r.map((cell) => ({ text: cell, options: { fontSize: 8 } }))),
+            ];
+            slide.addTable(tableRows, { x, y: bodyY, w, colW, fontSize: 8, border: { type: "solid", color: "E5E7EB", pt: 0.5 }, autoPage: false });
+          }
+          addAttachmentLinks(slide, attachments, x, y + h - 0.2, w);
+        } else if (block.type === "photo") {
+          const url = value?.type === "photo" ? value.url : "";
+          if (url) {
+            const imgH = Math.min(bodyH, w * 0.75);
+            slide.addImage({ path: url, x: x + (w - imgH) / 2, y: bodyY, w: imgH, h: imgH });
+          }
         }
       }
     } else {
-      // Legacy fixed section slides
+      // 레거시 고정 4필드 보고서: 표지 + 섹션별 슬라이드 (기존 방식 그대로)
+      const cover = prs.addSlide();
+      cover.background = { color: ACCENT };
+      const reportTitle = tr("title" as Parameters<typeof tr>[0]);
+      cover.addText(reportTitle, { x: 0.8, y: 1.5, w: 11.5, h: 1, fontSize: 36, bold: true, color: "FFFFFF" });
+      cover.addText(complaintInfo.title, { x: 0.8, y: 2.7, w: 11.5, h: 0.6, fontSize: 18, color: "D1D5DB" });
+      const meta = [
+        `${t("complaintNumber")}: ${complaintInfo.complaintNumber}`,
+        `${t("customer")}: ${complaintInfo.customerName}`,
+        `${t("part")}: ${complaintInfo.partName}`,
+        `${t("receivedAt")}: ${new Date(complaintInfo.receivedAt).toLocaleDateString()}`,
+        resolutionType
+          ? `${tr("judgment" as Parameters<typeof tr>[0])}: ${resolutionLabels[resolutionType] ?? resolutionType}`
+          : `${t("severity")}: ${t(`severities.${complaintInfo.severity}` as Parameters<typeof t>[0]) ?? complaintInfo.severity}`,
+      ].join("   |   ");
+      cover.addText(meta, { x: 0.8, y: 3.8, w: 11.5, h: 0.4, fontSize: 11, color: "9CA3AF" });
+      cover.addText(new Date().toLocaleDateString(), { x: 0.8, y: 5.5, w: 11.5, h: 0.3, fontSize: 10, color: "9CA3AF" });
+
       for (const def of sectionDefs) {
         const content = sections[def.key];
         if (!content?.trim()) continue;
@@ -679,6 +669,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
         <Label className="text-sm font-semibold">{block.label}</Label>
         <ReportTableBlock
           columns={block.columns}
+          columnWidths={block.columnWidths}
           rows={rows}
           editing={editing}
           onChange={(nextRows) => setBlockData((p) => ({ ...p, [block.key]: { type: "table", rows: nextRows, attachments: value?.type === "table" ? value.attachments : undefined } }))}
@@ -867,9 +858,13 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
           {/* Blocks: template-driven (width-grouped), or legacy fixed sections */}
           {report.template
             ? groupBlocksIntoRows(report.template.blocks).map((row, idx) => (
-                row.length === 2 ? (
-                  <div key={idx} className="grid grid-cols-2 gap-4">
-                    {row.map((block) => renderBlock(block))}
+                row.length > 1 ? (
+                  <div key={idx} className="flex gap-4 items-start">
+                    {row.map((block, i) => (
+                      <div key={block.key} style={{ flexBasis: `${rowFractions(row)[i] * 100}%` }} className="min-w-0">
+                        {renderBlock(block)}
+                      </div>
+                    ))}
                   </div>
                 ) : renderBlock(row[0])
               ))

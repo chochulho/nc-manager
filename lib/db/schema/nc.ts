@@ -374,11 +374,12 @@ export const ncFieldClaimDetails = pgTable("nc_field_claim_details", {
 // 고객사별 분석보고서 양식(텍스트/표/사진 블록 구성). templateId가 null인 보고서는
 // 레거시 고정 4필드 양식(문제현상/원인분석/결론/후속조치)을 그대로 사용한다.
 
-export type BlockWidth = "full" | "half";
+// "half"는 과거 저장값과의 호환을 위해 유지 (1/2와 동일한 가중치)
+export type BlockWidth = "full" | "half" | "1/3" | "2/3";
 
 export type ReportTemplateBlock =
-  | { key: string; type: "text"; label: string; placeholder?: string; width?: BlockWidth }
-  | { key: string; type: "table"; label: string; columns: string[]; defaultRows?: string[][]; width?: BlockWidth }
+  | { key: string; type: "text"; label: string; placeholder?: string; defaultValue?: string; width?: BlockWidth }
+  | { key: string; type: "table"; label: string; columns: string[]; columnWidths?: number[]; defaultRows?: string[][]; width?: BlockWidth }
   | { key: string; type: "photo"; label: string; width?: BlockWidth };
 
 export const ncReportTemplates = pgTable("nc_report_templates", {
