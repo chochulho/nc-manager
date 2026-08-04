@@ -431,6 +431,10 @@
       "attachFile": "Attach file",
       "insertClaimInfo": "Insert claim info",
       "noClaimInfo": "No claim info available to insert.",
+      "reloadDefaults": "Reload template defaults",
+      "reloadDefaultsConfirm": "This fills empty blocks with the template's default content/rows. Already-entered content is left unchanged. Continue?",
+      "noDefaultsToApply": "No template defaults to apply, or all blocks are already filled.",
+      "reloadedDefaults": "Template defaults loaded.",
       "resolutionLabels": {
         "ntf": "NTF (No Trouble Found)",
         "customer_misuse": "Customer Fault",

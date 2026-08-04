@@ -154,6 +154,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   const [saving, setSaving] = useState(false);
   const [creating, setCreating] = useState(false);
   const [importingCapa, setImportingCapa] = useState(false);
+  const [reloadingDefaults, setReloadingDefaults] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState<string | null>(null);
@@ -335,6 +336,49 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       toast.success(tr("importedCapa" as Parameters<typeof tr>[0]));
     } finally {
       setImportingCapa(false);
+    }
+  }
+
+  // 템플릿에 나중에 추가/수정된 기본 내용(defaultValue/defaultRows)을,
+  // 이미 생성된 보고서의 빈 블록에 한해 채워 넣는다 (기존 입력 내용은 덮어쓰지 않음).
+  async function handleReloadTemplateDefaults() {
+    if (!report?.template) return;
+    if (!confirm(tr("reloadDefaultsConfirm" as Parameters<typeof tr>[0]))) return;
+
+    const nextBlockData = { ...blockData };
+    let changed = false;
+    for (const block of report.template.blocks) {
+      const current = nextBlockData[block.key];
+      if (block.type === "text" && block.defaultValue) {
+        const hasContent = current?.type === "text" && current.value.trim();
+        if (!hasContent) {
+          nextBlockData[block.key] = { type: "text", value: block.defaultValue, attachments: current?.type === "text" ? current.attachments : undefined };
+          changed = true;
+        }
+      } else if (block.type === "table" && block.defaultRows?.length) {
+        const hasRows = current?.type === "table" && current.rows.length > 0;
+        if (!hasRows) {
+          nextBlockData[block.key] = { type: "table", rows: block.defaultRows.map((r) => [...r]), attachments: current?.type === "table" ? current.attachments : undefined };
+          changed = true;
+        }
+      }
+    }
+    if (!changed) { toast.error(tr("noDefaultsToApply" as Parameters<typeof tr>[0])); return; }
+
+    setReloadingDefaults(true);
+    try {
+      const res = await fetch(`/api/nc/analysis-reports/${report.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blockData: nextBlockData }),
+      });
+      if (!res.ok) { toast.error(tc("error")); return; }
+      const updated = await res.json();
+      setReport((prev) => (prev ? { ...prev, ...updated } : updated));
+      setBlockData(nextBlockData);
+      toast.success(tr("reloadedDefaults" as Parameters<typeof tr>[0]));
+    } finally {
+      setReloadingDefaults(false);
     }
   }
 
@@ -760,6 +804,14 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             {capaId && (
               <Button variant="ghost" size="sm" onClick={handleImportCapa} disabled={importingCapa} title={tr("importFromCapa" as Parameters<typeof tr>[0])}>
                 {importingCapa ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+            {report.template && (
+              <Button
+                variant="ghost" size="sm" onClick={handleReloadTemplateDefaults} disabled={reloadingDefaults}
+                title={tr("reloadDefaults" as Parameters<typeof tr>[0])}
+              >
+                {reloadingDefaults ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
               </Button>
             )}
             <Button variant="ghost" size="sm" onClick={() => window.print()} title="인쇄">
