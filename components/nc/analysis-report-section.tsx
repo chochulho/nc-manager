@@ -507,17 +507,55 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       );
     }
 
-    if (report.template) {
-      // ── 템플릿 보고서: 헤더 + 모든 블록을 한 장에 배치 ──
-      const slide = prs.addSlide();
-      slide.background = { color: "FFFFFF" };
+    // 블록 내용을 슬라이드의 지정한 영역(region)에 그려 넣는다.
+    // 행(가로 배치) 단위로 슬라이드를 나누기 때문에 영역이 넉넉해 겹침 없이 렌더링된다.
+    function addBlockRegion(slide: PptxSlide, block: ReportTemplateBlock, region: { x: number; y: number; w: number; h: number }, labelFontSize: number) {
+      const { x, y, w, h } = region;
+      const LABEL_H = 0.45;
+      slide.addShape(prs.ShapeType.rect, { x, y, w, h: LABEL_H, fill: { color: ACCENT } });
+      slide.addText(block.label, { x: x + 0.08, y, w: w - 0.16, h: LABEL_H, fontSize: labelFontSize, bold: true, color: "FFFFFF", valign: "middle" });
+      const bodyY = y + LABEL_H + 0.1;
+      const bodyH = h - LABEL_H - 0.1;
+      const value = blockData[block.key];
 
-      // 헤더 밴드 (표지 대신 상단에 축약된 정보를 배치)
-      const HEADER_H = 1.05;
-      slide.addShape(prs.ShapeType.rect, { x: 0, y: 0, w: 13.33, h: HEADER_H, fill: { color: ACCENT } });
-      slide.addText(tr("title" as Parameters<typeof tr>[0]), { x: 0.35, y: 0.08, w: 8.5, h: 0.5, fontSize: 22, bold: true, color: "FFFFFF" });
-      slide.addText(complaintInfo.title, { x: 0.35, y: 0.58, w: 8.5, h: 0.4, fontSize: 11, color: "E5E7EB" });
-      const meta = [
+      if (block.type === "text") {
+        const content = value?.type === "text" ? value.value : "";
+        const attachments = value?.type === "text" ? value.attachments : undefined;
+        const fontSize = content.length > 900 ? 9 : content.length > 500 ? 10.5 : 12;
+        slide.addText(content, { x, y: bodyY, w, h: bodyH - (attachments?.length ? 0.25 : 0), fontSize, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 4 });
+        addAttachmentLinks(slide, attachments, x, y + h - 0.22, w);
+      } else if (block.type === "table") {
+        const rows = value?.type === "table" ? value.rows : [];
+        const attachments = value?.type === "table" ? value.attachments : undefined;
+        if (rows.length) {
+          const weights = block.columnWidths?.length === block.columns.length ? block.columnWidths : block.columns.map(() => 1);
+          const weightSum = weights.reduce((a, b) => a + (b || 1), 0) || 1;
+          const colW = weights.map((wt) => ((wt || 1) / weightSum) * w);
+          const tableFontSize = rows.length > 10 ? 8 : 9.5;
+          const tableRows = [
+            block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" }, fontSize: tableFontSize } })),
+            ...rows.map((r) => r.map((cell) => ({ text: cell, options: { fontSize: tableFontSize } }))),
+          ];
+          slide.addTable(tableRows, { x, y: bodyY, w, colW, fontSize: tableFontSize, border: { type: "solid", color: "E5E7EB", pt: 0.5 } });
+        }
+        addAttachmentLinks(slide, attachments, x, y + h - 0.22, w);
+      } else if (block.type === "photo") {
+        const url = value?.type === "photo" ? value.url : "";
+        if (url) {
+          const imgH = Math.min(bodyH, w * 0.75);
+          slide.addImage({ path: url, x: x + (w - imgH) / 2, y: bodyY, w: imgH, h: imgH });
+        }
+      }
+    }
+
+    if (report.template) {
+      // 표지 슬라이드 (레거시와 동일한 스타일, 축약 없이 유지)
+      const cover = prs.addSlide();
+      cover.background = { color: ACCENT };
+      const reportTitle = tr("title" as Parameters<typeof tr>[0]);
+      cover.addText(reportTitle, { x: 0.8, y: 1.5, w: 11.5, h: 1, fontSize: 36, bold: true, color: "FFFFFF" });
+      cover.addText(complaintInfo.title, { x: 0.8, y: 2.7, w: 11.5, h: 0.6, fontSize: 18, color: "D1D5DB" });
+      const coverMeta = [
         `${t("complaintNumber")}: ${complaintInfo.complaintNumber}`,
         `${t("customer")}: ${complaintInfo.customerName}`,
         `${t("part")}: ${complaintInfo.partName}`,
@@ -525,68 +563,41 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
         resolutionType
           ? `${tr("judgment" as Parameters<typeof tr>[0])}: ${resolutionLabels[resolutionType] ?? resolutionType}`
           : `${t("severity")}: ${t(`severities.${complaintInfo.severity}` as Parameters<typeof t>[0]) ?? complaintInfo.severity}`,
-      ];
-      slide.addText(meta.join("\n"), { x: 9.1, y: 0.08, w: 3.9, h: 0.9, fontSize: 8.5, color: "F3F4F6", valign: "top", lineSpacing: 12 });
+      ].join("   |   ");
+      cover.addText(coverMeta, { x: 0.8, y: 3.8, w: 11.5, h: 0.4, fontSize: 11, color: "9CA3AF" });
+      cover.addText(new Date().toLocaleDateString(), { x: 0.8, y: 5.5, w: 11.5, h: 0.3, fontSize: 10, color: "9CA3AF" });
 
-      const CONTENT_X = 0.35;
-      const CONTENT_Y = HEADER_H + 0.12;
-      const CONTENT_W = 13.33 - CONTENT_X * 2;
-      const CONTENT_H = 7.5 - CONTENT_Y - 0.15;
-      const ROW_GAP = 0.12;
-      const COL_GAP = 0.2;
+      // 행(가로 배치 그룹) 단위로 한 슬라이드씩 — 겹침 없이 넉넉한 공간 확보
+      const SLIDE_X = 0.4;
+      const SLIDE_Y = 0.35;
+      const SLIDE_W = 13.33 - SLIDE_X * 2;
+      const SLIDE_H = 7.5 - SLIDE_Y - 0.35;
+      const COL_GAP = 0.3;
 
-      const templateRows = groupBlocksIntoRows(report.template.blocks);
-      const rowH = templateRows.length
-        ? (CONTENT_H - ROW_GAP * (templateRows.length - 1)) / templateRows.length
-        : CONTENT_H;
-
-      let y = CONTENT_Y;
-      for (const row of templateRows) {
-        const fractions = rowFractions(row);
-        const availW = CONTENT_W - COL_GAP * (row.length - 1);
-        let x = CONTENT_X;
-        row.forEach((block, i) => {
-          const w = availW * fractions[i];
-          addBlockRegion(block, { x, y, w, h: rowH });
-          x += w + COL_GAP;
+      for (const row of groupBlocksIntoRows(report.template.blocks)) {
+        const hasAnyContent = row.some((b) => {
+          const v = blockData[b.key];
+          if (v?.type === "text") return !!v.value?.trim() || !!v.attachments?.length;
+          if (v?.type === "table") return v.rows.length > 0 || !!v.attachments?.length;
+          if (v?.type === "photo") return !!v.url;
+          return false;
         });
-        y += rowH + ROW_GAP;
-      }
+        if (!hasAnyContent) continue;
 
-      function addBlockRegion(block: ReportTemplateBlock, region: { x: number; y: number; w: number; h: number }) {
-        const { x, y, w, h } = region;
-        const LABEL_H = 0.3;
-        slide.addShape(prs.ShapeType.rect, { x, y, w, h: LABEL_H, fill: { color: ACCENT } });
-        slide.addText(block.label, { x: x + 0.06, y, w: w - 0.12, h: LABEL_H, fontSize: 10, bold: true, color: "FFFFFF", valign: "middle" });
-        const bodyY = y + LABEL_H + 0.05;
-        const bodyH = h - LABEL_H - 0.05;
-        const value = blockData[block.key];
+        const slide = prs.addSlide();
+        slide.background = { color: "FFFFFF" };
 
-        if (block.type === "text") {
-          const content = value?.type === "text" ? value.value : "";
-          const attachments = value?.type === "text" ? value.attachments : undefined;
-          slide.addText(content, { x, y: bodyY, w, h: bodyH, fontSize: 9, color: "111827", valign: "top", wrap: true, paraSpaceAfter: 3 });
-          addAttachmentLinks(slide, attachments, x, y + h - 0.2, w);
-        } else if (block.type === "table") {
-          const rows = value?.type === "table" ? value.rows : [];
-          const attachments = value?.type === "table" ? value.attachments : undefined;
-          if (rows.length) {
-            const weights = block.columnWidths?.length === block.columns.length ? block.columnWidths : block.columns.map(() => 1);
-            const weightSum = weights.reduce((a, b) => a + (b || 1), 0) || 1;
-            const colW = weights.map((wt) => ((wt || 1) / weightSum) * w);
-            const tableRows = [
-              block.columns.map((c) => ({ text: c, options: { bold: true, fill: { color: "F3F4F6" }, fontSize: 8 } })),
-              ...rows.map((r) => r.map((cell) => ({ text: cell, options: { fontSize: 8 } }))),
-            ];
-            slide.addTable(tableRows, { x, y: bodyY, w, colW, fontSize: 8, border: { type: "solid", color: "E5E7EB", pt: 0.5 }, autoPage: false });
-          }
-          addAttachmentLinks(slide, attachments, x, y + h - 0.2, w);
-        } else if (block.type === "photo") {
-          const url = value?.type === "photo" ? value.url : "";
-          if (url) {
-            const imgH = Math.min(bodyH, w * 0.75);
-            slide.addImage({ path: url, x: x + (w - imgH) / 2, y: bodyY, w: imgH, h: imgH });
-          }
+        if (row.length === 1) {
+          addBlockRegion(slide, row[0], { x: SLIDE_X, y: SLIDE_Y, w: SLIDE_W, h: SLIDE_H }, 18);
+        } else {
+          const fractions = rowFractions(row);
+          const availW = SLIDE_W - COL_GAP * (row.length - 1);
+          let x = SLIDE_X;
+          row.forEach((block, i) => {
+            const w = availW * fractions[i];
+            addBlockRegion(slide, block, { x, y: SLIDE_Y, w, h: SLIDE_H }, 14);
+            x += w + COL_GAP;
+          });
         }
       }
     } else {
