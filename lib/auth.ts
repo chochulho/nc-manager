@@ -21,8 +21,18 @@ export interface AppSession {
      * - [id…] → 해당 사업장만 조회 가능
      */
     allowedSiteIds: string[] | null;
+    /**
+     * NC Manager 제품 사용권한 여부 (qmintel 멤버×제품 매트릭스).
+     * - ADMIN/isAdmin/superadmin → 항상 true (전권)
+     * - 일반 MEMBER → org_member_products에 'nc-manager' grant가 있어야 true
+     * false면 (app) 레이아웃에서 접근 차단.
+     */
+    entitled: boolean;
   };
 }
+
+// qmintel 멤버×제품 매트릭스의 이 앱 슬러그 (계약 §1)
+const PRODUCT_SLUG = "nc-manager";
 
 // Map Supabase role to NC Manager role
 function mapRole(role: string | null): "ADMIN" | "MEMBER" {
@@ -156,6 +166,22 @@ export async function auth(): Promise<AppSession | null> {
     allowedSiteIds = userSiteRows.map((r) => r.siteId);
   }
 
+  // ── 제품 사용권한(nc-manager) 강제 ────────────────────────────────
+  // 관리자/슈퍼어드민은 전권. 일반 멤버는 qmintel 멤버×제품 매트릭스에서
+  // 'nc-manager' grant를 받아야 접근 가능(quality-hub와 공유하는 Supabase의
+  // org_member_products / get_my_product_slugs() 직접 조회 — push 불필요).
+  let entitled = resolvedOrgRole === "ADMIN";
+  if (!entitled) {
+    const { data: slugs, error: entErr } = await supabase.rpc("get_my_product_slugs");
+    if (entErr) {
+      // 조회 실패(예: RPC 미배포) 시 하위호환으로 허용 — 강제 오작동으로 잠기지 않도록.
+      console.error("[auth] get_my_product_slugs error:", entErr.message);
+      entitled = true;
+    } else {
+      entitled = Array.isArray(slugs) && (slugs as string[]).includes(PRODUCT_SLUG);
+    }
+  }
+
   return {
     user: {
       id: user.id,
@@ -167,6 +193,7 @@ export async function auth(): Promise<AppSession | null> {
       orgRole: resolvedOrgRole,
       organizationName: resolvedOrgName,
       allowedSiteIds,
+      entitled,
     },
   };
 }

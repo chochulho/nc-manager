@@ -10,6 +10,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await auth();
   if (!session) redirect("/login");
 
+  // NC Manager 제품 사용권한 없는 멤버 차단 (qmintel 멤버×제품 매트릭스 기준).
+  // 공유 Supabase 세션이라 signOut 금지(quality-hub까지 로그아웃됨) — 안내 화면만 표시.
+  if (!session.user.entitled) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-sm text-center">
+          <h1 className="mb-2 text-lg font-semibold text-foreground">접근 권한이 없습니다</h1>
+          <p className="text-sm text-muted-foreground">
+            NC Manager 사용 권한이 없습니다. 조직 관리자에게 제품 접근 권한을 요청하세요.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const orgId = session.user.organizationId;
 
   // 사업장 목록 + 현재 선택된 사업장 쿠키 병렬 조회
