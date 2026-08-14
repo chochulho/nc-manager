@@ -10,7 +10,7 @@ import { PrintButton } from "@/components/nc/print-button";
 import { Link } from "@/lib/i18n/navigation";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
 import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 function countBy<T>(arr: T[], key: (item: T) => string): Record<string, number> {
   return arr.reduce(
@@ -76,6 +76,7 @@ interface ReportCase {
   number: string;
   title: string;
   date: Date;
+  dateLabel: string;
   severityLabel: string;
   severityColorClass: string;
   statusLabel: string;
@@ -124,7 +125,7 @@ function CaseListTable({
               <td className="py-2 pr-2">
                 <Link href={c.href} className="font-medium hover:underline">{c.title}</Link>
               </td>
-              <td className="py-2 pr-2 text-muted-foreground whitespace-nowrap">{c.date.toLocaleDateString()}</td>
+              <td className="py-2 pr-2 text-muted-foreground whitespace-nowrap">{c.dateLabel}</td>
               <td className="py-2 pr-2">
                 <span className={`inline-block px-1.5 py-0.5 rounded-full font-medium ${c.severityColorClass}`}>{c.severityLabel}</span>
               </td>
@@ -144,7 +145,7 @@ export default async function DashboardPage({
 }: {
   searchParams: Promise<{ year?: string; period?: string }>;
 }) {
-  const [session, t, tNc, tPnc, tCc, tCapa, tc, tPeriod] = await Promise.all([
+  const [session, t, tNc, tPnc, tCc, tCapa, tc, tPeriod, locale] = await Promise.all([
     auth(),
     getTranslations("dashboard"),
     getTranslations("nc"),
@@ -153,7 +154,9 @@ export default async function DashboardPage({
     getTranslations("capa"),
     getTranslations("common"),
     getTranslations("periodFilter"),
+    getLocale(),
   ]);
+  const printedAt = new Date().toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { timeZone: "Asia/Seoul" });
 
   const orgId = session?.user?.organizationId;
   const selectedSiteId = await getSelectedSiteId();
@@ -280,6 +283,8 @@ export default async function DashboardPage({
     return { rootCause: "-", action: fallbackAction || "-", capaStatus: null };
   }
 
+  const fmtDate = (d: Date) => d.toLocaleDateString(locale === "ko" ? "ko-KR" : "en-US", { timeZone: "Asia/Seoul" });
+
   const ncCases: ReportCase[] = ncCaseList.map((item) => {
     const dispositionLabel = item.dispositionType ? tNc(`dispositions.${item.dispositionType}` as Parameters<typeof tNc>[0]) : null;
     const fallbackAction = [dispositionLabel, item.dispositionNotes].filter(Boolean).join(" — ");
@@ -289,6 +294,7 @@ export default async function DashboardPage({
       number: item.ncNumber,
       title: item.title,
       date: item.discoveredAt,
+      dateLabel: fmtDate(item.discoveredAt),
       severityLabel: tNc(`severities.${item.severity}` as Parameters<typeof tNc>[0]),
       severityColorClass: SEVERITY_BADGE[item.severity] ?? "",
       statusLabel: tNc(`statuses.${item.status}` as Parameters<typeof tNc>[0])
@@ -308,6 +314,7 @@ export default async function DashboardPage({
       number: item.pncNumber,
       title: item.title,
       date: item.discoveredAt,
+      dateLabel: fmtDate(item.discoveredAt),
       severityLabel: tPnc(`severities.${item.severity}` as Parameters<typeof tPnc>[0]),
       severityColorClass: SEVERITY_BADGE[item.severity] ?? "",
       statusLabel: tPnc(`statuses.${item.status}` as Parameters<typeof tPnc>[0])
@@ -326,6 +333,7 @@ export default async function DashboardPage({
       number: item.complaintNumber,
       title: item.title,
       date: item.receivedAt,
+      dateLabel: fmtDate(item.receivedAt),
       severityLabel: tCc(`severities.${item.severity}` as Parameters<typeof tCc>[0]),
       severityColorClass: SEVERITY_BADGE[item.severity] ?? "",
       statusLabel: tCc(`statuses.${item.status}` as Parameters<typeof tCc>[0])
@@ -396,7 +404,7 @@ export default async function DashboardPage({
       <div className="hidden print:block mb-6">
         <h1 className="text-2xl font-bold">{t("reportTitle")}</h1>
         <p className="text-gray-600 mt-1">
-          {session?.user?.organizationName} &nbsp;·&nbsp; {label} &nbsp;·&nbsp; {new Date().toLocaleDateString()}
+          {session?.user?.organizationName} &nbsp;·&nbsp; {label} &nbsp;·&nbsp; {printedAt}
         </p>
       </div>
 
