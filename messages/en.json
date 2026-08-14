@@ -118,7 +118,15 @@
     "colSeverity": "Severity",
     "colStatus": "Status",
     "colCount": "Count",
-    "colRatio": "Ratio"
+    "colRatio": "Ratio",
+    "caseListTitle": "Major Nonconformance Status",
+    "caseListScope": "Last 3 months · includes all open cases",
+    "colNumber": "Number",
+    "colDate": "Date",
+    "colProgress": "Progress",
+    "colRootCause": "Root Cause",
+    "colAction": "Action",
+    "noCases": "No cases found."
   },
   "nc": {
     "title": "Process NC",
@@ -233,6 +241,9 @@
     "occurrenceLocation": "Occurrence Location",
     "discoveredBySite": "Discovered at Site",
     "discoveredByProcess": "Discovered at Process",
+    "partInfo": "Part Information",
+    "appliedProduct": "Applied Product",
+    "usageProcess": "Usage Process",
     "quantityInspected": "Qty Inspected",
     "quantityNc": "NC Quantity",
     "regulatoryRelated": "Regulatory Related",

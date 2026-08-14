@@ -30,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     "title", "description", "discoveredAt", "discoveryStage", "severity",
     "discoveredBySiteId", "discoveredByProcessId",
     "occurrenceSiteId", "occurrenceProcessId", "occurrenceSupplierId",
-    "partId", "lotNumber", "quantityInspected", "quantityNc",
+    "partId", "appliedProduct", "lotNumber", "quantityInspected", "quantityNc",
     "categoryL2Id", "categoryL3Id", "tags",
     "safetyRelated", "regulatoryRelated", "capaRequired",
     "status", "containmentLocation", "containmentQuantity", "containedAt",

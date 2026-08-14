@@ -198,11 +198,11 @@ export function AttachmentSection({ entityType, entityId }: Props) {
                   className="w-full h-full object-cover cursor-pointer"
                   onClick={() => setLightbox(viewUrl(img.id))}
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-1.5">
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-1.5 pointer-events-none">
                   <span className="text-white text-xs truncate max-w-[70%]">{img.filename}</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleDelete(img.id, img.filename); }}
-                    className="p-0.5 bg-red-500 rounded-full text-white hover:bg-red-600"
+                    className="p-0.5 bg-red-500 rounded-full text-white hover:bg-red-600 pointer-events-auto"
                   >
                     <X className="h-3 w-3" />
                   </button>

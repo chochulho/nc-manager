@@ -90,6 +90,7 @@ export const partNCs = pgTable("nc_part_ncs", {
   occurrenceSupplierId: text("occurrence_supplier_id").references(() => ncSuppliers.id),
 
   partId: text("part_id").references(() => ncParts.id),
+  appliedProduct: text("applied_product"),
   lotNumber: text("lot_number"),
   quantityInspected: numeric("quantity_inspected"),
   quantityNc: numeric("quantity_nc"),

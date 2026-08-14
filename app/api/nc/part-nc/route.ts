@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     title, description, discoveredAt, discoveryStage, severity,
     discoveredBySiteId, discoveredByProcessId,
     occurrenceSiteId, occurrenceProcessId, occurrenceSupplierId,
-    partId, lotNumber, quantityInspected, quantityNc,
+    partId, appliedProduct, lotNumber, quantityInspected, quantityNc,
     categoryL2Id, categoryL3Id, tags,
     safetyRelated, regulatoryRelated, capaRequired,
   } = body;
@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       occurrenceProcessId: occurrenceProcessId || null,
       occurrenceSupplierId: occurrenceSupplierId || null,
       partId: partId || null,
+      appliedProduct: appliedProduct || null,
       lotNumber: lotNumber || null,
       quantityInspected: quantityInspected || null,
       quantityNc: quantityNc || null,

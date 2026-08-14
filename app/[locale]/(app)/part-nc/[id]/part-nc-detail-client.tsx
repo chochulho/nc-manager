@@ -21,9 +21,8 @@ interface CategoryL2 { id: string; code: string; nameKo: string }
 interface PNC {
   id: string; pncNumber: string; title: string; description: string | null;
   discoveredAt: Date; discoveryStage: string; severity: string; status: string;
-  occurrenceSiteId: string | null;
-  discoveredBySiteId: string | null; discoveredByProcessId: string | null;
-  occurrenceSupplierId: string | null; partId: string | null;
+  occurrenceProcessId: string | null;
+  occurrenceSupplierId: string | null; partId: string | null; appliedProduct: string | null;
   lotNumber: string | null; quantityInspected: string | null; quantityNc: string | null;
   categoryL2Id: string | null; safetyRelated: boolean; regulatoryRelated: boolean; capaRequired: boolean;
   capaId: string | null;
@@ -58,9 +57,6 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [discoveredLocationType, setDiscoveredLocationType] = useState<"site" | "supplier">(
-    pnc.occurrenceSupplierId ? "supplier" : "site"
-  );
   const [form, setForm] = useState({
     title: pnc.title,
     description: pnc.description ?? "",
@@ -68,11 +64,10 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
     discoveryStage: pnc.discoveryStage,
     severity: pnc.severity,
     status: pnc.status,
-    occurrenceSiteId: pnc.occurrenceSiteId ?? "",
-    discoveredBySiteId: pnc.discoveredBySiteId ?? "",
-    discoveredByProcessId: pnc.discoveredByProcessId ?? "",
     occurrenceSupplierId: pnc.occurrenceSupplierId ?? "",
+    occurrenceProcessId: pnc.occurrenceProcessId ?? "",
     partId: pnc.partId ?? "",
+    appliedProduct: pnc.appliedProduct ?? "",
     lotNumber: pnc.lotNumber ?? "",
     quantityInspected: pnc.quantityInspected ?? "",
     quantityNc: pnc.quantityNc ?? "",
@@ -108,7 +103,6 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
     }
   }
 
-  const siteMap = Object.fromEntries(sites.map(s => [s.id, s.name]));
   const processMap = Object.fromEntries(processes.map(p => [p.id, p.name]));
   const partMap = Object.fromEntries(parts.map(p => [p.id, `${p.number} — ${p.name}`]));
   const supplierMap = Object.fromEntries(suppliers.map(s => [s.id, s.name]));
@@ -230,9 +224,9 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
             )}
           </div>
 
-          {/* Subject info */}
+          {/* Part info */}
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-            <h2 className="section-title">{tc("targetInfo")}</h2>
+            <h2 className="section-title">{t("partInfo")}</h2>
             {editing ? (
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -243,8 +237,26 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
                   </Select>
                 </div>
                 <div>
+                  <Label>{t("appliedProduct")}</Label>
+                  <Input value={form.appliedProduct} onChange={(e) => set("appliedProduct", e.target.value)} className="mt-1" />
+                </div>
+                <div>
+                  <Label>{t("supplier")}</Label>
+                  <Select value={form.occurrenceSupplierId} onValueChange={(v: string) => set("occurrenceSupplierId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <Label>{tc("lotNumber")}</Label>
                   <Input value={form.lotNumber} onChange={(e) => set("lotNumber", e.target.value)} placeholder="LOT-XXXXXX" className="mt-1" />
+                </div>
+                <div>
+                  <Label>{t("usageProcess")}</Label>
+                  <Select value={form.occurrenceProcessId} onValueChange={(v: string) => set("occurrenceProcessId", v)}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
+                    <SelectContent>{processes.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>{t("quantityInspected")}</Label>
@@ -258,7 +270,10 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
             ) : (
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div><dt className="text-muted-foreground">{t("part")}</dt><dd className="font-medium mt-0.5">{pnc.partId ? partMap[pnc.partId] ?? "-" : "-"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("appliedProduct")}</dt><dd className="font-medium mt-0.5">{pnc.appliedProduct ?? "-"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("supplier")}</dt><dd className="font-medium mt-0.5">{pnc.occurrenceSupplierId ? supplierMap[pnc.occurrenceSupplierId] ?? "-" : "-"}</dd></div>
                 <div><dt className="text-muted-foreground">{tc("lotNumber")}</dt><dd className="font-medium mt-0.5">{pnc.lotNumber ?? "-"}</dd></div>
+                <div><dt className="text-muted-foreground">{t("usageProcess")}</dt><dd className="font-medium mt-0.5">{pnc.occurrenceProcessId ? processMap[pnc.occurrenceProcessId] ?? "-" : "-"}</dd></div>
                 <div><dt className="text-muted-foreground">{t("quantityInspected")}</dt><dd className="font-medium mt-0.5">{pnc.quantityInspected ?? "-"}</dd></div>
                 <div><dt className="text-muted-foreground">{t("quantityNc")}</dt><dd className="font-medium mt-0.5">{pnc.quantityNc ?? "-"}</dd></div>
               </dl>
@@ -347,80 +362,6 @@ export function PartNCDetailClient({ pnc, sites, processes, parts, suppliers, ca
 
         {/* Sidebar */}
         <div className="space-y-5">
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-            <h2 className="section-title">{t("occurrenceLocation")}</h2>
-            {editing ? (
-              <div className="space-y-3">
-                <div>
-                  <Label>{t("site")}</Label>
-                  <Select value={form.occurrenceSiteId} onValueChange={(v: string) => set("occurrenceSiteId", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
-                    <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>{t("discoveredByType")}</Label>
-                  <div className="mt-1 inline-flex rounded-lg border border-gray-200 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDiscoveredLocationType("site");
-                        set("occurrenceSupplierId", "");
-                      }}
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${discoveredLocationType === "site" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-gray-50"}`}
-                    >
-                      {t("site")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDiscoveredLocationType("supplier");
-                        set("discoveredBySiteId", "");
-                      }}
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${discoveredLocationType === "supplier" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-gray-50"}`}
-                    >
-                      {t("supplier")}
-                    </button>
-                  </div>
-                </div>
-                {discoveredLocationType === "site" ? (
-                  <div>
-                    <Label>{t("discoveredBySite")}</Label>
-                    <Select value={form.discoveredBySiteId} onValueChange={(v: string) => set("discoveredBySiteId", v)}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
-                      <SelectContent>{sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                ) : (
-                  <div>
-                    <Label>{t("supplier")}</Label>
-                    <Select value={form.occurrenceSupplierId} onValueChange={(v: string) => set("occurrenceSupplierId", v)}>
-                      <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
-                      <SelectContent>{suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div>
-                  <Label>{t("discoveredByProcess")}</Label>
-                  <Select value={form.discoveredByProcessId} onValueChange={(v: string) => set("discoveredByProcessId", v)}>
-                    <SelectTrigger className="mt-1"><SelectValue placeholder={tc("select")} /></SelectTrigger>
-                    <SelectContent>{processes.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ) : (
-              <dl className="space-y-3 text-sm">
-                <div><dt className="text-muted-foreground">{t("site")}</dt><dd className="font-medium mt-0.5">{pnc.occurrenceSiteId ? siteMap[pnc.occurrenceSiteId] ?? "-" : "-"}</dd></div>
-                {pnc.occurrenceSupplierId ? (
-                  <div><dt className="text-muted-foreground">{t("supplier")}</dt><dd className="font-medium mt-0.5">{supplierMap[pnc.occurrenceSupplierId] ?? "-"}</dd></div>
-                ) : (
-                  <div><dt className="text-muted-foreground">{t("discoveredBySite")}</dt><dd className="font-medium mt-0.5">{pnc.discoveredBySiteId ? siteMap[pnc.discoveredBySiteId] ?? "-" : "-"}</dd></div>
-                )}
-                <div><dt className="text-muted-foreground">{t("discoveredByProcess")}</dt><dd className="font-medium mt-0.5">{pnc.discoveredByProcessId ? processMap[pnc.discoveredByProcessId] ?? "-" : "-"}</dd></div>
-              </dl>
-            )}
-          </div>
-
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
             <h2 className="section-title">{tc("attributes")}</h2>
             {editing ? (

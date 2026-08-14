@@ -118,7 +118,15 @@
     "colSeverity": "심각도",
     "colStatus": "상태",
     "colCount": "건수",
-    "colRatio": "비율"
+    "colRatio": "비율",
+    "caseListTitle": "주요 불량 현황",
+    "caseListScope": "최근 3개월 · 미종결 포함",
+    "colNumber": "번호",
+    "colDate": "일자",
+    "colProgress": "진행상황",
+    "colRootCause": "원인",
+    "colAction": "대책",
+    "noCases": "해당 건이 없습니다."
   },
   "nc": {
     "title": "공정 부적합",
@@ -233,6 +241,9 @@
     "occurrenceLocation": "발생 위치",
     "discoveredBySite": "발견 사업장",
     "discoveredByProcess": "발견 공정",
+    "partInfo": "부품 정보",
+    "appliedProduct": "적용 제품",
+    "usageProcess": "사용 공정",
     "quantityInspected": "검사 수량",
     "quantityNc": "부적합 수량",
     "regulatoryRelated": "법규 관련 (Regulatory)",
