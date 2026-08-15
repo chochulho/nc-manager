@@ -94,6 +94,21 @@
   }
 }
 
+/*
+ * 인쇄 전용 콘텐츠: `display:none → @media print{display:block}` 토글은 화면에서
+ * 숨겨져 있던 요소가 인쇄 시 여러 페이지로 넘치는 경우 크롬이 페이지 계산에서
+ * 아예 누락시키는 경우가 있어, 반대로 기본값을 block으로 두고 화면에서만
+ * 숨기는 방식을 사용한다 (인쇄 컨텍스트에서는 별도 오버라이드 없이 그대로 렌더링됨).
+ */
+.print-only {
+  display: block;
+}
+@media screen {
+  .print-only {
+    display: none;
+  }
+}
+
 @layer components {
   .input {
     @apply w-full px-3.5 py-2.5 text-sm border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-gray-400 transition-colors;

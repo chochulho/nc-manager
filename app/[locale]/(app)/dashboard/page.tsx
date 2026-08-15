@@ -533,7 +533,7 @@ export default async function DashboardPage({
 
       {/* Case List: 주요 불량 현황 (최근 3개월 · 미종결) — 보고서 출력(인쇄) 전용, 화면에는 노출하지 않음 */}
       {(ncCases.length > 0 || pncCases.length > 0 || ccCases.length > 0) && (
-        <div className="hidden print:block mt-8 space-y-6">
+        <div className="print-only mt-8 space-y-6">
           <h2 className="text-base font-bold flex items-center gap-2">
             {t("caseListTitle")}
             <span className="text-xs font-normal text-muted-foreground">({t("caseListScope")})</span>
