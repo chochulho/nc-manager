@@ -96,7 +96,7 @@ function CaseListTable({
     return <p className="text-xs text-muted-foreground py-3">{emptyLabel}</p>;
   }
   return (
-    <div className="overflow-x-auto">
+    <>
       <table className="w-full text-xs table-fixed">
         <colgroup>
           <col style={{ width: "9%" }} />
@@ -136,7 +136,7 @@ function CaseListTable({
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 }
 
@@ -531,18 +531,15 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {/* TEMP DEBUG: 항상 화면에 노출 — 원인 진단용, 확인 후 되돌릴 예정 */}
-      <p className="text-xs text-red-600 mt-2">DEBUG counts: nc={ncCases.length} pnc={pncCases.length} cc={ccCases.length}</p>
-
       {/* Case List: 주요 불량 현황 (최근 3개월 · 미종결) — 보고서 출력(인쇄) 전용, 화면에는 노출하지 않음 */}
       {(ncCases.length > 0 || pncCases.length > 0 || ccCases.length > 0) && (
-        <div className="mt-8 space-y-6">
+        <div className="hidden print:block mt-8 space-y-6">
           <h2 className="text-base font-bold flex items-center gap-2">
             {t("caseListTitle")}
             <span className="text-xs font-normal text-muted-foreground">({t("caseListScope")})</span>
           </h2>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 break-inside-avoid">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-orange-500" />
               {t("ncAnalysis")}
@@ -550,7 +547,7 @@ export default async function DashboardPage({
             <CaseListTable cases={ncCases} headers={caseHeaders} emptyLabel={t("noCases")} />
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 break-inside-avoid">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <PackageX className="h-4 w-4 text-purple-500" />
               {t("pncAnalysis")}
@@ -558,7 +555,7 @@ export default async function DashboardPage({
             <CaseListTable cases={pncCases} headers={caseHeaders} emptyLabel={t("noCases")} />
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 break-inside-avoid">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
               <MessageSquareWarning className="h-4 w-4 text-red-500" />
               {t("ccAnalysis")}
