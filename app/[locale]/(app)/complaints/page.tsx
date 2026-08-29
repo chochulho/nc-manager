@@ -48,7 +48,6 @@ export default async function ComplaintsPage({
         finalReportDueAt: customerComplaints.finalReportDueAt,
         capaId: customerComplaints.capaId,
         capaNumber: capas.capaNumber,
-        resolutionType: customerComplaints.resolutionType,
         recurrenceType: customerComplaints.recurrenceType,
         lotNumber: customerComplaints.lotNumber,
         partNumberDetail: customerComplaints.partNumberDetail,

@@ -25,7 +25,6 @@ interface ComplaintItem {
   finalReportDueAt: Date | null;
   capaId: string | null;
   capaNumber: string | null;
-  resolutionType: string | null;
   recurrenceType: string | null;
   lotNumber: string | null;
   partNumberDetail: string | null;
@@ -59,13 +58,6 @@ const STAGE_COLORS: Record<string, string> = {
   field:      "text-orange-600",
   warranty:   "text-yellow-600",
   other:      "text-gray-500",
-};
-
-const RESOLUTION_LABELS: Record<string, { label: string; className: string }> = {
-  confirmed_nc:    { label: "실제 부적합", className: "text-indigo-700 bg-indigo-50" },
-  ntf:             { label: "NTF",         className: "text-gray-600  bg-gray-100"   },
-  customer_misuse: { label: "고객 귀책",   className: "text-purple-700 bg-purple-50" },
-  partial:         { label: "부분 확인",   className: "text-orange-700 bg-orange-50" },
 };
 
 function isSlaOverdue(due: Date | null): boolean {
@@ -148,7 +140,9 @@ export function ComplaintList({
               <span>{t("customer")}</span>
               <span>{t("severity")}</span>
               <span>{t("status")}</span>
-              <span>{t("finalReportDueLabel")}</span>
+              <span className="cursor-help" title="접수일 + 고객사별 최종보고 SLA(마스터 관리 > 고객사에서 설정, 기본 15일)">
+                {t("finalReportDueLabel")}
+              </span>
             </div>
 
             <ul className="divide-y">
@@ -172,7 +166,7 @@ export function ComplaintList({
                           <span className="font-mono text-xs font-semibold text-primary group-hover:underline whitespace-nowrap block">
                             {c.complaintNumber}
                           </span>
-                          <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 space-y-0.5">
+                          <div className="text-xs text-muted-foreground leading-tight mt-0.5 space-y-0.5">
                             <div>접 {formatDate(c.receivedAt)}</div>
                             {c.occurredAt && <div>발 {formatDate(c.occurredAt)}</div>}
                           </div>
@@ -208,31 +202,39 @@ export function ComplaintList({
                         </span>
 
                         {/* 상태 */}
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold w-fit ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
-                          {t(`statuses.${c.status}` as Parameters<typeof t>[0])}
-                        </span>
+                        <div>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold w-fit ${STATUS_COLORS[c.status] ?? "bg-gray-100 text-gray-600"}`}>
+                            {t(`statuses.${c.status}` as Parameters<typeof t>[0])}
+                          </span>
+                          {c.capaId && (
+                            <div className="text-[11px] text-blue-600 font-medium font-mono mt-0.5 truncate">
+                              {c.capaNumber ?? "CAPA"}
+                            </div>
+                          )}
+                        </div>
 
                         {/* SLA / 최종보고기한 */}
-                        <span>
+                        <div>
+                          <div className={`text-xs ${overdueFinal ? "text-red-600 font-semibold" : "text-muted-foreground"}`}>
+                            {formatDate(c.finalReportDueAt)}
+                          </div>
                           {isClosed ? (
-                            <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                              <CheckCircle2 className="h-3.5 w-3.5" /> 완료
+                            <span className="flex items-center gap-1 text-[11px] text-green-600 font-medium mt-0.5">
+                              <CheckCircle2 className="h-3 w-3" /> 완료
                             </span>
                           ) : overdueFinal ? (
-                            <span className="flex items-center gap-1 text-red-600 text-xs font-semibold">
-                              <Clock className="h-3.5 w-3.5" /> {tCommon("overdue")}
+                            <span className="flex items-center gap-1 text-[11px] text-red-600 font-semibold mt-0.5">
+                              <Clock className="h-3 w-3" /> {tCommon("overdue")}
                             </span>
                           ) : days !== null ? (
-                            <span className={`text-xs ${days <= 3 ? "text-orange-600 font-semibold" : "text-muted-foreground"}`}>
-                              {formatDate(c.finalReportDueAt!)}
+                            <span className={`text-[11px] mt-0.5 block ${days <= 3 ? "text-orange-600 font-semibold" : "text-muted-foreground"}`}>
+                              D-{days}
                             </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </span>
+                          ) : null}
+                        </div>
                       </div>
 
-                      {/* 2행: 발생단계 | 재발 | 부품명 | LOT | VIN | 주행거리 | CAPA | 분석결과 */}
+                      {/* 2행: 발생단계 | 재발 | 부품명 | LOT | VIN | 주행거리 */}
                       <div className="grid grid-cols-[7rem_1fr] gap-x-3 mt-1">
                         {/* 번호 열 아래 빈 공간 맞춤 */}
                         <span />
@@ -265,20 +267,6 @@ export function ComplaintList({
                           {/* 주행거리 */}
                           {c.mileageKm && (
                             <span className="text-xs text-muted-foreground">{Number(c.mileageKm).toLocaleString()}km</span>
-                          )}
-
-                          {/* CAPA 연결 */}
-                          {c.capaId && (
-                            <span className="text-xs text-blue-600 font-medium">
-                              {c.capaNumber ?? "CAPA 연결"}
-                            </span>
-                          )}
-
-                          {/* 분석결과 */}
-                          {c.resolutionType && RESOLUTION_LABELS[c.resolutionType] && (
-                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${RESOLUTION_LABELS[c.resolutionType].className}`}>
-                              {RESOLUTION_LABELS[c.resolutionType].label}
-                            </span>
                           )}
                         </div>
                       </div>
