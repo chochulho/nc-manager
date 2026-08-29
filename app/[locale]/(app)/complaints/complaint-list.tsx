@@ -15,6 +15,7 @@ interface ComplaintItem {
   complaintNumber: string;
   title: string;
   receivedAt: Date;
+  occurredAt: Date | null;
   discoveryStage: string;
   severity: string;
   status: string;
@@ -22,8 +23,8 @@ interface ComplaintItem {
   recallRisk: boolean;
   initialResponseDueAt: Date | null;
   finalReportDueAt: Date | null;
-  receivedChannel: string | null;
   capaId: string | null;
+  capaNumber: string | null;
   resolutionType: string | null;
   recurrenceType: string | null;
   lotNumber: string | null;
@@ -31,7 +32,6 @@ interface ComplaintItem {
   customerName: string | null;
   partName: string | null;
   partNumber: string | null;
-  analysisStatus: string | null;
   analysisSections: { rootCause?: string; conclusion?: string } | null;
   vehicleModel: string | null;
   vehicleVin: string | null;
@@ -59,14 +59,6 @@ const STAGE_COLORS: Record<string, string> = {
   field:      "text-orange-600",
   warranty:   "text-yellow-600",
   other:      "text-gray-500",
-};
-
-const CHANNEL_LABELS: Record<string, string> = {
-  portal:   "포털",
-  email:    "이메일",
-  phone:    "전화",
-  meeting:  "미팅",
-  informal: "비공식",
 };
 
 const RESOLUTION_LABELS: Record<string, { label: string; className: string }> = {
@@ -176,9 +168,15 @@ export function ComplaintList({
                       {/* 1행: 번호 | 제목(+차종/품번) | 분석내용 | 고객사 | 심각도 | 상태 | SLA */}
                       <div className="grid grid-cols-[7rem_1.3fr_1fr_8rem_5rem_7rem_8rem] gap-x-3 items-center">
                         {/* 번호 */}
-                        <span className="font-mono text-xs font-semibold text-primary group-hover:underline whitespace-nowrap">
-                          {c.complaintNumber}
-                        </span>
+                        <div className="min-w-0">
+                          <span className="font-mono text-xs font-semibold text-primary group-hover:underline whitespace-nowrap block">
+                            {c.complaintNumber}
+                          </span>
+                          <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 space-y-0.5">
+                            <div>접 {formatDate(c.receivedAt)}</div>
+                            {c.occurredAt && <div>발 {formatDate(c.occurredAt)}</div>}
+                          </div>
+                        </div>
 
                         {/* 제목 */}
                         <div className="min-w-0">
@@ -234,12 +232,10 @@ export function ComplaintList({
                         </span>
                       </div>
 
-                      {/* 2행: 발생단계 | 재발 | 부품명 | LOT | VIN | 주행거리 | 접수채널 | CAPA | 분석결과 | 접수일 */}
+                      {/* 2행: 발생단계 | 재발 | 부품명 | LOT | VIN | 주행거리 | CAPA | 분석결과 */}
                       <div className="grid grid-cols-[7rem_1fr] gap-x-3 mt-1">
                         {/* 번호 열 아래 빈 공간 맞춤 */}
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(c.receivedAt)}
-                        </span>
+                        <span />
                         <div className="flex items-center gap-3 flex-wrap">
                           {/* 발생 단계 */}
                           <span className={`text-xs font-medium ${STAGE_COLORS[c.discoveryStage] ?? "text-gray-500"}`}>
@@ -271,31 +267,17 @@ export function ComplaintList({
                             <span className="text-xs text-muted-foreground">{Number(c.mileageKm).toLocaleString()}km</span>
                           )}
 
-                          {/* 접수 채널 */}
-                          {c.receivedChannel && (
-                            <span className="text-xs text-muted-foreground">
-                              {CHANNEL_LABELS[c.receivedChannel] ?? c.receivedChannel}
-                            </span>
-                          )}
-
                           {/* CAPA 연결 */}
-                          {c.capaId ? (
-                            <span className="text-xs text-blue-600 font-medium">CAPA 연결</span>
-                          ) : (
-                            <span className="text-xs text-gray-400">CAPA 미연결</span>
+                          {c.capaId && (
+                            <span className="text-xs text-blue-600 font-medium">
+                              {c.capaNumber ?? "CAPA 연결"}
+                            </span>
                           )}
 
                           {/* 분석결과 */}
                           {c.resolutionType && RESOLUTION_LABELS[c.resolutionType] && (
                             <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${RESOLUTION_LABELS[c.resolutionType].className}`}>
                               {RESOLUTION_LABELS[c.resolutionType].label}
-                            </span>
-                          )}
-
-                          {/* 분석보고서 상태 */}
-                          {c.analysisStatus && (
-                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${c.analysisStatus === "final" ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"}`}>
-                              분석 {c.analysisStatus === "final" ? "확정" : "초안"}
                             </span>
                           )}
                         </div>

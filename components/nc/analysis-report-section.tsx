@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   FileText, ChevronDown, ChevronUp, Save, Loader2,
-  Download, Printer, RefreshCw, Trash2, CheckCircle2, PenLine, XCircle, Upload, X, Paperclip, Wand2,
+  Download, Printer, RefreshCw, Trash2, CheckCircle2, PenLine, XCircle, Upload, X, Paperclip, Wand2, RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -191,6 +191,7 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
   const [creating, setCreating] = useState(false);
   const [importingCapa, setImportingCapa] = useState(false);
   const [reloadingDefaults, setReloadingDefaults] = useState(false);
+  const [unfinalizing, setUnfinalizing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = useState<string | null>(null);
@@ -358,6 +359,25 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleUnfinalize() {
+    if (!report) return;
+    if (!confirm(tr("unfinalizeConfirm" as Parameters<typeof tr>[0]))) return;
+    setUnfinalizing(true);
+    try {
+      const res = await fetch(`/api/nc/analysis-reports/${report.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "draft" }),
+      });
+      if (!res.ok) { toast.error(tc("error")); return; }
+      const updated = await res.json();
+      setReport((prev) => (prev ? { ...prev, ...updated } : updated));
+      toast.success(tr("unfinalized" as Parameters<typeof tr>[0]));
+    } finally {
+      setUnfinalizing(false);
     }
   }
 
@@ -905,6 +925,12 @@ export function AnalysisReportSection({ complaintId, capaId, complaintInfo, onCo
             {!editing && report.status !== "final" && (
               <Button variant="outline" size="sm" onClick={() => { setEditing(true); setExpanded(true); }}>
                 <PenLine className="h-3.5 w-3.5 mr-1" />{tc("edit")}
+              </Button>
+            )}
+            {!editing && report.status === "final" && (
+              <Button variant="outline" size="sm" onClick={handleUnfinalize} disabled={unfinalizing}>
+                {unfinalizing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5 mr-1" />}
+                {tr("unfinalize" as Parameters<typeof tr>[0])}
               </Button>
             )}
             <button onClick={() => setExpanded((v) => !v)} className="p-1 text-gray-400 hover:text-gray-600">

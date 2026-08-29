@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { customerComplaints, ncCustomers, ncParts, ncAnalysisReports, ncFieldClaimDetails } from "@/lib/db/schema";
+import { customerComplaints, ncCustomers, ncParts, ncAnalysisReports, ncFieldClaimDetails, capas } from "@/lib/db/schema";
 import { eq, desc, and, gte, lte, count } from "drizzle-orm";
 import { ComplaintList } from "./complaint-list";
 import { parsePeriodParams, periodToDateRange } from "@/lib/period-utils";
@@ -38,6 +38,7 @@ export default async function ComplaintsPage({
         complaintNumber: customerComplaints.complaintNumber,
         title: customerComplaints.title,
         receivedAt: customerComplaints.receivedAt,
+        occurredAt: customerComplaints.occurredAt,
         discoveryStage: customerComplaints.discoveryStage,
         severity: customerComplaints.severity,
         status: customerComplaints.status,
@@ -45,8 +46,8 @@ export default async function ComplaintsPage({
         recallRisk: customerComplaints.recallRisk,
         initialResponseDueAt: customerComplaints.initialResponseDueAt,
         finalReportDueAt: customerComplaints.finalReportDueAt,
-        receivedChannel: customerComplaints.receivedChannel,
         capaId: customerComplaints.capaId,
+        capaNumber: capas.capaNumber,
         resolutionType: customerComplaints.resolutionType,
         recurrenceType: customerComplaints.recurrenceType,
         lotNumber: customerComplaints.lotNumber,
@@ -54,7 +55,6 @@ export default async function ComplaintsPage({
         customerName: ncCustomers.name,
         partName: ncParts.partName,
         partNumber: ncParts.partNumber,
-        analysisStatus: ncAnalysisReports.status,
         analysisSections: ncAnalysisReports.sections,
         vehicleModel: ncFieldClaimDetails.vehicleModel,
         vehicleVin: ncFieldClaimDetails.vehicleVin,
@@ -65,6 +65,7 @@ export default async function ComplaintsPage({
       .leftJoin(ncParts, eq(customerComplaints.partId, ncParts.id))
       .leftJoin(ncAnalysisReports, eq(ncAnalysisReports.complaintId, customerComplaints.id))
       .leftJoin(ncFieldClaimDetails, eq(ncFieldClaimDetails.complaintId, customerComplaints.id))
+      .leftJoin(capas, eq(customerComplaints.capaId, capas.id))
       .where(and(...conditions))
       .orderBy(desc(customerComplaints.createdAt))
       .limit(PAGE_SIZE)

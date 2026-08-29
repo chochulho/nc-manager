@@ -447,6 +447,9 @@
       "noDefaultsToApply": "No template defaults to apply, or all blocks are already filled.",
       "reloadedDefaults": "Template defaults loaded.",
       "uploadInProgress": "File upload in progress. Please wait before saving.",
+      "unfinalize": "Unfinalize",
+      "unfinalizeConfirm": "This reverts the report back to draft status so it can be edited again. Continue?",
+      "unfinalized": "Finalization cancelled. The report can be edited again.",
       "resolutionLabels": {
         "ntf": "NTF (No Trouble Found)",
         "customer_misuse": "Customer Fault",
