@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Plus, MessageSquareWarning, AlertCircle, Clock, Download, CheckCircle2 } from "lucide-react";
+import { Plus, MessageSquareWarning, AlertCircle, Clock, Download, Upload, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
@@ -102,6 +102,12 @@ export function ComplaintList({
               Excel
             </Button>
           </a>
+          <Link href="/complaints/import">
+            <Button variant="outline" size="sm">
+              <Upload className="h-4 w-4 mr-1" />
+              가져오기
+            </Button>
+          </Link>
           <Link href="/complaints/new">
             <Button>
               <Plus className="h-4 w-4 mr-1" />

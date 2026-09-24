@@ -594,7 +594,7 @@
     "actionDepartment": "Department",
     "actionDepartmentPlaceholder": "Department name",
     "actionResponsible": "Responsible",
-    "actionResponsiblePlaceholder": "Person in charge",
+    "actionResponsiblePlaceholder": "Select responsible person",
     "effectivenessReviewDue": "Review Due Date",
     "effectivenessReviewedAt": "Reviewed At",
     "effectivenessReviewer": "Reviewer",

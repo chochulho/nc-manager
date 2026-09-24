@@ -456,7 +456,16 @@ export const ncSlaReminderLogs = pgTable("nc_sla_reminder_logs", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   orgId: text("org_id").notNull(),
   entityType: text("entity_type", {
-    enum: ["complaint_initial", "complaint_final", "capa_action", "capa_effectiveness"],
+    enum: [
+      "complaint_initial",
+      "complaint_final",
+      "capa_action_d5",
+      "capa_action_d1",
+      "capa_action_escalation",
+      "capa_effectiveness_d5",
+      "capa_effectiveness_d1",
+      "capa_effectiveness_escalation",
+    ],
   }).notNull(),
   entityId: text("entity_id").notNull(),
   sentToEmail: text("sent_to_email").notNull(),

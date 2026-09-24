@@ -594,7 +594,7 @@
     "actionDepartment": "부서",
     "actionDepartmentPlaceholder": "담당 부서",
     "actionResponsible": "담당자",
-    "actionResponsiblePlaceholder": "담당자 이름",
+    "actionResponsiblePlaceholder": "담당자 선택",
     "effectivenessReviewDue": "검토 예정일",
     "effectivenessReviewedAt": "검토 완료일",
     "effectivenessReviewer": "담당자",

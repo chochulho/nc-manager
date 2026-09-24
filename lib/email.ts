@@ -231,3 +231,55 @@ export async function sendCapaActionAssignmentEmail({
   });
 }
 
+export async function sendCapaEscalationEmail({
+  to,
+  recipientName,
+  orgName,
+  capaNumber,
+  capaTitle,
+  itemLabel,
+  responsibleName,
+  dueAt,
+  daysOverdue,
+  capaUrl,
+}: {
+  to: string;
+  recipientName: string;
+  orgName: string;
+  capaNumber: string;
+  capaTitle: string;
+  itemLabel: string;
+  responsibleName: string;
+  dueAt: Date;
+  daysOverdue: number;
+  capaUrl: string;
+}) {
+  const dueDateStr = dueAt.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `[NC Manager] 🚨 일정 지연 에스컬레이션 — ${capaNumber}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+        <p style="color:#6b7280;font-size:12px;margin-bottom:16px;">[NC Manager] ${orgName}</p>
+        <h2 style="font-size:18px;margin-bottom:8px;">🚨 담당자가 기한을 초과했습니다</h2>
+        <p style="color:#374151;font-size:14px;">안녕하세요, ${recipientName}님.</p>
+        <p style="color:#374151;font-size:14px;">아래 CAPA의 <strong>${itemLabel}</strong>이(가) 기한을 넘겨 관리자에게 자동 에스컬레이션되었습니다.</p>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:16px 0;">
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">CAPA</p>
+          <p style="margin:0 0 16px;font-size:14px;font-family:monospace;">${capaNumber} — ${capaTitle}</p>
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">항목</p>
+          <p style="margin:0 0 16px;font-size:14px;">${itemLabel}</p>
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">담당자</p>
+          <p style="margin:0 0 16px;font-size:14px;">${responsibleName}</p>
+          <p style="margin:0 0 8px;font-size:13px;color:#6b7280;">기한</p>
+          <p style="margin:0;font-size:14px;font-weight:600;color:#ef4444;">${dueDateStr} (${daysOverdue}일 초과)</p>
+        </div>
+        <a href="${capaUrl}" style="display:inline-block;background:#1d4ed8;color:white;text-decoration:none;padding:10px 20px;border-radius:6px;font-size:14px;margin-top:8px;">CAPA 확인하기</a>
+        <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb;"/>
+        <p style="color:#9ca3af;font-size:11px;">이 이메일은 NC Manager에서 자동 발송되었습니다.</p>
+      </div>
+    `,
+  });
+}

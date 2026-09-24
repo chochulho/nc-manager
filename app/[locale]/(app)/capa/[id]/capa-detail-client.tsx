@@ -141,7 +141,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
 
   // Action 추가용 상태
   const [showAddAction, setShowAddAction] = useState(false);
-  const [newAction, setNewAction] = useState({ actionType: "corrective", description: "", department: "", responsibleName: "", dueAt: "" });
+  const [newAction, setNewAction] = useState({ actionType: "corrective", description: "", department: "", responsibleUserId: "", dueAt: "" });
   const [addingAction, setAddingAction] = useState(false);
   // 완료일 선택 상태
   const [completingAction, setCompletingAction] = useState<{ id: string; date: string } | null>(null);
@@ -272,6 +272,7 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     if (!newAction.description) { toast.error(tCommon("required")); return; }
     setAddingAction(true);
     try {
+      const responsibleMember = members.find((m) => m.id === newAction.responsibleUserId);
       const res = await fetch(`/api/nc/capa/${capa.id}/actions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -279,14 +280,15 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
           actionType: newAction.actionType,
           description: newAction.description,
           department: newAction.department || null,
-          responsibleName: newAction.responsibleName || null,
+          responsibleUserId: newAction.responsibleUserId || null,
+          responsibleName: responsibleMember?.name || null,
           dueAt: newAction.dueAt || null,
         }),
       });
       if (!res.ok) { toast.error(tCommon("error")); return; }
       const created = await res.json();
       setActions((prev) => [...prev, created]);
-      setNewAction({ actionType: "corrective", description: "", department: "", responsibleName: "", dueAt: "" });
+      setNewAction({ actionType: "corrective", description: "", department: "", responsibleUserId: "", dueAt: "" });
       setShowAddAction(false);
     } finally {
       setAddingAction(false);
@@ -776,7 +778,15 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
                   </div>
                   <div>
                     <Label className="text-xs">{t("actionResponsible")}</Label>
-                    <Input value={newAction.responsibleName} onChange={(e) => setNewAction((p) => ({ ...p, responsibleName: e.target.value }))} placeholder={t("actionResponsiblePlaceholder")} className="mt-1 h-8 text-sm" />
+                    <Select value={newAction.responsibleUserId || "__none__"} onValueChange={(v) => setNewAction((p) => ({ ...p, responsibleUserId: v === "__none__" ? "" : v }))}>
+                      <SelectTrigger className="mt-1 h-8 text-sm"><SelectValue placeholder={t("actionResponsiblePlaceholder")} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">{t("actionResponsiblePlaceholder")}</SelectItem>
+                        {members.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>

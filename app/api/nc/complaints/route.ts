@@ -1,25 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { customerComplaints, ncSequences, ncCustomers, ncFieldClaimDetails } from "@/lib/db/schema";
+import { customerComplaints, ncCustomers, ncFieldClaimDetails } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { sql } from "drizzle-orm";
 import { buildSiteFilter, getSelectedSiteId } from "@/lib/site-filter";
-
-async function nextComplaintNumber(orgId: string): Promise<string> {
-  const year = new Date().getFullYear();
-  const result = await db
-    .insert(ncSequences)
-    .values({ orgId, entityType: "customer_complaint", year, lastSeq: 1 })
-    .onConflictDoUpdate({
-      target: [ncSequences.orgId, ncSequences.entityType, ncSequences.year],
-      set: { lastSeq: sql`${ncSequences.lastSeq} + 1` },
-    })
-    .returning({ lastSeq: ncSequences.lastSeq });
-
-  const seq = result[0].lastSeq;
-  return `CC-${year}-${String(seq).padStart(4, "0")}`;
-}
+import { nextComplaintNumber } from "@/lib/nc/sequence";
 
 export async function GET() {
   const session = await auth();
