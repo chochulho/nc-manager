@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { ShieldAlert, Trash2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ export function AdminRecordPanel({
   listHref,
   onRenumbered,
   onUnlinked,
+  children,
 }: {
   currentNumber: string;
   deleteApiUrl: string;
@@ -35,6 +36,8 @@ export function AdminRecordPanel({
   listHref: string;
   onRenumbered: (newNumber: string) => void;
   onUnlinked?: () => void;
+  /** 엔티티 전용 관리자 작업 (레코드 삭제 위에 표시) */
+  children?: ReactNode;
 }) {
   const initial = parseNumber(currentNumber);
   const [year, setYear] = useState(String(initial.year));
@@ -155,6 +158,8 @@ export function AdminRecordPanel({
           </p>
         </div>
       )}
+
+      {children}
 
       <div>
         <Label>레코드 삭제</Label>

@@ -7,6 +7,31 @@ import { eq, and } from "drizzle-orm";
 import { sendCapaAssignmentEmail } from "@/lib/email";
 import { findBlockingLinks, isRecordAdmin, logAdminAction } from "@/lib/nc/admin-registry";
 
+// PATCH로 수정 가능한 필드. 방법론/번호/출처/조직 등은 관리자 전용 엔드포인트로만 변경한다.
+const EDITABLE_FIELDS = [
+  "title",
+  "problemStatement",
+  "d1Team",
+  "d2Description",
+  "d3InterimContainment",
+  "d4RootCause",
+  "d5PermanentActions",
+  "d6Implementation",
+  "d7Prevention",
+  "d8Recognition",
+  "status",
+  "championUserId",
+  "effectivenessReviewDueAt",
+  "effectivenessReviewerUserId",
+  "effectivenessVerdict",
+  "effectivenessNote",
+  "recurrenceConfirmed",
+  "recurrenceNote",
+  "fmeaRef",
+  "changeRef",
+  "docChanges",
+] as const;
+
 const APP_URL = process.env.NEXT_PUBLIC_BASE_DOMAIN
   ? `https://${process.env.NEXT_PUBLIC_BASE_DOMAIN}`
   : "https://nc-manager.vercel.app";
@@ -48,16 +73,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const now = new Date();
-  const updates: Record<string, unknown> = { ...body, updatedAt: now };
+  const updates: Record<string, unknown> = { updatedAt: now };
+  for (const key of EDITABLE_FIELDS) {
+    if (key in body) updates[key] = body[key];
+  }
 
   if (typeof updates.effectivenessReviewDueAt === "string") {
     updates.effectivenessReviewDueAt = new Date(updates.effectivenessReviewDueAt);
   }
 
-  if (body.status === "closed" && !body.closedAt) {
+  if (body.status === "closed") {
     updates.closedAt = now;
   }
-  if (body.effectivenessVerdict && !body.effectivenessReviewedAt) {
+  if (body.effectivenessVerdict) {
     updates.effectivenessReviewedAt = now;
   }
 

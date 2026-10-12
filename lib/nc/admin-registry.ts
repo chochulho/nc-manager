@@ -238,7 +238,7 @@ export async function logAdminAction(
   kind: EntityKind,
   entityId: string,
   userId: string,
-  action: "deleted" | "renumbered" | "unlinked",
+  action: "deleted" | "renumbered" | "unlinked" | "methodology_changed",
   payload: unknown
 ): Promise<void> {
   await db.insert(ncActivities).values({ orgId, entityType: kind, entityId, userId, action, payload: payload as object });

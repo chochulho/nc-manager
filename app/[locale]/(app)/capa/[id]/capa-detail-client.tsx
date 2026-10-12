@@ -145,6 +145,9 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
   const [addingAction, setAddingAction] = useState(false);
   // 완료일 선택 상태
   const [completingAction, setCompletingAction] = useState<{ id: string; date: string } | null>(null);
+  // 관리자 방법론 변경
+  const [methodologyDraft, setMethodologyDraft] = useState(capa.methodology);
+  const [changingMethodology, setChangingMethodology] = useState(false);
 
   function setF(key: string, value: unknown) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -162,13 +165,16 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
       const body: Record<string, unknown> = {
         title: form.title,
         problemStatement: form.problemStatement || null,
-        d1Team: isSimpleCapa ? null : (form.d1Team || null),
         d2Description: form.d2Description || null,
         d3InterimContainment: form.d3InterimContainment || null,
         d4RootCause: isSimpleCapa ? (form.simpleRootCause || null) : form.d4RootCause,
-        d5PermanentActions: isSimpleCapa ? null : form.d5PermanentActions,
-        d6Implementation: isSimpleCapa ? null : form.d6Implementation,
-        d8Recognition: isSimpleCapa ? null : (form.d8Recognition || null),
+        // Simple CAPA에서는 8D 전용 필드를 보내지 않는다 — 방법론을 다시 8D로 바꾸면 기존 값이 복원되도록
+        ...(isSimpleCapa ? {} : {
+          d1Team: form.d1Team || null,
+          d5PermanentActions: form.d5PermanentActions,
+          d6Implementation: form.d6Implementation,
+          d8Recognition: form.d8Recognition || null,
+        }),
         fmeaRef: form.fmeaRef || null,
         changeRef: form.changeRef || null,
         docChanges: (form.docChanges as DocChangeItem[]).length > 0 ? form.docChanges : null,
@@ -312,6 +318,33 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
     if (!confirm(tCommon("confirm"))) return;
     const res = await fetch(`/api/nc/capa/${capa.id}/actions/${actionId}`, { method: "DELETE" });
     if (res.ok) setActions((prev) => prev.filter((a) => a.id !== actionId));
+  }
+
+  async function changeMethodology() {
+    const label = t(`methodologies.${methodologyDraft}` as Parameters<typeof t>[0]);
+    if (!confirm(`방법론을 ${label}(으)로 변경하시겠습니까?`)) return;
+    setChangingMethodology(true);
+    try {
+      const res = await fetch(`/api/nc/capa/${capa.id}/methodology`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ methodology: methodologyDraft }),
+      });
+      if (!res.ok) { toast.error("방법론 변경에 실패했습니다."); return; }
+      const updated: CAPA = await res.json();
+      setCapa(updated);
+      // 근본원인 입력 폼을 새 형식에 맞게 다시 채운다
+      setForm((prev) => ({
+        ...prev,
+        d4RootCause: Array.isArray(updated.d4RootCause)
+          ? (updated.d4RootCause as Array<{ why: string; because: string }>)
+          : Array.from({ length: 5 }, () => ({ why: "", because: "" })),
+        simpleRootCause: typeof updated.d4RootCause === "string" ? updated.d4RootCause : "",
+      }));
+      toast.success(`방법론이 ${label}(으)로 변경됐습니다.`);
+    } finally {
+      setChangingMethodology(false);
+    }
   }
 
   const sourceHref = capa.sourceType === "internal_nc"
@@ -1100,7 +1133,32 @@ export function CAPADetailClient({ capa: initialCapa, actions: initialActions, s
               listHref="/capa"
               onRenumbered={(newNumber) => setCapa((prev) => ({ ...prev, capaNumber: newNumber }))}
               onUnlinked={() => router.refresh()}
-            />
+            >
+              <div>
+                <Label>방법론 변경</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Select value={methodologyDraft} onValueChange={setMethodologyDraft} disabled={editing}>
+                    <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="8d">{t("methodologies.8d")}</SelectItem>
+                      <SelectItem value="simple_capa">{t("methodologies.simple_capa")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={changeMethodology}
+                    disabled={editing || changingMethodology || methodologyDraft === capa.methodology}
+                  >
+                    {changingMethodology ? "변경 중..." : "방법론 변경"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {editing
+                    ? "수정 중에는 변경할 수 없습니다. 먼저 저장하거나 취소하세요."
+                    : "근본원인은 새 형식으로 옮겨집니다. 8D 전용 항목(D1/D5/D6/D8)은 Simple CAPA에서 숨겨질 뿐 보존됩니다."}
+                </p>
+              </div>
+            </AdminRecordPanel>
           )}
         </div>
       </div>
